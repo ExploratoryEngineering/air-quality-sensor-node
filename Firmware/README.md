@@ -1,4 +1,4 @@
-# Air quality sensor node
+# Air quality sensor node firmware
 
 This project contains firmware for an air quality sensor node
 
