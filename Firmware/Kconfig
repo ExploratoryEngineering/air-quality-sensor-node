@@ -1,0 +1,5 @@
+module = EE06
+module-str = EE06
+source "subsys/logging/Kconfig.template.log_config"
+
+source "Kconfig.zephyr"
