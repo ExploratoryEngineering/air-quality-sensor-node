@@ -38,15 +38,36 @@
 #define OPC_LASER_STATUS_INDEX        82  // 16 bit unsigned integer
 #define OPC_HISTOGRAM_CHECKSUM_INDEX  84  // 16 bit unsigned integer
 
+typedef struct 
+{
+    uint16_t bin[OPC_BINS];
+    uint16_t period;
+    uint16_t flowrate;
+    uint16_t temperature;
+    uint16_t humidity;
+    float pm_a;
+    float pm_b;
+    float pm_c;
+    uint16_t fan_rev_count;
+    uint16_t laser_status;
+    bool valid;
+} OPC_SAMPLE;
+
+
 // OPC commands (not the complete set)
-#define OPC_N3_WRITE_PERIPHERAL_POWER_STATUS          0x03
+#define OPC_N3_WRITE_PERIPHERAL_POWER_STATUS            0x03
 #define OPC_N3_READ_INFORMATION_STRING                  0x3F
 #define OPC_N3_READ_SERIAL_NUMBER_STRING                0x10
 #define OPC_N3_READ_HISTOGRAM_DATA_AND_RESET_HISTOGRAM  0x30
 #define OPC_N3_READ_PM_DATA_AND_RESET_HISTOGRAM         0x32
+#define OPC_N3_READ_DAC_AND_POWER_STATUS                0x13
+#define OPC_RESET                                       0x06
 
+// OPC status codes
+#define OPC_BUSY                                    0x31
 #define OPC_N3_DATA_READY                           0xF3
 
+// OPC peripherals / options
 #define OPC_OPTION_FAN_ON                           0x03
 #define OPC_OPTION_FAN_OFF                          0x02
 #define OPC_OPTION_LASER_ON                         0x07

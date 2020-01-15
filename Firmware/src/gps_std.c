@@ -21,8 +21,6 @@
 #include "gps_std.h"
 #include "nmealib.h"
 
-#include "atof.h" // Stolen from the interwebs. Probably worth testing...
-
 #define LOG_LEVEL CONFIG_EE06_LOG_LEVEL
 LOG_MODULE_DECLARE(EE06);
 
