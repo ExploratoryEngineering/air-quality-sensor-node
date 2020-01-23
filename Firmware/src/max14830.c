@@ -28,13 +28,13 @@
 
 extern struct device * gpio_device;
 
+extern struct k_sem uart_semaphore;
+
 bool dataReady = false;
 
 #define LOG_LEVEL CONFIG_EE06_LOG_LEVEL
 LOG_MODULE_DECLARE(EE06);
 
-
-#define EE_NBIOT_01_ADDRESS 0x61
 
 #define RX_BUFFER_SIZE 256
 
@@ -187,6 +187,12 @@ void flushRXBuffer()
 
 int sendMessage(uint8_t address, uint8_t * txBuffer, uint8_t txLength)
 {
+    if (0 != k_sem_take(&uart_semaphore, K_MSEC(100)))
+    {
+        LOG_ERR("(sendMessage) Uart not available");
+        return -1;
+    }
+
     flushRXBuffer();
     DiscardWaitingRxJunk(address);
     EnableTxMode(address);
@@ -197,6 +203,8 @@ int sendMessage(uint8_t address, uint8_t * txBuffer, uint8_t txLength)
 
     WaitForTx(address);
     EnableRxMode(address);
+
+    k_sem_give(&uart_semaphore);
     return 0;
 }
 
@@ -241,6 +249,12 @@ void readFromRxFifo(uint8_t address)
 
 void readReply()
 {
+    if (0 != k_sem_take(&uart_semaphore, K_MSEC(100)))
+    {
+        LOG_ERR("(readReply) Uart not available");
+        return;
+    }
+
     // The trigger can be read from any UART 
     uint8_t uart_trigger = max14830_read(EE_NBIOT_01_ADDRESS  , GLOBAL_IRQ_REGISTER); 
 
@@ -270,6 +284,7 @@ void readReply()
             readFromRxFifo(uart_address);
         }
     }
+    k_sem_give(&uart_semaphore);
 }
 
 // void irq_handler(struct device *gpiob, struct gpio_callback *cb, u32_t pins)

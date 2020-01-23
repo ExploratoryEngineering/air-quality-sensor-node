@@ -19,6 +19,8 @@
 
 #include <stdint.h>
 
+#define EE_NBIOT_01_ADDRESS 0x61
+
 #define CLOCK_FREQUENCY 3686400
 
 #define LCR_REGISTER 0x0B

@@ -76,7 +76,7 @@ bool initialize_board()
 
 void main(void)
 {
-#ifdef EE-04
+#ifdef EE_04
 	printk("EE-04\n");
 	while (1)
 	{
