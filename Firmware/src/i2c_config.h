@@ -19,4 +19,5 @@
 #include <zephyr.h>
 #include <device.h>
 
-struct device * I2C_init();
+struct device * get_I2C_device();
+void I2CScan();

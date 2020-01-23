@@ -16,7 +16,6 @@
 
 #include <zephyr.h>
 #include "ee_nbiot_01.h"
-#include "txrxbuffer.h"
 #include "max14830.h"
 #include <string.h>
 #include <stdbool.h>

@@ -14,54 +14,60 @@
 **  limitations under the License.
 */
 
-/*
+// The MAX14830 datasheet is available from https://datasheets.maximintegrated.com/en/ds/MAX14830.pdf
+
 #include "max14830.h"
 
 #include <zephyr.h>
+#include <i2c.h>
+#include "i2c_config.h"
+#include <logging/log.h>
+#include <gpio.h>
+#include "gpio.h"
+#include "pinout.h"
+
+extern struct device * gpio_device;
+
+bool dataReady = false;
+
+#define LOG_LEVEL CONFIG_EE06_LOG_LEVEL
+LOG_MODULE_DECLARE(EE06);
 
 
-extern uint8_t TX_BUFFER[TX_BUFFER_SIZE];
-extern uint8_t RX_BUFFER[RX_BUFFER_SIZE];
+#define EE_NBIOT_01_ADDRESS 0x61
+
+#define RX_BUFFER_SIZE 256
+
+uint8_t RX_BUFFER[RX_BUFFER_SIZE];
+
+// static struct gpio_callback gpio_cb;
 
 int rxIndex = 0;
 
-void max14830_write(uint8_t address, uint8_t reg, uint8_t data)
+int max14830_write(uint8_t address, uint8_t reg, uint8_t data)
 {
-    int rc;
-    uint8_t data_txBuffer[2] = {reg, data};
-    struct hal_i2c_master_data txData = {
-        .len = sizeof(data_txBuffer),
-        .address = address,
-        .buffer = data_txBuffer,
-    };
-    rc = hal_i2c_master_write(1, &txData, 1, 1);
-    if (rc != 0)
+    uint8_t txBuffer[] = {reg, data};
+    int err = i2c_write(get_I2C_device(), txBuffer, 2, EE_NBIOT_01_ADDRESS);
+    if (0 != err)
     {
-        console_printf("   ERROR: I2C write failed! (register: %02X, data: %02X\n", address, data);
+        LOG_ERR("i2c_write failed with error: %d", err);
     }
+    return err;
 }
 
 uint8_t max14830_read(uint8_t address, uint8_t reg)
 {
-    uint8_t data_txBuffer[] = {reg};
-    struct hal_i2c_master_data txData = {
-        .len = sizeof(data_txBuffer),
-        .address = address,
-        .buffer = data_txBuffer,
-    };
-    hal_i2c_master_write(1, &txData, 1, 0);
+    uint8_t txBuffer[] = {reg};
+    uint8_t rxBuffer[] = {0};
 
-    uint8_t data_rxBuffer[] = {0};
-    struct hal_i2c_master_data rxData = {
-        .len = sizeof(data_rxBuffer),
-        .address = address,
-        .buffer = data_rxBuffer,
-    };
-    hal_i2c_master_read(1, &rxData, 1, 1);
+    int err = i2c_write_read(get_I2C_device(), EE_NBIOT_01_ADDRESS, txBuffer, 1, rxBuffer, 1);
+    if (0 != err)
+    {
+        LOG_ERR("i2c_write_read failed with error: %d", err);
+    }
 
-    return data_rxBuffer[0];
+    return rxBuffer[0];
 }
-
 
 void initUart(uint8_t address, int baud, uint8_t wordlength, uint8_t parity, uint8_t stopBits)
 {
@@ -84,13 +90,11 @@ void initUart(uint8_t address, int baud, uint8_t wordlength, uint8_t parity, uin
 			div = clk / baud;
 		}
 	}
-    console_printf("Base clock frequency: %d, Address: %02X, UART baudrate: %d, divisor: %d, mode: %d\n", CLOCK_FREQUENCY, address, baud, div, mode);
+    LOG_INF("MAX14830: Base clock frequency: %d, Address: %02X, UART baudrate: %d, divisor: %d, mode: %d\n", CLOCK_FREQUENCY, address, baud, div, mode);
 
     max14830_write(address, DIVLSB_REGISTER, div / 16);
     max14830_write(address, DIVMSB_REGISTER, (div / 16) >> 8);
     max14830_write(address, BRGCONFIG_REGISTER, (div % 16) | mode);
-    //console_printf("LSB : %02X\n", div / 16);
-    // console_printf("MSB : %02X\n", (div % 16) | mode);
 
     uint8_t lcr = 0;
 
@@ -128,16 +132,17 @@ void initUart(uint8_t address, int baud, uint8_t wordlength, uint8_t parity, uin
 
 void resetWait()
 {
-    console_printf("MAX14830: Waiting for reset signal...\n");
-    while (hal_gpio_read(IRQ_PIN) == 0) {
-        console_printf("MAX14830: Waiting...\n");
-    }
-    console_printf("MAX14830: Reset ok\n");
+    LOG_INF("MAX14830: Waiting for reset signal...\n");
+    u32_t resetVal;
+    do {
+        LOG_INF("MAX14830: Waiting...\n");
+        k_sleep(1);
+        gpio_pin_read(get_GPIO_device(), MAX14830_IRQ, &resetVal);
+    } while (0 == resetVal);
 }
 
 void EnableRxMode(uint8_t address)
 {
-//    console_printf("Enabling Rx mode\n");
     uint8_t mode1 = max14830_read(address, MODE1_REGISTER);
     mode1 |= 0b00000010;
     max14830_write(address, MODE1_REGISTER, mode1);
@@ -145,7 +150,6 @@ void EnableRxMode(uint8_t address)
 
 void EnableTxMode(uint8_t address)
 {
-//    console_printf("Enabling Tx mode\n");
     uint8_t mode1 = max14830_read(address, MODE1_REGISTER);
     mode1 &= 0b11111101;
     max14830_write(address, MODE1_REGISTER, mode1);
@@ -156,10 +160,13 @@ void WaitForTx(uint8_t address)
      while (max14830_read(address, TxFIFOLvl_REGISTER));
 }
 
-void WaitForRx(uint8_t address)
-{
-     while (max14830_read(address, RxFIFOLvl_REGISTER) == 0);
-}
+// void WaitForRx(uint8_t address)
+// {
+//     int ret;
+//     do {
+//         ret = max14830_read(address, RxFIFOLvl_REGISTER);
+//     } while (0 == ret);
+// }
 
 void DiscardWaitingRxJunk(uint8_t address)
 {
@@ -174,65 +181,47 @@ void DiscardWaitingRxJunk(uint8_t address)
 void flushRXBuffer()
 {
     rxIndex = 0;
-    RX_BUFFER[0] = 0;
     memset(RX_BUFFER, 0, RX_BUFFER_SIZE);    
 }
 
 
-int sendMessage(uint8_t address, uint8_t * txBuffer, uint8_t * rxBuffer)
+int sendMessage(uint8_t address, uint8_t * txBuffer, uint8_t txLength)
 {
     flushRXBuffer();
     DiscardWaitingRxJunk(address);
-    int txLength = strlen((char*)txBuffer);
-
     EnableTxMode(address);
 
-    if (txLength+2 > TX_BUFFER_SIZE)
-    {
-        console_printf("Woops. TxBuffer overrun");
-        return -1;
+    for (int i=0; i<txLength; i++) {
+        max14830_write(EE_NBIOT_01_ADDRESS, THR_REGISTER, *txBuffer++);
     }
 
-    TX_BUFFER[0] = THR_REGISTER;
-    for (int i=0; i<txLength; i++)
-    {
-        TX_BUFFER[i+1] = *txBuffer;    
-        txBuffer++;
-    }
-    TX_BUFFER[txLength+1] = 0;
-
-    //console_printf("Sending message :%s (length: %d)\n",(char *)(&TX_BUFFER[1]), strlen((char *)(&TX_BUFFER[1])));
-
-    struct hal_i2c_master_data txData = {
-        .len = txLength+1,
-        .address = address,
-        .buffer = TX_BUFFER,
-    };
-    int rc = hal_i2c_master_write(1, &txData, 1, 1);
-    if (rc != 0)
-    {
-        console_printf("   ERROR: I2C write failed! (address: %02X)\n", address);
-        return -1;
-    }
-    
     WaitForTx(address);
     EnableRxMode(address);
-    WaitForRx(address);
-
-    // We can do this, in order to fake synchronicity, or we can implement a full fledged event driven command / response stack thingy...
-    os_time_delay(OS_TICKS_PER_SEC*2); 
     return 0;
 }
 
 
 void readFromRxFifo(uint8_t address) 
 {
-    uint8_t fifo = 0;
+    uint8_t fifo_level = 0;
     uint8_t ch;
-    do {
-        fifo = max14830_read(address, RxFIFOLvl_REGISTER);
+    while (true) 
+    {
+        fifo_level = max14830_read(address, RxFIFOLvl_REGISTER);
+        if (0 == fifo_level) 
+        {
+            break;
+        }
         ch = max14830_read(address, RHR_REGISTER);
-        // console_printf(" %c ", ch);
+
+        printk("%c ", ch);
+        if ('\r' == ch) 
+        {
+            printk("\n");
+            // TODO: Copy RX_BUFFER into response message and flushrx
+        }
+        k_sleep(1);
+
         RX_BUFFER[rxIndex] = ch;
         RX_BUFFER[rxIndex+1] = 0;
         rxIndex++;
@@ -240,52 +229,71 @@ void readFromRxFifo(uint8_t address)
         if (rxIndex > RX_BUFFER_SIZE-1)
         {
             rxIndex = 0;
-            console_printf("Woops. Slight case of buffer overrun here...\n");
+            LOG_ERR("Woops. Slight case of buffer overrun here...\n");
             break;
         }
-    } while (fifo > 0);
+    } 
+
+    printk("\n");
+    k_sleep(1);
+
 }
 
-
-static void irq_handler()
+void readReply()
 {
-    uint8_t uart_trigger = max14830_read(EE_NBIOT_01_ADDRESS  , GLOBAL_IRQ_REGISTER); // can be read from any UART 
+    // The trigger can be read from any UART 
+    uint8_t uart_trigger = max14830_read(EE_NBIOT_01_ADDRESS  , GLOBAL_IRQ_REGISTER); 
+
     uint8_t uart_address = 0;
     uart_trigger &= 0x0F;
     if (uart_trigger == 0x0F)
         return;
-    if ((uart_trigger & 0b0001) == 0)
+    // The UART multiplexer supports up to 4 channels (so far, we're only using UART0)
+    if ((uart_trigger & 0b0001) == 0) 
     {
         uart_address = EE_NBIOT_01_ADDRESS; 
-        //console_printf("Interrupt from EE-NBIOT-01\n");
-    } else if ((uart_trigger & 0b0010) == 0) {
-        uart_address = HONEYWELL_ADDRESS; 
-        //console_printf("Interrupt from Honeywell\n");
-    }
+    } 
+    // else {
+    //     // uart_address = <other device>
+    // }
 
+    // Check interrupt cause. 
     uint8_t cause = max14830_read(uart_address, INTERRUPT_STATUS_REGISTER);
-    if (cause & LSRErrInt) {
-        uint8_t err = max14830_read(uart_address, LSR_REGISTER);
-        if (err & 0b00000001) {
+    if (cause & LSRErrInt) 
+    {
+        printk("Cause: %02X\n", cause);
+        k_sleep(100);
+        // Check the line status register
+        uint8_t line_status = max14830_read(uart_address, LSR_REGISTER);
+        if ((line_status & RTimeout) || (line_status & RFifoTrigInt))
+        {
             readFromRxFifo(uart_address);
         }
     }
-    if (cause & RFifoTrigInt) 
-    {
-        readFromRxFifo(uart_address);
-    }
 }
 
-static void EnableRxFIFOIrq(uint8_t address)
+// void irq_handler(struct device *gpiob, struct gpio_callback *cb, u32_t pins)
+// {
+//     dataReady = true;
+// }
+
+void EnableRxFIFOIrq(uint8_t address)
 {   
-    int rc;
-    rc = hal_gpio_irq_init(IRQ_PIN, irq_handler, NULL, HAL_GPIO_TRIG_FALLING, HAL_GPIO_PULL_UP);
-    if (rc != 0)
-    {
-        console_printf("hal_gpio_irq_init failed. Error code: %d\n", rc);
-    }
-    hal_gpio_irq_enable(IRQ_PIN);
-    
+//     gpio_device = get_GPIO_device();
+//     int	ret = gpio_pin_configure(gpio_device, MAX14830_IRQ, GPIO_INT | GPIO_PUD_PULL_UP | GPIO_INT_EDGE | GPIO_INT_ACTIVE_LOW | GPIO_DIR_IN);
+//     if (ret) {
+// 		printk("Error configuring %d!\n", MAX14830_IRQ);
+// 	}
+// 	gpio_init_callback(&gpio_cb, irq_handler, BIT(MAX14830_IRQ));
+// 	ret = gpio_add_callback(gpio_device, &gpio_cb);
+//     if (ret) {
+// 		printk("Error enabling callback %d!\n", MAX14830_IRQ);
+// 	}
+// 	ret = gpio_pin_enable_callback(gpio_device, MAX14830_IRQ);
+//     if (ret) {
+// 		printk("Error enabling callback %d!\n", MAX14830_IRQ);
+// 	}
+
     max14830_write(address, IRQENABLE_REGISTER, RFifoTrgIEn | LSRErrIEn);
     max14830_write(address, FIFOTRIGLVL_REGISTER, (1 << 4));
     max14830_write(address, MODE1_REGISTER, IRQSel);
@@ -294,33 +302,34 @@ static void EnableRxFIFOIrq(uint8_t address)
     max14830_write(address, LSRINTEN_REGISTER, 0b00001111);
 }
 
-void reset_max14830()
+
+void MAX_entry_point(void * foo, void * bar, void * gazonk)
 {
-    hal_gpio_init_out(RESET_PIN, 1);
-    hal_gpio_write(RESET_PIN, 0);
-    os_time_delay(OS_TICKS_PER_SEC);
-    hal_gpio_write(RESET_PIN, 1);
-    os_time_delay(OS_TICKS_PER_SEC);    
-}
-
-void init_max14830()
-{
-    console_printf("Initializing MAX14830...\n");
-
-    hal_gpio_init_in(IRQ_PIN, HAL_GPIO_PULL_UP);
-    hal_gpio_init_in(RESET_PIN, HAL_GPIO_PULL_UP);
-
+    LOG_INF("Initializing MAX14830...\n");
     resetWait();
     
     // Initialize baud rate, parity, word length and stop bits for each uart
     initUart(EE_NBIOT_01_ADDRESS, 9600, 8, NO_PARITY, 1);
-    initUart(HONEYWELL_ADDRESS, 9600, 8, NO_PARITY, 1);
-
     EnableRxFIFOIrq(EE_NBIOT_01_ADDRESS);
-    EnableRxFIFOIrq(HONEYWELL_ADDRESS);
     max14830_read(EE_NBIOT_01_ADDRESS, INTERRUPT_STATUS_REGISTER); // What the actual .... ?
-    max14830_read(HONEYWELL_ADDRESS, INTERRUPT_STATUS_REGISTER); // What the actual .... ?
 
+    flushRXBuffer();
+
+    // For the time being, we are just polling the 14830 IRQ pin
+    u32_t irq_status = -1;
+    while (true) 
+    {
+       printk("Waiting for rx...\n");
+       k_sleep(200);
+
+        int ret = gpio_pin_read(get_GPIO_device(), MAX14830_IRQ, &irq_status);
+        if (0 == ret)
+        {
+            if (DATA_READY == irq_status) 
+            {
+                 readReply();
+            }
+        }
+        k_sleep(100);
+    }
 }
-
-*/

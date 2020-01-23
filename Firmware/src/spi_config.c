@@ -23,7 +23,7 @@ LOG_MODULE_DECLARE(EE06);
 
 struct device * spi_dev;
 
-struct device * SPI_init()
+struct device * get_SPI_device()
 {
   spi_dev = device_get_binding(SPI_DEV);
   if (!spi_dev) {

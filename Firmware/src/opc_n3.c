@@ -65,7 +65,7 @@ void OPC_init()
 {
     LOG_INF("OPC_N3 - Init.");
 
-    OPC_spi_dev = SPI_init();
+    OPC_spi_dev = get_SPI_device();
     OPC_config.cs = NULL;
     OPC_config.frequency = 500000;
     OPC_config.operation = SPI_OP_MODE_MASTER | SPI_WORD_SET(8) | SPI_TRANSFER_MSB | SPI_MODE_CPHA;
@@ -372,7 +372,6 @@ void log_sample(OPC_SAMPLE sample)
     LOG_INF("Laser status: %d", sample.laser_status);
     LOG_INF("CRC: %s", sample.valid ? "OK" : "INVALID");
 }
-
 
 void OPC_entry_point(void * foo, void * bar, void * gazonk)
 {

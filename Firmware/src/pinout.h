@@ -33,5 +33,7 @@
 #define MAX14830_IRQ    3
 #define MAX14830_RESET  4
 
+#define EE_NBIOT_01_RESET 2
+
 #endif
 

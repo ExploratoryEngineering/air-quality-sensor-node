@@ -21,7 +21,7 @@
 
 #define SPI_BUF_SIZE 256
 
-struct device * SPI_init();
+struct device * get_SPI_device();
 
 #define SPI_DEV "SPI_1"
 

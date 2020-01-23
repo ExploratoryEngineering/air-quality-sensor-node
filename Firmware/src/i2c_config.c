@@ -26,16 +26,15 @@ LOG_MODULE_DECLARE(EE06);
 
 #define I2C_DEV "I2C_0"
 
-struct device * I2C_init() 
+struct device * get_I2C_device() 
 {
 	struct device * i2c_dev;
-	LOG_INF("I2C_init");
 	i2c_dev = device_get_binding(I2C_DEV);
 	if (!i2c_dev) {
 		LOG_ERR("I2C device driver not found");
 		return NULL;
 	}
-    if (i2c_configure(i2c_dev, I2C_SPEED_SET(I2C_SPEED_FAST))) {
+    if (i2c_configure(i2c_dev, I2C_SPEED_SET(I2C_SPEED_STANDARD))) {
 		LOG_ERR("I2C configuration failed");
         return NULL;
     }
@@ -45,7 +44,7 @@ struct device * I2C_init()
 
 void I2CScan() 
 {
-	struct device * i2c_dev = I2C_init();
+	struct device * i2c_dev = get_I2C_device();
 
 	for (u8_t i = 4; i <= 0x77; i++) 
 	{

@@ -27,7 +27,7 @@
 #define LOG_LEVEL CONFIG_EE06_LOG_LEVEL
 LOG_MODULE_DECLARE(EE06);
 
-struct device *gpio_dev = NULL;
+static struct device *gpio_dev = NULL;
 
 
 int ConfigureOutputPin(u32_t pin)
@@ -48,15 +48,21 @@ int ConfigureInputPin(u32_t pin)
     return ret;
 }
 
-struct device * GPIO_init()
+struct device * get_GPIO_device()
 {
-    LOG_INF("GPIO_init");
-	gpio_dev = device_get_binding(DT_GPIO_P0_DEV_NAME);
-	if (!gpio_dev) {
-		printk("YIKES ! Cannot find %s!\n", DT_GPIO_P0_DEV_NAME);
-		return NULL;
-	}
+    if (gpio_dev == NULL)
+    {
+        gpio_dev = device_get_binding(DT_GPIO_P0_DEV_NAME);
+        if (!gpio_dev) {
+            printk("YIKES ! Cannot find %s!\n", DT_GPIO_P0_DEV_NAME);
+            return NULL;
+        }
+    }
+    return gpio_dev;
+}
 
+void init_GPIO()
+{
     // CS_SX1276
     LOG_INF("Disable ANT_HF_CONTROL");
     ConfigureOutputPin(CS_SX1276);
@@ -96,15 +102,21 @@ struct device * GPIO_init()
     // MAX14830
     LOG_INF("Configuring MAX14830 IO");
     ConfigureOutputPin(MAX14830_RESET);
-    ConfigureInputPin(MAX14830_IRQ);
+    gpio_pin_write(gpio_dev, MAX14830_RESET, 1);
     gpio_pin_write(gpio_dev, MAX14830_RESET, 0);
     k_sleep(1000);
     gpio_pin_write(gpio_dev, MAX14830_RESET, 1);
     k_sleep(1000);
+    int	ret = gpio_pin_configure(gpio_dev, MAX14830_IRQ, GPIO_DIR_IN | GPIO_PUD_PULL_UP);
+    if (ret) {
+		printk("Error configuring %d!\n", MAX14830_IRQ);
+	}
+	
+    // EE-NBIOT-01/02
+    ConfigureOutputPin(EE_NBIOT_01_RESET);
+    gpio_pin_write(gpio_dev, EE_NBIOT_01_RESET, 1);
 
     LOG_INF("InitGPIO - done.");
-
-    return gpio_dev;
 }
 
 void gps_reset()

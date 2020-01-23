@@ -5,6 +5,7 @@
 
     sda-pin = <27>;
 	scl-pin = <26>;
+	clock-frequency = <I2C_BITRATE_STANDARD>;
 };
 
 &spi1 {

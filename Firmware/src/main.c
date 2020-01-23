@@ -32,6 +32,7 @@
 #include "ads124s08.h"
 #include "chipcap2.h"
 #include "gps.h"
+#include "max14830.h"
 
 #define LOG_LEVEL CONFIG_EE06_LOG_LEVEL
 LOG_MODULE_REGISTER(EE06);
@@ -42,30 +43,60 @@ LOG_MODULE_REGISTER(EE06);
 #define CC2_THREAD_STACK_SIZE 1024
 #define OPC_THREAD_PRIORITY -4
 #define OPC_THREAD_STACK_SIZE 1024
+#define MAX_THREAD_PRIORITY -4
+#define MAX_THREAD_STACK_SIZE 1024
 
 // K_THREAD_DEFINE(gps_thread_id, GPS_THREAD_STACK_SIZE, GPS_entry_point, NULL, NULL, NULL, GPS_THREAD_PRIORITY, 0, 30000);
 // K_THREAD_DEFINE(cc2_thread_id, CC2_THREAD_STACK_SIZE, CC2_entry_point, NULL, NULL, NULL, GPS_THREAD_PRIORITY, 0, 20000);
-K_THREAD_DEFINE(opc_thread_id, OPC_THREAD_STACK_SIZE, OPC_entry_point, NULL, NULL, NULL, OPC_THREAD_PRIORITY, 0, 25000);
+// K_THREAD_DEFINE(opc_thread_id, OPC_THREAD_STACK_SIZE, OPC_entry_point, NULL, NULL, NULL, OPC_THREAD_PRIORITY, 0, 25000);
+K_THREAD_DEFINE(max_thread_id, MAX_THREAD_STACK_SIZE, MAX_entry_point, NULL, NULL, NULL, MAX_THREAD_PRIORITY, 0, 15000);
 
-void initialize_board()
+struct device * gpio_device;
+
+bool initialize_board()
 {
-	GPIO_init();
-	I2C_init();
-	SPI_init();
+	gpio_device = get_GPIO_device();
+	init_GPIO(gpio_device);
+	if (NULL == gpio_device) {
+		LOG_ERR("Unable to initialize GPIO device");
+		return false;
+	}
+	if (NULL == get_I2C_device()) {
+		LOG_ERR("Unable to initialize I2C device");
+		return false;
+	}
+	if (NULL == get_SPI_device()) {
+		LOG_ERR("Unable to initialize SPI device");
+		return false;
+	}
 	ADS124S08_init();
 	ADS124S08_begin();
+	return true;
 }
 
 void main(void)
 {
-	printk("TK - Alphasense\n");
+#ifdef EE-04
+	printk("EE-04\n");
+	while (1)
+	{
+		k_sleep(2000);
+		LOG_INF("Nothing to see here...");
+	}
+#else
+	printk("Air quality sensor node\n");
 	k_sleep(5000);	// (Testing only) Delay for manual powercycling and JLink
 
-	initialize_board();
+	if (!initialize_board())
+	{
+		LOG_ERR("Board initialization failed. Unable to start sensor node.");
+		return;
+	}
 
 	while (1)
 	{
 		k_sleep(5000);
+		LOG_INF("Main thread is running...");
 	}
-
+#endif
 }

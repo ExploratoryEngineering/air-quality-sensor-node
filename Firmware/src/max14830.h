@@ -14,7 +14,6 @@
 **  limitations under the License.
 */
 
-/*
 #ifndef _MAX14830_h_
 #define _MAX14830_h_
 
@@ -63,10 +62,7 @@
 #define LSRINTEN_REGISTER 0x03
 #define LSR_REGISTER 0x04
 
-
 #define I2C_NUM 1
-
-
 
 #define THR_REGISTER 0x00
 #define RHR_REGISTER 0x00
@@ -75,18 +71,20 @@
 #define EVEN_PARITY 1
 #define ODD_PARITY 2
 
-// #define IRQ_PIN 3
-// #define RESET_PIN 4
+#define DATA_READY 0
+#define RTimeout 0b00000001
 
 void init_max14830();
 void initUart(uint8_t address, int baudrate, uint8_t wordlength, uint8_t parity, uint8_t stopBits);
-void max14830_write(uint8_t address, uint8_t reg, uint8_t data);
+int max14830_write(uint8_t address, uint8_t reg, uint8_t data);
 uint8_t max14830_read(uint8_t address, uint8_t reg);
-int sendMessage(uint8_t address, uint8_t * txBuffer, uint8_t * rxBuffer);
+int sendMessage(uint8_t address, uint8_t * txBuffer, uint8_t txLength);
+void MAX_entry_point(void * foo, void * bar, void * gazonk);
+
+// FOTA interface
+// bool uart_write(uint8_t c);
+// bool uart_poll(uint8_t * c);
 
 
 #endif
-
-
-*/
 

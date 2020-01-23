@@ -41,7 +41,7 @@ void CC2_init()
 {
     LOG_DBG("Initializing ChipCap2 ");
 
-    i2c_dev = I2C_init();
+    i2c_dev = get_I2C_device();
     uint8_t NORMAL_OPERATION_MODE[] = {CHIPCAP2_NORMAL_OPERATION_MODE,0,0};
     int err = i2c_write(i2c_dev, NORMAL_OPERATION_MODE, 3, CHIPCAP2_ADDRESS);
     if (0 != err)
