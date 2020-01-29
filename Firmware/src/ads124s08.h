@@ -113,33 +113,33 @@
  *
  */
 /* Define the ADC positive input channels (MUXP) */
-#define ADS_P_AIN0				0x00
-#define ADS_P_AIN1				0x10
-#define ADS_P_AIN2				0x20
-#define ADS_P_AIN3				0x30
-#define ADS_P_AIN4				0x40
-#define ADS_P_AIN5				0x50
-#define ADS_P_AIN6				0x60
-#define ADS_P_AIN7				0x70
-#define ADS_P_AIN8				0x80
-#define ADS_P_AIN9				0x90
-#define ADS_P_AIN10				0xA0
-#define ADS_P_AIN11				0xB0
-#define ADS_P_AINCOM			0xC0
+#define ADS_P_AIN0				(0b0000 << 4)
+#define ADS_P_AIN1				(0b0001 << 4)
+#define ADS_P_AIN2				(0b0010 << 4)
+#define ADS_P_AIN3				(0b0011 << 4)
+#define ADS_P_AIN4				(0b0100 << 4)
+#define ADS_P_AIN5				(0b0101 << 4)
+#define ADS_P_AIN6				(0b0110 << 4)
+#define ADS_P_AIN7				(0b0111 << 4)
+#define ADS_P_AIN8				(0b1000 << 4)
+#define ADS_P_AIN9				(0b1001 << 4)
+#define ADS_P_AIN10				(0b1010 << 4)
+#define ADS_P_AIN11				(0b1011 << 4)
+#define ADS_P_AINCOM			(0b1100 << 4)
 /* Define the ADC negative input channels (MUXN)*/
-#define ADS_N_AIN0				0x00
-#define ADS_N_AIN1				0x01
-#define ADS_N_AIN2				0x02
-#define ADS_N_AIN3				0x03
-#define ADS_N_AIN4				0x04
-#define ADS_N_AIN5				0x05
-#define ADS_N_AIN6				0x06
-#define ADS_N_AIN7				0x07
-#define ADS_N_AIN8				0x08
-#define ADS_N_AIN9				0x09
-#define ADS_N_AIN10				0x0A
-#define ADS_N_AIN11				0x0B
-#define ADS_N_AINCOM			0x0C
+#define ADS_N_AIN0				0b0000
+#define ADS_N_AIN1				0b0001
+#define ADS_N_AIN2				0b0010
+#define ADS_N_AIN3				0b0011
+#define ADS_N_AIN4				0b0100
+#define ADS_N_AIN5				0b0101
+#define ADS_N_AIN6				0b0110
+#define ADS_N_AIN7				0b0111
+#define ADS_N_AIN8				0b1000
+#define ADS_N_AIN9				0b1001
+#define ADS_N_AIN10				0b1010
+#define ADS_N_AIN11				0b1011
+#define ADS_N_AINCOM			0b1100
 /* ADS124S08 Register 3 (PGA) Definition */
 /*   Bit 7   |   Bit 6   |   Bit 5   |   Bit 4   |   Bit 3   |   Bit 2   |   Bit 1   |   Bit 0
  *--------------------------------------------------------------------------------------------
@@ -411,25 +411,24 @@
 #define RESET_PIN  ADC_RESET
 #define CKEN_PIN  -1
 
+#define DEVICE_READY_FLAG 0b01000000
 
 void ADS124S08_init(void);
 void ADS124S08_begin();
 char ADS124S08_regRead(unsigned int regnum);
 void ADS124S08_readRegs(unsigned int regnum, unsigned int count, uint8_t *data);
 void ADS124S08_regWrite(unsigned int regnum, unsigned char data);
-void ADS124S08_writeRegs(unsigned int regnum, unsigned int howmuch, unsigned char *data);
 void ADS124S08_reStart(void);
 void ADS124S08_sendCommand(uint8_t op_code);
-int  ADS124S08_rData(uint8_t *dStatus, uint8_t *dData, uint8_t *dCRC);
-int  ADS124S08_dataRead(uint8_t *dStatus, uint8_t *dData, uint8_t *dCRC);
-void ADS124S08_selectDeviceCSLow(void);
-void ADS124S08_releaseChipSelect(void);
-void ADS124S08_assertStart(void);
-void ADS124S08_deassertStart(void);
+unsigned int ADS124S08_dataRead(uint8_t *dStatus, uint8_t *dCRC);
+void ADS124S08_select(void);
+void ADS124S08_release(void);
+void ADS124S08_startConversion(void);
+void ADS124S08_stopConversion(void);
 void ADS124S08_assertClock(void);
 void ADS124S08_deassertClock(void);
 
-
+void ADC_entry_point(void * foo, void * bar, void * gazonk);
 
 
 

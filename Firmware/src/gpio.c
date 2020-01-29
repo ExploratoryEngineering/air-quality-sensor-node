@@ -76,6 +76,8 @@ void init_GPIO()
 	// ConfigureOutputPin(CKEN_PIN);
 	// ConfigureOutputPin(DRDY_PIN);
     gpio_pin_write(gpio_dev, ADC_SYNC, 0);
+    gpio_pin_write(gpio_dev, ADC_RESET, 0);
+    k_sleep(1000);
     gpio_pin_write(gpio_dev, ADC_RESET, 1);
     gpio_pin_write(gpio_dev, CS_ADC, 1);
     // gpio_pin_write(CK_EN, 0);

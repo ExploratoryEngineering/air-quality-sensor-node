@@ -30,6 +30,7 @@ int digitalWrite( u32_t pin, u32_t value );
 
 
 void init_GPIO();
+struct device * get_GPIO_device();
 int ConfigureOutputPin(u32_t pin);
 int ConfigureInputPin(u32_t pin);
 struct device * get_GPIO_device();
