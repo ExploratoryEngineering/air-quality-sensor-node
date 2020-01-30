@@ -38,6 +38,8 @@
 #define OPC_LASER_STATUS_INDEX        82  // 16 bit unsigned integer
 #define OPC_HISTOGRAM_CHECKSUM_INDEX  84  // 16 bit unsigned integer
 
+
+
 typedef struct 
 {
     uint16_t bin[OPC_BINS];
@@ -87,7 +89,7 @@ typedef struct
 #define OPC_N3_CMD_COMMAND_ACK_WAIT                 10
 #define OPC_N3_SPI_BUFFER_RESET_WAIT                2000
 
-void OPC_entry_point(void * foo, void * bar, void * gazonk);
+void OPC_main(void * foo, void * bar, void * gazonk);
 void OPC_init();
 void OPC_selectDeviceCSLow(void);
 void OPC_releaseChipSelect(void);

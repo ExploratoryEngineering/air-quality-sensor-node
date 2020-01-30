@@ -38,6 +38,8 @@
 #include "ADS124S08.h"
 #include <gpio.h>
 #include "gpio.h"
+#include "opc_n3.h"
+#include "messagebuffer.h"
 
 LOG_MODULE_DECLARE(EE06);
 
@@ -51,6 +53,9 @@ struct spi_buf_set ADS124S08_buf_set_tx;
 struct spi_buf ADS124S08_buf_rx;
 struct spi_buf_set ADS124S08_buf_set_rx;
 struct device * ADS124S08_spi_dev;
+
+
+extern SENSOR_NODE_MESSAGE sensor_node_message;
 
 u8_t ADS124S08_spi_tx_buffer[SPI_BUF_SIZE];
 u8_t ADS124S08_spi_rx_buffer[SPI_BUF_SIZE];
@@ -409,58 +414,24 @@ unsigned int sampleChannel(unsigned char channel)
 		if (!valid) {
 			LOG_ERR("ADC not ready while sampling channel: %c", channel);
 		}
-		 printk("ADC (2's): %u , status :%d, crc: %d - valid: %s\n", data, status, crc, (valid ? "YES" : "NO"));
-
+//		 printk("ADC (2's): %u , status :%d, crc: %d - valid: %s\n", data, status, crc, (valid ? "YES" : "NO"));
 
 		return data;
 }
 
 
-
-
-void ADC_entry_point(void * foo, void * bar, void * gazonk)
+void ADC_main(void * foo, void * bar, void * gazonk)
 {
-  LOG_INF("Initializing ADS124S08...\n");
-
-
+  // LOG_INF("Initializing ADS124S08...\n");
+	// configureAdc(ADS_P_AIN5);
 	// dumpRegisters();
-	configureAdc(ADS_P_AIN5);
-	dumpRegisters();
-	
+	// float LSB = 0.0000005960464478;
 
-		// float LSB = 0.0000005960464478;
-
-		unsigned int op1,op2,op3,op4,op5,op6,pt;
-    while (true) 
-    {
-			op1 = sampleChannel(ADS_P_AIN0);
-			op2 = sampleChannel(ADS_P_AIN1);
-			op3 = sampleChannel(ADS_P_AIN2);
-			op4 = sampleChannel(ADS_P_AIN3);
-			op5 = sampleChannel(ADS_P_AIN4);
-			op6 = sampleChannel(ADS_P_AIN5);
-			pt = sampleChannel(ADS_P_AIN8);
-
-			printk("OP1: %u\n", op1);
-			printk("OP2: %u\n", op2);
-			printk("OP3: %u\n", op3);
-			printk("OP4: %u\n", op4);
-			printk("OP5: %u\n", op5);
-			printk("OP6: %u\n", op6);
-			printk("PT: %u\n\n", pt);
-
-
-			// uint8_t status = 0;
-			// uint8_t crc = 0;
-			// ADS124S08_startConversion();
-			// unsigned int data = ADS124S08_dataRead(&status, &crc);
-			// ADS124S08_stopConversion();
-			// bool valid = ~(status & DEVICE_READY_FLAG);
-			// printk("ADC (2's): %u , status :%d, crc: %d - valid: %s\n", data, status, crc, (valid ? "YES" : "NO"));
-
-
-
-
-			k_sleep(1000);
-    }
+			sensor_node_message.sample.afe3_sample.op1 = sampleChannel(ADS_P_AIN0);
+			sensor_node_message.sample.afe3_sample.op2 = sampleChannel(ADS_P_AIN1);
+			sensor_node_message.sample.afe3_sample.op3 = sampleChannel(ADS_P_AIN2);
+			sensor_node_message.sample.afe3_sample.op4 = sampleChannel(ADS_P_AIN3);
+			sensor_node_message.sample.afe3_sample.op5 = sampleChannel(ADS_P_AIN4);
+			sensor_node_message.sample.afe3_sample.op6 = sampleChannel(ADS_P_AIN5);
+			sensor_node_message.sample.afe3_sample.pt = sampleChannel(ADS_P_AIN8);
 }

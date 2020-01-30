@@ -21,6 +21,7 @@
 #include "gps.h"
 #include "gps_cache.h"
 #include "gpio.h"
+#include "messagebuffer.h"
 
 #define LOG_LEVEL CONFIG_EE06_LOG_LEVEL
 LOG_MODULE_DECLARE(EE06);
@@ -30,8 +31,13 @@ LOG_MODULE_DECLARE(EE06);
 
 static uint8_t nmea_buffer[MAX_NMEA_BUFFER];
 static uint8_t nmea_pos = 0;
-gps_fix_t fix;
+
+extern SENSOR_NODE_MESSAGE sensor_node_message;
+
 int gps_retries_before_fix = 0;
+
+
+
 
 static int rxData(uint8_t data)
 {
@@ -108,15 +114,15 @@ void GPS_entry_point(void * foo, void * bar, void * gazonk)
     while (true) 
     {
         k_sched_lock();
-        if (gps_get_fix(&fix)) 
+        if (gps_get_fix(&sensor_node_message.sample.gps_fix)) 
         {
-            LOG_INF("----- GPS has fix : %d, %d\n", (int)(fix.longitude*1000), (int)(fix.latitude*1000));
+            LOG_INF("----- GPS has fix : %d, %d\n", (int)(sensor_node_message.sample.gps_fix.longitude*1000), (int)(sensor_node_message.sample.gps_fix.latitude*1000));
         }
         else
         {
-            LOG_INF("----- No GPS fix... -------\n");
+            // LOG_INF("----- No GPS fix... -------\n");
             gps_retries_before_fix++;
-            LOG_INF("Fix attempts: %d.\n", gps_retries_before_fix);
+            // LOG_INF("Fix attempts: %d.\n", gps_retries_before_fix);
             if (gps_retries_before_fix > GPS_FIX_RETRY_LIMIT)
             {
                 gps_retries_before_fix = 0;

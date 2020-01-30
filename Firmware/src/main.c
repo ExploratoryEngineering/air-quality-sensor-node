@@ -33,27 +33,18 @@
 #include "chipcap2.h"
 #include "gps.h"
 #include "max14830.h"
+#include "messagebuffer.h"
 
 #define LOG_LEVEL CONFIG_EE06_LOG_LEVEL
 LOG_MODULE_REGISTER(EE06);
 
 #define GPS_THREAD_PRIORITY -5
 #define GPS_THREAD_STACK_SIZE 1024
-#define CC2_THREAD_PRIORITY -6
-#define CC2_THREAD_STACK_SIZE 1024
-#define OPC_THREAD_PRIORITY -4
-#define OPC_THREAD_STACK_SIZE 1024
-#define MAX_THREAD_PRIORITY -4
-#define MAX_THREAD_STACK_SIZE 1024
-#define ADC_THREAD_PRIORITY -4
-#define ADC_THREAD_STACK_SIZE 1024
+// #define MAX_THREAD_PRIORITY -4
+// #define MAX_THREAD_STACK_SIZE 1024
 
-
-// K_THREAD_DEFINE(gps_thread_id, GPS_THREAD_STACK_SIZE, GPS_entry_point, NULL, NULL, NULL, GPS_THREAD_PRIORITY, 0, 30000);
-// K_THREAD_DEFINE(cc2_thread_id, CC2_THREAD_STACK_SIZE, CC2_entry_point, NULL, NULL, NULL, GPS_THREAD_PRIORITY, 0, 20000);
-// K_THREAD_DEFINE(opc_thread_id, OPC_THREAD_STACK_SIZE, OPC_entry_point, NULL, NULL, NULL, OPC_THREAD_PRIORITY, 0, 25000);
+K_THREAD_DEFINE(gps_thread_id, GPS_THREAD_STACK_SIZE, GPS_entry_point, NULL, NULL, NULL, GPS_THREAD_PRIORITY, 0, 30000);
 // K_THREAD_DEFINE(max_thread_id, MAX_THREAD_STACK_SIZE, MAX_entry_point, NULL, NULL, NULL, MAX_THREAD_PRIORITY, 0, 15000);
-K_THREAD_DEFINE(adc_thread_id, ADC_THREAD_STACK_SIZE, ADC_entry_point, NULL, NULL, NULL, ADC_THREAD_PRIORITY, 0, 12000);
 
 struct device * gpio_device;
 
@@ -97,10 +88,21 @@ void main(void)
 		return;
 	}
 
+	LOG_INF("Message size: %d", sizeof(SENSOR_NODE_MESSAGE));
+
+
 	while (1)
 	{
+		CC2_main(NULL, NULL, NULL);
+		ADC_main(NULL, NULL, NULL);
+		OPC_main(NULL, NULL, NULL);
+
+		DEBUG_CC2();
+		DEBUG_GPS();
+		DEBUG_AFE();
+		DEBUG_OPC();
+
 		k_sleep(5000);
-		LOG_INF("Main thread is running...");
 	}
 #endif
 }

@@ -413,6 +413,17 @@
 
 #define DEVICE_READY_FLAG 0b01000000
 
+typedef struct
+{
+    unsigned int op1;
+    unsigned int op2;
+    unsigned int op3;
+    unsigned int op4;
+    unsigned int op5;
+    unsigned int op6;
+    unsigned int pt;
+} AFE3_SAMPLE;
+
 void ADS124S08_init(void);
 void ADS124S08_begin();
 char ADS124S08_regRead(unsigned int regnum);
@@ -428,7 +439,7 @@ void ADS124S08_stopConversion(void);
 void ADS124S08_assertClock(void);
 void ADS124S08_deassertClock(void);
 
-void ADC_entry_point(void * foo, void * bar, void * gazonk);
+void ADC_main(void * foo, void * bar, void * gazonk);
 
 
 

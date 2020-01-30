@@ -21,6 +21,7 @@
 #include <device.h>
 #include <i2c.h>
 #include "i2c_config.h"
+#include "messagebuffer.h"
 
 
 // Note: The Chipcap sensor is onlys used for monitoring ambient temperature and humidity in the controller housing
@@ -29,8 +30,7 @@
 #define LOG_LEVEL CONFIG_EE06_LOG_LEVEL
 LOG_MODULE_DECLARE(EE06);
 
-float RH;
-float Temp_C;
+extern SENSOR_NODE_MESSAGE sensor_node_message;
 
 #define CC2_VALID_DATA (0x00)
 #define CC2_STALE_DATA (0x01)
@@ -39,7 +39,7 @@ struct device * i2c_dev;
 
 void CC2_init() 
 {
-    LOG_DBG("Initializing ChipCap2 ");
+    // LOG_DBG("Initializing ChipCap2 ");
 
     i2c_dev = get_I2C_device();
     uint8_t NORMAL_OPERATION_MODE[] = {CHIPCAP2_NORMAL_OPERATION_MODE,0,0};
@@ -52,7 +52,7 @@ void CC2_init()
 
 void CC2_sample()
 {
-    LOG_DBG("Sampling Chipcap2 sensor.");
+    // LOG_DBG("Sampling Chipcap2 sensor.");
 
     uint8_t rxBuffer[] = {0,0,0,0};
     int err = i2c_read(i2c_dev, rxBuffer, 4, CHIPCAP2_ADDRESS);
@@ -65,10 +65,10 @@ void CC2_sample()
 
     float RH_H = (rxBuffer[0] & 0b00111111);
     float RH_L = rxBuffer[1];
-    RH = ((RH_H*256 + RH_L)/16384)*100;
+    sensor_node_message.sample.cc2_sample.RH = ((RH_H*256 + RH_L)/16384)*100;
     float TempC_H = rxBuffer[2];
     float TempC_L = rxBuffer[3] >> 4;
-    Temp_C = ((TempC_H*64+TempC_L)/16384)*165-40; 
+    sensor_node_message.sample.cc2_sample.Temp_C = ((TempC_H*64+TempC_L)/16384)*165-40; 
 
     // Send a new measurement request after reading. Cannot be sent before first read
     uint8_t MEASUREMENT_REQUEST[] = {};
@@ -79,20 +79,13 @@ void CC2_sample()
         LOG_ERR("Unable to send measurement request to Chipcap2 sensor. i2c_write failed with error: %d", err);
     }
 
-    // LOG_INF("Chipcap2: Temperature: %d", (int)Temp_C);
-    LOG_INF("Chipcap2: Relative humidity: %d", (int)RH);
+    // LOG_INF("Chipcap2: Temperature: %d", (int)sensor_node_message.sample.cc2_sample.Temp_C);
+    // LOG_INF("Chipcap2: Relative humidity: %d", (int)sensor_node_message.sample.cc2_sample.RH);
 }
 
-void CC2_entry_point(void * foo, void * bar, void * gazonk)
+void CC2_main(void * foo, void * bar, void * gazonk)
 {
-    LOG_INF("CC2 Thread running...");
    	CC2_init();
-    while (true) 
-    {
-        k_sched_lock();
-        CC2_sample();
-        k_sched_unlock();
-        k_sleep(30000);
-    }
+    CC2_sample();
 }
 

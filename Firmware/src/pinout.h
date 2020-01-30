@@ -18,7 +18,7 @@
 #define _PINOUT_H_
 
 #define CS_ADC  28
-#define CS_OPC  25
+#define CS_OPC  29
 #define CS_SX1276 22
 
 #define ADC_RESET 30

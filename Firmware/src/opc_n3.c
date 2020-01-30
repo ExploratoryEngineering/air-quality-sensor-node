@@ -22,7 +22,7 @@
 #include "spi_config.h"
 #include <logging/log.h>
 #include <math.h>
-
+#include "messagebuffer.h"
 
 // Note:
 //          1) The first histogram must be discarded, since it doesn't contain PM-data (although it has temperature, 
@@ -31,10 +31,10 @@
 //             The documentation mentions that the Autogain toggle will cease until the next reset, but it is rather vague 
 //             regarding the effects of the gain settings and autogain.
 
+extern SENSOR_NODE_MESSAGE sensor_node_message;
 
 #define LOG_LEVEL CONFIG_EE06_LOG_LEVEL
 LOG_MODULE_DECLARE(EE06);
-
 
 struct spi_config OPC_config;
 //struct spi_cs_control OPC_control;
@@ -63,7 +63,7 @@ void OPC_releaseChipSelect(void)
 
 void OPC_init()
 {
-    LOG_INF("OPC_N3 - Init.");
+    // LOG_INF("OPC_N3 - Init.");
 
     OPC_spi_dev = get_SPI_device();
     OPC_config.cs = NULL;
@@ -71,10 +71,10 @@ void OPC_init()
     OPC_config.operation = SPI_OP_MODE_MASTER | SPI_WORD_SET(8) | SPI_TRANSFER_MSB | SPI_MODE_CPHA;
     OPC_config.slave = 0;
 
-    LOG_INF("OPC_config cs: %d", (int)OPC_config.cs);
-	LOG_INF("OPC_config frequency: %d", (int)OPC_config.frequency);
-	LOG_INF("OPC_config operation: %d", (int)OPC_config.operation);
-	LOG_INF("OPC_config slave: %d", (int)OPC_config.slave);
+    // LOG_INF("OPC_config cs: %d", (int)OPC_config.cs);
+	// LOG_INF("OPC_config frequency: %d", (int)OPC_config.frequency);
+	// LOG_INF("OPC_config operation: %d", (int)OPC_config.operation);
+	// LOG_INF("OPC_config slave: %d", (int)OPC_config.slave);
 }
 
 
@@ -277,40 +277,42 @@ void Read_DAC_and_power_status()
 
 void peripeherals_power_on()
 {
-    LOG_INF("Switching fan - ON");
+    // LOG_INF("Switching fan - ON");
     OPC_command(OPC_N3_WRITE_PERIPHERAL_POWER_STATUS, OPC_OPTION_FAN_ON, NULL, 0);
     k_sleep(FAN_SETTLING_TIME_MS);
 
-    LOG_INF("Switching laser - ON");
+    // LOG_INF("Switching laser - ON");
     OPC_command(OPC_N3_WRITE_PERIPHERAL_POWER_STATUS, OPC_OPTION_LASER_ON, NULL, 0);
     k_sleep(LASER_SETTLING_TIME_MS);
 }
 
 void peripherals_power_off()
 {
-    LOG_INF("Switching laser - OFF");
+    // LOG_INF("Switching laser - OFF");
     OPC_command(OPC_N3_WRITE_PERIPHERAL_POWER_STATUS, OPC_OPTION_LASER_OFF, NULL, 0);
     k_sleep(LASER_SETTLING_TIME_MS);
 
-    LOG_INF("Switching fan - OFF");
+    // LOG_INF("Switching fan - OFF");
     OPC_command(OPC_N3_WRITE_PERIPHERAL_POWER_STATUS, OPC_OPTION_FAN_OFF, NULL, 0);
     k_sleep(FAN_SETTLING_TIME_MS);
 }
 
 OPC_N3_RESULT OPC_sample()
 {
-
     peripeherals_power_on();
 
-    LOG_INF("Sampling");
+    // LOG_INF("Sampling");
     k_sleep(OPC_SAMPLING_TIME_MS);
 
-    LOG_INF("Initiating transmission of histogram...");
+    // LOG_INF("Initiating transmission of histogram...");
     memset(histogram, 0, OPC_HISTOGRAM_SIZE);
-
     OPC_command(OPC_N3_READ_HISTOGRAM_DATA_AND_RESET_HISTOGRAM, OPC_OPTION_NONE, &histogram[0], OPC_HISTOGRAM_SIZE);
 
-    OPC_trace_historgram();
+//  NOTE: For some arcane reason, it seems that it is necessary with a delay _after_ we have read the histogram,
+//  but _before_ we switch off the peripherals.
+
+    k_sleep(OPC_SAMPLING_TIME_MS);
+//    OPC_trace_historgram();
 
     peripherals_power_off();
 
@@ -318,7 +320,7 @@ OPC_N3_RESULT OPC_sample()
     uint16_t checksum = get_uint16_value(&histogram[OPC_HISTOGRAM_CHECKSUM_INDEX]);
     if (checksum == OPC_calcCRC(histogram, OPC_HISTOGRAM_SIZE-2))
     {
-        LOG_INF("Yay! We have a valid checksum! (%04X)", checksum);
+        // LOG_INF("Yay! We have a valid checksum! (%04X)", checksum);
     }
     else
     {
@@ -333,26 +335,24 @@ OPC_N3_RESULT OPC_sample()
 
 OPC_SAMPLE decode_historgram(bool valid)
 {
-    OPC_SAMPLE sample;
-
     for (int i=0; i<OPC_BINS; i++)
     {
-        sample.bin[i] = get_uint16_value(&histogram[i*2]);
+        sensor_node_message.sample.opc_sample.bin[i] = get_uint16_value(&histogram[i*2]);
     }
-    sample.period = get_uint16_value(&histogram[OPC_SAMPLING_PERIOD_INDEX]);
-    sample.flowrate = get_uint16_value(&histogram[OPC_SAMPLE_FLOWRATE_INDEX]);
+    sensor_node_message.sample.opc_sample.period = get_uint16_value(&histogram[OPC_SAMPLING_PERIOD_INDEX]);
+    sensor_node_message.sample.opc_sample.flowrate = get_uint16_value(&histogram[OPC_SAMPLE_FLOWRATE_INDEX]);
     uint16_t raw_sample_temp = get_uint16_value(&histogram[OPC_TEMPERATURE_INDEX]);
-    sample.temperature = -45 +175*raw_sample_temp/65535;
+    sensor_node_message.sample.opc_sample.temperature = -45 +175*raw_sample_temp/65535;
     uint16_t raw_sample_humidity = get_uint16_value(&histogram[OPC_HUMIDITY_INDEX]);
-    sample.humidity =  100*raw_sample_humidity/65535;
-    sample.pm_a = get_float_value(&histogram[OPC_PM_A_INDEX]);
-    sample.pm_b = get_float_value(&histogram[OPC_PM_B_INDEX]);
-    sample.pm_c = get_float_value(&histogram[OPC_PM_C_INDEX]);
-    sample.fan_rev_count = get_uint16_value(&histogram[OPC_FAN_REV_COUNT_INDEX]);
-    sample.laser_status = get_uint16_value(&histogram[OPC_LASER_STATUS_INDEX]);
-    sample.valid = valid;
+    sensor_node_message.sample.opc_sample.humidity =  100*raw_sample_humidity/65535;
+    sensor_node_message.sample.opc_sample.pm_a = get_float_value(&histogram[OPC_PM_A_INDEX]);
+    sensor_node_message.sample.opc_sample.pm_b = get_float_value(&histogram[OPC_PM_B_INDEX]);
+    sensor_node_message.sample.opc_sample.pm_c = get_float_value(&histogram[OPC_PM_C_INDEX]);
+    sensor_node_message.sample.opc_sample.fan_rev_count = get_uint16_value(&histogram[OPC_FAN_REV_COUNT_INDEX]);
+    sensor_node_message.sample.opc_sample.laser_status = get_uint16_value(&histogram[OPC_LASER_STATUS_INDEX]);
+    sensor_node_message.sample.opc_sample.valid = valid;
 
-    return sample;
+    return sensor_node_message.sample.opc_sample;
 }
 
 void log_sample(OPC_SAMPLE sample)
@@ -373,20 +373,10 @@ void log_sample(OPC_SAMPLE sample)
     LOG_INF("CRC: %s", sample.valid ? "OK" : "INVALID");
 }
 
-void OPC_entry_point(void * foo, void * bar, void * gazonk)
+void OPC_main(void * foo, void * bar, void * gazonk)
 {
    	OPC_init();
-
-    OPC_read_information_string();
-
-    while (true) 
-    {
-        LOG_INF("OPC-N3 Thread running...");
-        k_sched_lock();
-        OPC_SAMPLE sample = decode_historgram(OPC_OK == OPC_sample());
-        log_sample(sample);
-        k_sched_unlock();
-        k_sleep(30000);
-    }
+//    OPC_read_information_string();
+    decode_historgram(OPC_OK == OPC_sample());
 }
 
