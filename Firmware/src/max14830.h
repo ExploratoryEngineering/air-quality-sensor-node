@@ -21,6 +21,8 @@
 
 #define EE_NBIOT_01_ADDRESS 0x61
 
+#define RX_BUFFER_SIZE 256
+
 #define CLOCK_FREQUENCY 3686400
 
 #define LCR_REGISTER 0x0B
@@ -81,7 +83,9 @@ void initUart(uint8_t address, int baudrate, uint8_t wordlength, uint8_t parity,
 int max14830_write(uint8_t address, uint8_t reg, uint8_t data);
 uint8_t max14830_read(uint8_t address, uint8_t reg);
 int sendMessage(uint8_t address, uint8_t * txBuffer, uint8_t txLength);
-void MAX_entry_point(void * foo, void * bar, void * gazonk);
+//void MAX_entry_point(void * foo, void * bar, void * gazonk);
+void MAX_RX_entry_point(void * foo, void * bar, void * gazonk);
+void MAX_init();
 
 // FOTA interface
 // bool uart_write(uint8_t c);

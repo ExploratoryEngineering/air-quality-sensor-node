@@ -26,21 +26,20 @@
 #include "gpio.h"
 #include "pinout.h"
 
-extern struct device * gpio_device;
-
-extern struct k_sem uart_semaphore;
-
-bool dataReady = false;
-
 #define LOG_LEVEL CONFIG_EE06_LOG_LEVEL
 LOG_MODULE_DECLARE(EE06);
 
 
-#define RX_BUFFER_SIZE 256
+extern struct device * gpio_device;
+
+static struct k_sem rx_sem;
+#define RX_SEM_SIZE 128
+static uint8_t rx_buffer[RX_SEM_SIZE];
+
 
 uint8_t RX_BUFFER[RX_BUFFER_SIZE];
 
-// static struct gpio_callback gpio_cb;
+static struct gpio_callback gpio_cb;
 
 int rxIndex = 0;
 
@@ -157,16 +156,16 @@ void EnableTxMode(uint8_t address)
 
 void WaitForTx(uint8_t address)
 {
-     while (max14830_read(address, TxFIFOLvl_REGISTER));
+    while (max14830_read(address, TxFIFOLvl_REGISTER));
 }
 
-// void WaitForRx(uint8_t address)
-// {
-//     int ret;
-//     do {
-//         ret = max14830_read(address, RxFIFOLvl_REGISTER);
-//     } while (0 == ret);
-// }
+void WaitForRx(uint8_t address)
+{
+    int ret;
+    do {
+        ret = max14830_read(address, RxFIFOLvl_REGISTER);
+    } while (0 == ret);
+}
 
 void DiscardWaitingRxJunk(uint8_t address)
 {
@@ -187,12 +186,6 @@ void flushRXBuffer()
 
 int sendMessage(uint8_t address, uint8_t * txBuffer, uint8_t txLength)
 {
-    if (0 != k_sem_take(&uart_semaphore, K_MSEC(100)))
-    {
-        LOG_ERR("(sendMessage) Uart not available");
-        return -1;
-    }
-
     flushRXBuffer();
     DiscardWaitingRxJunk(address);
     EnableTxMode(address);
@@ -204,9 +197,12 @@ int sendMessage(uint8_t address, uint8_t * txBuffer, uint8_t txLength)
     WaitForTx(address);
     EnableRxMode(address);
 
-    k_sem_give(&uart_semaphore);
+    // // We can do this, in order to fake synchronicity, or we can implement a full fledged event driven command / response stack thingy...
+    k_sleep(2000);
+    
     return 0;
 }
+
 
 
 void readFromRxFifo(uint8_t address) 
@@ -249,12 +245,6 @@ void readFromRxFifo(uint8_t address)
 
 void readReply()
 {
-    if (0 != k_sem_take(&uart_semaphore, K_MSEC(100)))
-    {
-        LOG_ERR("(readReply) Uart not available");
-        return;
-    }
-
     // The trigger can be read from any UART 
     uint8_t uart_trigger = max14830_read(EE_NBIOT_01_ADDRESS  , GLOBAL_IRQ_REGISTER); 
 
@@ -275,8 +265,6 @@ void readReply()
     uint8_t cause = max14830_read(uart_address, INTERRUPT_STATUS_REGISTER);
     if (cause & LSRErrInt) 
     {
-        printk("Cause: %02X\n", cause);
-        k_sleep(100);
         // Check the line status register
         uint8_t line_status = max14830_read(uart_address, LSR_REGISTER);
         if ((line_status & RTimeout) || (line_status & RFifoTrigInt))
@@ -284,30 +272,31 @@ void readReply()
             readFromRxFifo(uart_address);
         }
     }
-    k_sem_give(&uart_semaphore);
 }
 
-// void irq_handler(struct device *gpiob, struct gpio_callback *cb, u32_t pins)
-// {
-//     dataReady = true;
-// }
+void irq_handler(struct device *gpiob, struct gpio_callback *cb, u32_t pins)
+{
+    k_sem_give(&rx_sem);
+}
 
 void EnableRxFIFOIrq(uint8_t address)
 {   
-//     gpio_device = get_GPIO_device();
-//     int	ret = gpio_pin_configure(gpio_device, MAX14830_IRQ, GPIO_INT | GPIO_PUD_PULL_UP | GPIO_INT_EDGE | GPIO_INT_ACTIVE_LOW | GPIO_DIR_IN);
-//     if (ret) {
-// 		printk("Error configuring %d!\n", MAX14830_IRQ);
-// 	}
-// 	gpio_init_callback(&gpio_cb, irq_handler, BIT(MAX14830_IRQ));
-// 	ret = gpio_add_callback(gpio_device, &gpio_cb);
-//     if (ret) {
-// 		printk("Error enabling callback %d!\n", MAX14830_IRQ);
-// 	}
-// 	ret = gpio_pin_enable_callback(gpio_device, MAX14830_IRQ);
-//     if (ret) {
-// 		printk("Error enabling callback %d!\n", MAX14830_IRQ);
-// 	}
+    gpio_device = get_GPIO_device();
+    int	ret = gpio_pin_configure(gpio_device, MAX14830_IRQ, GPIO_INT | GPIO_PUD_PULL_UP | GPIO_INT_EDGE | GPIO_INT_ACTIVE_LOW | GPIO_DIR_IN);
+    if (ret) {
+		printk("Error configuring %d!\n", MAX14830_IRQ);
+	}
+	gpio_init_callback(&gpio_cb, irq_handler, BIT(MAX14830_IRQ));
+	ret = gpio_add_callback(gpio_device, &gpio_cb);
+    if (ret) 
+    {
+		LOG_ERR("Error enabling callback %d!\n", MAX14830_IRQ);
+	}
+	ret = gpio_pin_enable_callback(gpio_device, MAX14830_IRQ);
+    if (ret) 
+    {
+		LOG_ERR("Error enabling callback %d!\n", MAX14830_IRQ);
+	}
 
     max14830_write(address, IRQENABLE_REGISTER, RFifoTrgIEn | LSRErrIEn);
     max14830_write(address, FIFOTRIGLVL_REGISTER, (1 << 4));
@@ -318,7 +307,8 @@ void EnableRxFIFOIrq(uint8_t address)
 }
 
 
-void MAX_entry_point(void * foo, void * bar, void * gazonk)
+
+void MAX_init()
 {
     LOG_INF("Initializing MAX14830...\n");
     resetWait();
@@ -329,22 +319,51 @@ void MAX_entry_point(void * foo, void * bar, void * gazonk)
     max14830_read(EE_NBIOT_01_ADDRESS, INTERRUPT_STATUS_REGISTER); // What the actual .... ?
 
     flushRXBuffer();
+    
+    k_sem_init(&rx_sem, 0, RX_SEM_SIZE);
+}
 
-    // For the time being, we are just polling the 14830 IRQ pin
-    u32_t irq_status = -1;
-    while (true) 
+
+void MAX_RX_entry_point(void * foo, void * bar, void * gazonk)
+{
+    LOG_INF("MAX RX Thread running...\n");
+
+    while (true)
     {
-       printk("Waiting for rx...\n");
-       k_sleep(200);
-
-        int ret = gpio_pin_read(get_GPIO_device(), MAX14830_IRQ, &irq_status);
-        if (0 == ret)
-        {
-            if (DATA_READY == irq_status) 
-            {
-                 readReply();
-            }
-        }
-        k_sleep(100);
+        k_sem_take(&rx_sem, K_FOREVER);
+        LOG_INF("GOT a response!");
+        k_sleep(1000);
+        readReply();
     }
 }
+
+// void MAX_entry_point
+// {
+//     LOG_INF("Initializing MAX14830...\n");
+//     resetWait();
+    
+//     // Initialize baud rate, parity, word length and stop bits for each uart
+//     initUart(EE_NBIOT_01_ADDRESS, 9600, 8, NO_PARITY, 1);
+//     EnableRxFIFOIrq(EE_NBIOT_01_ADDRESS);
+//     max14830_read(EE_NBIOT_01_ADDRESS, INTERRUPT_STATUS_REGISTER); // What the actual .... ?
+
+//     flushRXBuffer();
+
+//     // For the time being, we are just polling the 14830 IRQ pin
+//     u32_t irq_status = -1;
+//     while (true) 
+//     {
+//        printk("Waiting for rx...\n");
+//        k_sleep(200);
+
+//         int ret = gpio_pin_read(get_GPIO_device(), MAX14830_IRQ, &irq_status);
+//         if (0 == ret)
+//         {
+//             if (DATA_READY == irq_status) 
+//             {
+//                  readReply();
+//             }
+//         }
+//         k_sleep(100);
+//     }
+// }

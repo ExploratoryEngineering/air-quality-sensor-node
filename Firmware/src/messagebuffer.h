@@ -18,8 +18,15 @@ typedef struct
 typedef union 
 {
     SENSOR_NODE_SAMPLE  sample;
-    uint8_t             bytebuffer[sizeof(SENSOR_NODE_SAMPLE)];
 } SENSOR_NODE_MESSAGE;
+
+#define TRANSMIT_BUFFER_TEXT_SIZE sizeof(SENSOR_NODE_SAMPLE)*2+1
+
+void encodeUint32Value(uint8_t * buffer, unsigned int value);
+void encodeUint16Value(uint8_t * buffer, unsigned int value);
+void encodeUint8Value(uint8_t * buffer, unsigned int value);
+
+uint8_t * encodeNBIotMessage();
 
 void DEBUG_CC2();
 void DEBUG_GPS();

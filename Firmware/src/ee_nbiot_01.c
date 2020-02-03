@@ -20,9 +20,14 @@
 #include <string.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <logging/log.h>
+#include <stdlib.h>
+#include <string.h>
 
 
-/*
+#define LOG_LEVEL CONFIG_EE06_LOG_LEVEL
+LOG_MODULE_DECLARE(EE06);
+
 const char OPEN_SOCKET_CMD[] = {"AT+NSOCR=\"DGRAM\",17,%d,%d\r"};
 const char CLOSE_SOCKET_CMD[] = {"AT+NSOCL=%d\r"};
 const char SEND_MESSAGE_CMD[] = {"AT+NSOST=%d,\"172.16.15.14\",%d,%d,\"%s\"\r"};
@@ -30,31 +35,37 @@ const char CHECK_IP_ADDR_CMD[] = {"AT+CGPADDR\r"};
 const char REBOOT_CMD[] = {"AT+NRB\r"};
 const char ERROR_STATUS_CMD[] = {"AT+CMEE=1\r"};
 
+#define TX_BUFFER_SIZE RX_BUFFER_SIZE
 extern uint8_t RX_BUFFER[RX_BUFFER_SIZE];
 uint8_t TX_REWRITE_BUFFER[TX_BUFFER_SIZE];
 
-int reset_ee_nbiot_01_pin = 02;
-
-
+// int reset_ee_nbiot_01_pin = 02;
 
 bool hasIPAddress() 
 {
-    //console_printf("Checking if the device has been asigned an IP address.\n");
+    LOG_INF("Checking if the device has been asigned an IP address.");
     char * cmd = (char *)CHECK_IP_ADDR_CMD;
     char * response = (char*)RX_BUFFER;
-    console_printf("%s", cmd);
-    sendMessage(EE_NBIOT_01_ADDRESS, (uint8_t*)CHECK_IP_ADDR_CMD, RX_BUFFER);
+    LOG_INF("COMMAND: %s", log_strdup(cmd));
+    sendMessage(EE_NBIOT_01_ADDRESS, (uint8_t*)CHECK_IP_ADDR_CMD, strlen(CHECK_IP_ADDR_CMD));
+
+    LOG_INF("\nResponse length: >>>%d<<<\n",strlen(response));
+    k_sleep(100);
+    LOG_INF("\nResponse: >>>%s<<<\n",log_strdup(response));
+    k_sleep(100);
+
 
     if (strstr(response, "ERROR\r"))
     {
-        console_printf("Error executing AT command: %s. Response: %s\n", cmd, response);
+        LOG_ERR("Error executing AT command: %s. Response: %s", log_strdup(cmd), log_strdup(response));
         return false;
     }
     if (!strstr(response, "OK\r"))
     {
-        console_printf("Incomplete response executing AT command: %s. Response: %s\n", cmd, response);
+        LOG_ERR("Incomplete response executing AT command: %s. Response: %s", log_strdup(cmd), log_strdup(response));
         return false;
     }
+
 
     const char * responseSeparator = "\"";
     char * responseToken = strtok(response, responseSeparator);
@@ -73,33 +84,33 @@ bool hasIPAddress()
         quadToken = strtok(NULL, quadSeparator);
     }
     if (validQuadCount == 4) {
-        console_printf("YAAAAY!, we've got an IP address!\n");
+        LOG_INF("YAAAAY!, we've got an IP address!");
         return true;
     }
 
-    console_printf("BUMMER!, No IP address yet...\n");
+    LOG_INF("BUMMER!, No IP address yet...");
     return false;
 }
 
 int openSocket(int port, RECEIVE_CONTROL ctrl)
 {
-    console_printf("Opening socket.\n");
+    LOG_INF("Opening socket.");
 
     sprintf((char*)TX_REWRITE_BUFFER, (char*)OPEN_SOCKET_CMD, port, ctrl);
-    console_printf("%s\n", TX_REWRITE_BUFFER);
-    sendMessage(EE_NBIOT_01_ADDRESS, TX_REWRITE_BUFFER, RX_BUFFER);
+    LOG_INF("%s\n", log_strdup(TX_REWRITE_BUFFER));
+    sendMessage(EE_NBIOT_01_ADDRESS, TX_REWRITE_BUFFER, strlen(TX_REWRITE_BUFFER));
     char * cmd = (char*)TX_REWRITE_BUFFER;
     char * response = (char*)RX_BUFFER;
-    console_printf("Open socket response:%s\n", response);
+    LOG_INF("Open socket response:%s", log_strdup(response));
 
     if (strstr(response, "ERROR\r"))
     {
-        console_printf("Error executing AT command: %s. Response: %s\n", cmd, response);
+        LOG_ERR("Error executing AT command: %s. Response: %s", log_strdup(cmd), log_strdup(response));
         return -1;
     }
     if (!strstr(response, "OK\r"))
     {
-        console_printf("Incomplete response executing AT command: %s. Response: %s\n", cmd, response);
+        LOG_ERR("Incomplete response executing AT command: %s. Response: %s", log_strdup(cmd), log_strdup(response));
         return -1;
     }
 
@@ -110,23 +121,23 @@ int openSocket(int port, RECEIVE_CONTROL ctrl)
 
 bool closeSocket(int socket)
 {
-    console_printf("Closing socket.\n");
+    LOG_INF("Closing socket.");
 
     sprintf((char*)TX_REWRITE_BUFFER, (char*)CLOSE_SOCKET_CMD, socket);
-    console_printf("%s\n", TX_REWRITE_BUFFER);
-    sendMessage(EE_NBIOT_01_ADDRESS, TX_REWRITE_BUFFER, RX_BUFFER);
+    LOG_INF("%s\n", log_strdup(TX_REWRITE_BUFFER));
+    sendMessage(EE_NBIOT_01_ADDRESS, TX_REWRITE_BUFFER, strlen(TX_REWRITE_BUFFER));
     char * cmd = (char*)TX_REWRITE_BUFFER;
     char * response = (char*)RX_BUFFER;
-    console_printf("Close socket response:%s\n", response);
+    LOG_INF("Close socket response:%s", log_strdup(response));
 
     if (strstr(response, "ERROR\r"))
     {
-        console_printf("Error executing AT command: %s. Response: %s\n", cmd, response);
+        LOG_ERR("Error executing AT command: %s. Response: %s", log_strdup(cmd), log_strdup(response));
         return false;
     }
     if (!strstr(response, "OK\r"))
     {
-        console_printf("Incomplete response executing AT command: %s. Response: %s\n", cmd, response);
+        LOG_ERR("Incomplete response executing AT command: %s. Response: %s", log_strdup(cmd), log_strdup(response));
         return true;
     }
 
@@ -135,26 +146,26 @@ bool closeSocket(int socket)
 
 bool sendNBIoTMessage(int port, char * message)
 {
-    console_printf("Sending NB-IoT message.\n");
+    LOG_INF("Sending NB-IoT message.");
 
     bool retVal = false;
     int socket = openSocket(port, IGNORE_INCOMING_MESSAGES);
 
     sprintf((char*)TX_REWRITE_BUFFER, (char*)SEND_MESSAGE_CMD, socket, port, strlen(message)/2, message);
     //console_printf("REWRITTEN MESSAGE: %s\n", TX_REWRITE_BUFFER);
-    sendMessage(EE_NBIOT_01_ADDRESS, TX_REWRITE_BUFFER, RX_BUFFER);
+    sendMessage(EE_NBIOT_01_ADDRESS, TX_REWRITE_BUFFER, strlen(TX_REWRITE_BUFFER));
 
     char * cmd = (char*)TX_REWRITE_BUFFER;
     char * response = (char*)RX_BUFFER;
-    console_printf("Send message response:%s\n", response);
+    LOG_INF("Send message response:%s", log_strdup(response));
 
     if (strstr(response, "ERROR\r"))
     {
-        console_printf("Error executing AT command: %s. Response: %s\n", cmd, response);
+        LOG_ERR("Error executing AT command: %s. Response: %s\n", log_strdup(cmd), log_strdup(response));
     }
     if (!strstr(response, "OK\r"))
     {
-        console_printf("Incomplete response executing AT command: %s. Response: %s\n", cmd, response);
+        LOG_ERR("Incomplete response executing AT command: %s. Response: %s", log_strdup(cmd), log_strdup(response));
         retVal = true;
     }
 
@@ -169,28 +180,29 @@ bool sendNBIoTMessage(int port, char * message)
 // -------------------------------------------
 void reboot_ee_nb_iot()
 {
-    console_printf("Rebooting SARA module\n");
-    hal_gpio_write(reset_ee_nbiot_01_pin, 0);
-    os_time_delay(OS_TICKS_PER_SEC);
-    hal_gpio_write(reset_ee_nbiot_01_pin, 1);
-    os_time_delay(OS_TICKS_PER_SEC);
+    LOG_INF("Rebooting SARA module - Work in progress...\n");
+    // hal_gpio_write(reset_ee_nbiot_01_pin, 0);
+    // os_time_delay(OS_TICKS_PER_SEC);
+    // hal_gpio_write(reset_ee_nbiot_01_pin, 1);
+    // os_time_delay(OS_TICKS_PER_SEC);
 
-    os_time_delay(OS_TICKS_PER_SEC*4);
+    // os_time_delay(OS_TICKS_PER_SEC*4);
 
-    sendMessage(EE_NBIOT_01_ADDRESS, (uint8_t*)ERROR_STATUS_CMD, RX_BUFFER);
-    console_printf("Response: %s\n", RX_BUFFER);
+    // sendMessage(EE_NBIOT_01_ADDRESS, (uint8_t*)ERROR_STATUS_CMD, RX_BUFFER);
+
+    sendMessage(EE_NBIOT_01_ADDRESS, (uint8_t*)REBOOT_CMD, strlen(REBOOT_CMD));
+    
+    LOG_INF("Response: %s", RX_BUFFER);
 }
+
 
 void init_ee_nbiot_01()
 {
-    console_printf("NB-IoT init\n");
-
-    hal_gpio_init_out(reset_ee_nbiot_01_pin, 1);
+    LOG_INF("NB-IoT init");
 
     while (!hasIPAddress()) 
     {
-        os_time_delay(OS_TICKS_PER_SEC*2);
+        LOG_INF("Waiting for IP address...");
+        k_sleep(2000);
     }
 }
-
-*/

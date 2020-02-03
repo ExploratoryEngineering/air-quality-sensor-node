@@ -14,7 +14,6 @@
 **  limitations under the License.
 */
 
-/*
 #pragma once
 #include <stdbool.h>
 #include <stdint.h>
@@ -32,5 +31,4 @@ bool closeSocket(int socket);
 bool sendNBIoTMessage(int port, char * message);
 void reboot_ee_nb_iot();
 
-*/
 

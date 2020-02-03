@@ -60,6 +60,7 @@ extern SENSOR_NODE_MESSAGE sensor_node_message;
 u8_t ADS124S08_spi_tx_buffer[SPI_BUF_SIZE];
 u8_t ADS124S08_spi_rx_buffer[SPI_BUF_SIZE];
 
+
 void ADS124S08_select(void)
 {
 	digitalWrite( CS_PIN, LOW );
