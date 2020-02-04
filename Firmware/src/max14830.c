@@ -30,6 +30,13 @@
 #define LOG_LEVEL CONFIG_EE06_LOG_LEVEL
 LOG_MODULE_DECLARE(EE06);
 
+#define MAX_THREAD_PRIORITY -4
+#define MAX_THREAD_STACK_SIZE 1024
+
+struct k_thread max_thread;
+
+K_THREAD_STACK_DEFINE(max_thread_stack, MAX_THREAD_STACK_SIZE);
+
 extern struct device *gpio_device;
 
 static struct k_sem rx_sem;
@@ -314,21 +321,6 @@ void EnableRxFIFOIrq(uint8_t address)
     max14830_write(address, LSRINTEN_REGISTER, 0b00001111);
 }
 
-void MAX_init()
-{
-    LOG_INF("Initializing MAX14830...\n");
-    resetWait();
-
-    // Initialize baud rate, parity, word length and stop bits for each uart
-    initUart(EE_NBIOT_01_ADDRESS, 9600, 8, NO_PARITY, 1);
-    EnableRxFIFOIrq(EE_NBIOT_01_ADDRESS);
-    max14830_read(EE_NBIOT_01_ADDRESS, INTERRUPT_STATUS_REGISTER); // What the actual .... ?
-
-    flushRXBuffer();
-
-    k_sem_init(&rx_sem, 0, RX_SEM_SIZE);
-}
-
 void MAX_RX_entry_point(void *foo, void *bar, void *gazonk)
 {
     LOG_INF("MAX RX Thread running...\n");
@@ -342,33 +334,23 @@ void MAX_RX_entry_point(void *foo, void *bar, void *gazonk)
     }
 }
 
-// void MAX_entry_point
-// {
-//     LOG_INF("Initializing MAX14830...\n");
-//     resetWait();
 
-//     // Initialize baud rate, parity, word length and stop bits for each uart
-//     initUart(EE_NBIOT_01_ADDRESS, 9600, 8, NO_PARITY, 1);
-//     EnableRxFIFOIrq(EE_NBIOT_01_ADDRESS);
-//     max14830_read(EE_NBIOT_01_ADDRESS, INTERRUPT_STATUS_REGISTER); // What the actual .... ?
+void MAX_init()
+{
+    LOG_INF("Initializing MAX14830...\n");
+    resetWait();
 
-//     flushRXBuffer();
+    // Initialize baud rate, parity, word length and stop bits for each uart
+    initUart(EE_NBIOT_01_ADDRESS, 9600, 8, NO_PARITY, 1);
+    EnableRxFIFOIrq(EE_NBIOT_01_ADDRESS);
+    max14830_read(EE_NBIOT_01_ADDRESS, INTERRUPT_STATUS_REGISTER); // What the actual .... ?
 
-//     // For the time being, we are just polling the 14830 IRQ pin
-//     u32_t irq_status = -1;
-//     while (true)
-//     {
-//        printf("Waiting for rx...\n");
-//        k_sleep(200);
+    flushRXBuffer();
 
-//         int ret = gpio_pin_read(get_GPIO_device(), MAX14830_IRQ, &irq_status);
-//         if (0 == ret)
-//         {
-//             if (DATA_READY == irq_status)
-//             {
-//                  readReply();
-//             }
-//         }
-//         k_sleep(100);
-//     }
-// }
+    k_sem_init(&rx_sem, 0, RX_SEM_SIZE);
+
+    k_thread_create(&max_thread, max_thread_stack,
+                    K_THREAD_STACK_SIZEOF(max_thread_stack),
+                    (k_thread_entry_t)MAX_RX_entry_point,
+                    NULL, NULL, NULL, MAX_THREAD_PRIORITY, 0, K_NO_WAIT);
+}
