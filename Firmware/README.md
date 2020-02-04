@@ -13,4 +13,11 @@ west build --pristine -b nrf52_pca10040 Firmware
 west flash
 ```
 
+## Required tools
 
+You'll need `make` to build the image. Releases are managed via the `reto` release tool (available at github.com/ExploratoryEngineering/reto)
+
+## Building
+
+* `make` builds the firmware for nRF52
+* `make flash` builds the firmware and flashes it to the board

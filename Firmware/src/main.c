@@ -34,7 +34,7 @@
 #include "gps.h"
 #include "max14830.h"
 #include "messagebuffer.h"
-#include "ee_nbiot_01.h"
+#include "version.h"
 
 #define LOG_LEVEL CONFIG_EE06_LOG_LEVEL
 LOG_MODULE_REGISTER(EE06);
@@ -47,22 +47,25 @@ LOG_MODULE_REGISTER(EE06);
 K_THREAD_DEFINE(gps_thread_id, GPS_THREAD_STACK_SIZE, GPS_entry_point, NULL, NULL, NULL, GPS_THREAD_PRIORITY, 0, 30000);
 K_THREAD_DEFINE(max_thread_id, MAX_THREAD_STACK_SIZE, MAX_RX_entry_point, NULL, NULL, NULL, MAX_THREAD_PRIORITY, 0, 10000);
 
-struct device * gpio_device;
+struct device *gpio_device;
 extern SENSOR_NODE_MESSAGE sensor_node_message;
 
 bool initialize_board()
 {
 	gpio_device = get_GPIO_device();
 	init_GPIO(gpio_device);
-	if (NULL == gpio_device) {
+	if (NULL == gpio_device)
+	{
 		LOG_ERR("Unable to initialize GPIO device");
 		return false;
 	}
-	if (NULL == get_I2C_device()) {
+	if (NULL == get_I2C_device())
+	{
 		LOG_ERR("Unable to initialize I2C device");
 		return false;
 	}
-	if (NULL == get_SPI_device()) {
+	if (NULL == get_SPI_device())
+	{
 		LOG_ERR("Unable to initialize SPI device");
 		return false;
 	}
@@ -81,8 +84,10 @@ void main(void)
 		LOG_INF("Nothing to see here...");
 	}
 #else
+	LOG_INF("This is the AQ node with version %s (%s).\n", AQ_VERSION, AQ_NAME);
+
 	printk("Air quality sensor node\n");
-	k_sleep(5000);	// (Testing only) Delay for manual powercycling and JLink
+	k_sleep(5000); // (Testing only) Delay for manual powercycling and JLink
 
 	if (!initialize_board())
 	{
@@ -93,7 +98,6 @@ void main(void)
 	LOG_INF("Message size: %d", sizeof(SENSOR_NODE_MESSAGE));
 
 	MAX_init();
-	init_ee_nbiot_01();
 
 	while (1)
 	{
@@ -102,17 +106,13 @@ void main(void)
 		// ADC_main(NULL, NULL, NULL);
 		// OPC_main(NULL, NULL, NULL);
 
-		LOG_INF("Transmitting...");
-		reboot_ee_nb_iot();
-		// TODO: 
+		// TODO:
 		// 	1) encodoe + TX
 		// 	2) TX interval
 		// 	3) FOTA
 		//  4) Updtime info (AFE warmup meta)
 		//	5) Register AFE serial in Horde
 		//	6) Version number in message
-		k_sleep(5000);
-
 
 		// DEBUG_CC2();
 		// DEBUG_GPS();
