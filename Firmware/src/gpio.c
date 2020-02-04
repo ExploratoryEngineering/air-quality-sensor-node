@@ -29,32 +29,34 @@ LOG_MODULE_DECLARE(EE06);
 
 static struct device *gpio_dev = NULL;
 
-
 int ConfigureOutputPin(u32_t pin)
 {
-    int	ret = gpio_pin_configure(gpio_dev, pin, (GPIO_DIR_OUT));
-	if (ret) {
-		printk("Error configuring %d!\n", pin);
-	}
+    int ret = gpio_pin_configure(gpio_dev, pin, (GPIO_DIR_OUT));
+    if (ret)
+    {
+        printf("Error configuring %d!\n", pin);
+    }
     return ret;
 }
 
 int ConfigureInputPin(u32_t pin)
 {
-    int	ret = gpio_pin_configure(gpio_dev, pin, (GPIO_DIR_IN));
-	if (ret) {
-		printk("Error configuring %d!\n", pin);
-	}
+    int ret = gpio_pin_configure(gpio_dev, pin, (GPIO_DIR_IN));
+    if (ret)
+    {
+        printf("Error configuring %d!\n", pin);
+    }
     return ret;
 }
 
-struct device * get_GPIO_device()
+struct device *get_GPIO_device()
 {
     if (gpio_dev == NULL)
     {
         gpio_dev = device_get_binding(DT_GPIO_P0_DEV_NAME);
-        if (!gpio_dev) {
-            printk("YIKES ! Cannot find %s!\n", DT_GPIO_P0_DEV_NAME);
+        if (!gpio_dev)
+        {
+            printf("YIKES ! Cannot find %s!\n", DT_GPIO_P0_DEV_NAME);
             return NULL;
         }
     }
@@ -73,8 +75,8 @@ void init_GPIO()
     ConfigureOutputPin(CS_ADC);
     ConfigureOutputPin(ADC_SYNC);
     ConfigureOutputPin(ADC_RESET);
-	// ConfigureOutputPin(CKEN_PIN);
-	// ConfigureOutputPin(DRDY_PIN);
+    // ConfigureOutputPin(CKEN_PIN);
+    // ConfigureOutputPin(DRDY_PIN);
     gpio_pin_write(gpio_dev, ADC_SYNC, 0);
     gpio_pin_write(gpio_dev, ADC_RESET, 0);
     k_sleep(1000);
@@ -86,7 +88,7 @@ void init_GPIO()
     LOG_INF("Configuring OPC-N3 IO");
     ConfigureOutputPin(CS_OPC);
     gpio_pin_write(gpio_dev, CS_OPC, 1);
- 
+
     // GPS
     LOG_INF("Configuring GPS IO");
     ConfigureOutputPin(GPS_FORCE_ON);
@@ -109,11 +111,12 @@ void init_GPIO()
     k_sleep(1000);
     gpio_pin_write(gpio_dev, MAX14830_RESET, 1);
     k_sleep(1000);
-    int	ret = gpio_pin_configure(gpio_dev, MAX14830_IRQ, GPIO_DIR_IN | GPIO_PUD_PULL_UP);
-    if (ret) {
-		printk("Error configuring %d!\n", MAX14830_IRQ);
-	}
-	
+    int ret = gpio_pin_configure(gpio_dev, MAX14830_IRQ, GPIO_DIR_IN | GPIO_PUD_PULL_UP);
+    if (ret)
+    {
+        printf("Error configuring %d!\n", MAX14830_IRQ);
+    }
+
     // EE-NBIOT-01/02
     ConfigureOutputPin(EE_NBIOT_01_RESET);
     gpio_pin_write(gpio_dev, EE_NBIOT_01_RESET, 1);
@@ -132,10 +135,11 @@ void gps_reset()
     gpio_pin_write(gpio_dev, GPS_FORCE_ON, 1);
 }
 
-int UnSelect(u32_t pin) 
+int UnSelect(u32_t pin)
 {
     int ret = gpio_pin_write(gpio_dev, pin, 1);
-    if (ret) {
+    if (ret)
+    {
         printf("Error unselecting : %d!\n", pin);
     }
     return ret;
@@ -145,7 +149,6 @@ void UnselectAllSPI()
 {
     UnSelect(CS_OPC);
     UnSelect(CS_ADC);
-    
 }
 
 int Select(u32_t pin)
@@ -153,16 +156,18 @@ int Select(u32_t pin)
     UnselectAllSPI();
 
     int ret = gpio_pin_write(gpio_dev, pin, 0);
-    if (ret) {
+    if (ret)
+    {
         printf("Error unselecting : %d!\n", pin);
     }
     return ret;
 }
 
-int digitalWrite( u32_t pin, u32_t value )
+int digitalWrite(u32_t pin, u32_t value)
 {
     int ret = gpio_pin_write(gpio_dev, pin, value);
-    if (ret) {
+    if (ret)
+    {
         printf("Error writing %d to pin %d.\n", value, pin);
     }
     return ret;

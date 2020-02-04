@@ -4,7 +4,6 @@
 #include <logging/log.h>
 LOG_MODULE_REGISTER(n2_comms);
 
-
 #include <zephyr.h>
 #include <device.h>
 #include <uart.h>
@@ -27,7 +26,6 @@ static struct k_sem urc_sem;
 static uint8_t urcbuffer[URC_SIZE];
 static struct ring_buf urc_rb;
 static struct k_sem rx_sem;
-
 
 #define URC_THREAD_STACK 512
 #define URC_THREAD_PRIORITY (CONFIG_NUM_COOP_PRIORITIES)
@@ -114,7 +112,7 @@ static void uart_isr(void *user_data)
             return;
         }
 #if DUMP_MODEM
-        printk("%c", data);
+        printf("%c", data);
 #endif
         if (prev == '\n' && data == '+')
         {
@@ -143,13 +141,14 @@ static void uart_isr(void *user_data)
 void modem_write(const char *cmd)
 {
 #if DUMP_MODEM
-    printk("%s", cmd);
+    printf("%s", cmd);
 #endif
     struct device *uart_dev = device_get_binding(UART_NAME);
-	if (!uart_dev) {
-		LOG_ERR("Cannot get UART device");
-		return;
-	}
+    if (!uart_dev)
+    {
+        LOG_ERR("Cannot get UART device");
+        return;
+    }
 
     for (int i = 0; i < strlen(cmd); i++)
     {
@@ -205,7 +204,6 @@ void modem_init(void)
                     K_THREAD_STACK_SIZEOF(urc_thread_stack),
                     (k_thread_entry_t)urc_threadproc,
                     NULL, NULL, NULL, K_PRIO_COOP(URC_THREAD_PRIORITY), 0, K_NO_WAIT);
-
 
     struct device *uart_dev = device_get_binding(UART_NAME);
     if (!uart_dev)

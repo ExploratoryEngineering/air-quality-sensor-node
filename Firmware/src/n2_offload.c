@@ -51,7 +51,7 @@ static char modem_command_buffer[CMD_BUFFER_SIZE];
 #define TO_HEX(i) (i <= 9 ? '0' + i : 'A' - 10 + i)
 #define S_TO_I(s) (s - 100)
 #define I_TO_S(i) (i + 100)
-#define VALID_SOCKET(s) (s >= 100 && s <= (100 + MDM_MAX_SOCKETS) && sockets[s-100].in_use)
+#define VALID_SOCKET(s) (s >= 100 && s <= (100 + MDM_MAX_SOCKETS) && sockets[s - 100].in_use)
 
 static struct k_sem mdm_sem;
 
@@ -120,7 +120,8 @@ static int offload_connect(int sfd, const struct sockaddr *addr,
 static int offload_poll(struct pollfd *fds, int nfds, int msecs)
 {
     // Not *quite* how it should behave but close enough.
-    if (msecs > 0) {
+    if (msecs > 0)
+    {
         k_sleep(msecs);
     }
     k_sem_take(&mdm_sem, K_FOREVER);
@@ -167,7 +168,8 @@ static int offload_recvfrom(int sfd, void *buf, short int len,
 
     // Use NSORF to read incoming data.
     memset(modem_command_buffer, 0, sizeof(modem_command_buffer));
-    if (len > MAX_RECEIVE) {
+    if (len > MAX_RECEIVE)
+    {
         len = MAX_RECEIVE;
     }
     sprintf(modem_command_buffer, "AT+NSORF=%d,%d\r", sockets[sock_fd].id, len);
@@ -268,12 +270,21 @@ static int offload_sendto(int sfd, const void *buf, size_t len,
         k_sem_give(&mdm_sem);
         return -EINVAL;
     }
-
-    sprintf(modem_command_buffer,
-            "AT+NSOST=%d,\"%s\",%d,%d,\"",
+#pragma GCC diagnostic push
+    // This raises a warning but the contents *does* fit into the buffer.
+    // modem_command_buffer is 64 bytes. Worst case is the following
+    //          1         2         3         4         5
+    // 12345678901234567890123456789012345678901234567890
+    // ---------|---------|---------|---------|---------|
+    // AT+NSOST=n,"nnn.nnn.nnn.nnn",nnnnnn,nnn,"
+    //
+    // IPv6 is a different story but N210 only supports IPv4.
+#pragma GCC diagnostic ignored "-Wformat-overflow"
+    sprintf(modem_command_buffer, "AT+NSOST=%d,\"%s\",%d,%d,\"",
             sockets[sock_fd].id, addr,
             ntohs(toaddr->sin_port),
             len);
+#pragma GCC diagnostic pop
 
     modem_write(modem_command_buffer);
 
@@ -344,13 +355,16 @@ static int offload_socket(int family, int type, int proto)
 
     k_sem_take(&mdm_sem, K_FOREVER);
     int fd = INVALID_FD;
-    for (int i = 0; i < MDM_MAX_SOCKETS; i++) {
-        if (!sockets[i].in_use) {
+    for (int i = 0; i < MDM_MAX_SOCKETS; i++)
+    {
+        if (!sockets[i].in_use)
+        {
             fd = i;
             break;
         }
     }
-    if (fd == INVALID_FD) {
+    if (fd == INVALID_FD)
+    {
         k_sem_give(&mdm_sem);
         return -ENOMEM;
     }

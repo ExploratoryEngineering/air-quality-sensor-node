@@ -77,7 +77,7 @@ bool initialize_board()
 void main(void)
 {
 #ifdef EE_04
-	printk("EE-04\n");
+	printf("EE-04\n");
 	while (1)
 	{
 		k_sleep(2000);
@@ -86,7 +86,6 @@ void main(void)
 #else
 	LOG_INF("This is the AQ node with version %s (%s).\n", AQ_VERSION, AQ_NAME);
 
-	printk("Air quality sensor node\n");
 	k_sleep(5000); // (Testing only) Delay for manual powercycling and JLink
 
 	if (!initialize_board())

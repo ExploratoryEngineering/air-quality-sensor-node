@@ -22,6 +22,7 @@
 #include <i2c.h>
 #include "i2c_config.h"
 #include <logging/log.h>
+#include <stdio.h>
 #include <gpio.h>
 #include "gpio.h"
 #include "pinout.h"
@@ -29,13 +30,10 @@
 #define LOG_LEVEL CONFIG_EE06_LOG_LEVEL
 LOG_MODULE_DECLARE(EE06);
 
-
-extern struct device * gpio_device;
+extern struct device *gpio_device;
 
 static struct k_sem rx_sem;
 #define RX_SEM_SIZE 128
-static uint8_t rx_buffer[RX_SEM_SIZE];
-
 
 uint8_t RX_BUFFER[RX_BUFFER_SIZE];
 
@@ -72,23 +70,25 @@ void initUart(uint8_t address, int baud, uint8_t wordlength, uint8_t parity, uin
 {
     unsigned int mode = 0, clk = CLOCK_FREQUENCY, div = clk / baud;
 
-	// Check for minimal value for divider
-	if (div < 16)
-		div = 16;
+    // Check for minimal value for divider
+    if (div < 16)
+        div = 16;
 
-	if (clk % baud && (div / 16) < 0x8000) {
-		// Mode x2 
-		mode = MODE2XBIT;
-		clk = CLOCK_FREQUENCY * 2;
-		div = clk / baud;
+    if (clk % baud && (div / 16) < 0x8000)
+    {
+        // Mode x2
+        mode = MODE2XBIT;
+        clk = CLOCK_FREQUENCY * 2;
+        div = clk / baud;
 
         // Mode x4
-		if (clk % baud && (div / 16) < 0x8000) {
-			mode = MODE4XBIT;
-			clk = CLOCK_FREQUENCY * 4;
-			div = clk / baud;
-		}
-	}
+        if (clk % baud && (div / 16) < 0x8000)
+        {
+            mode = MODE4XBIT;
+            clk = CLOCK_FREQUENCY * 4;
+            div = clk / baud;
+        }
+    }
     LOG_INF("MAX14830: Base clock frequency: %d, Address: %02X, UART baudrate: %d, divisor: %d, mode: %d\n", CLOCK_FREQUENCY, address, baud, div, mode);
 
     max14830_write(address, DIVLSB_REGISTER, div / 16);
@@ -99,22 +99,29 @@ void initUart(uint8_t address, int baud, uint8_t wordlength, uint8_t parity, uin
 
     switch (parity)
     {
-        case NO_PARITY:     break;
-        case EVEN_PARITY:   lcr |= 0b00011000; 
-                            break;
-        case ODD_PARITY:    lcr |= 0b00001000; 
-                            break;
+    case NO_PARITY:
+        break;
+    case EVEN_PARITY:
+        lcr |= 0b00011000;
+        break;
+    case ODD_PARITY:
+        lcr |= 0b00001000;
+        break;
     }
 
     switch (wordlength)
     {
-        case 5: break;
-        case 6: lcr |= 0b00000001;
-                break;
-        case 7: lcr |= 0b00000010;
-                break;
-        case 8: lcr |= 0b00000011;
-                break;
+    case 5:
+        break;
+    case 6:
+        lcr |= 0b00000001;
+        break;
+    case 7:
+        lcr |= 0b00000010;
+        break;
+    case 8:
+        lcr |= 0b00000011;
+        break;
     }
 
     if (stopBits != 0)
@@ -133,7 +140,8 @@ void resetWait()
 {
     LOG_INF("MAX14830: Waiting for reset signal...\n");
     u32_t resetVal;
-    do {
+    do
+    {
         LOG_INF("MAX14830: Waiting...\n");
         k_sleep(1);
         gpio_pin_read(get_GPIO_device(), MAX14830_IRQ, &resetVal);
@@ -156,13 +164,15 @@ void EnableTxMode(uint8_t address)
 
 void WaitForTx(uint8_t address)
 {
-    while (max14830_read(address, TxFIFOLvl_REGISTER));
+    while (max14830_read(address, TxFIFOLvl_REGISTER))
+        ;
 }
 
 void WaitForRx(uint8_t address)
 {
     int ret;
-    do {
+    do
+    {
         ret = max14830_read(address, RxFIFOLvl_REGISTER);
     } while (0 == ret);
 }
@@ -170,27 +180,27 @@ void WaitForRx(uint8_t address)
 void DiscardWaitingRxJunk(uint8_t address)
 {
     uint8_t fifo = 0;
-    do {
+    do
+    {
         fifo = max14830_read(address, RxFIFOLvl_REGISTER);
         max14830_read(address, RHR_REGISTER);
-    }
-    while (fifo != 0);
+    } while (fifo != 0);
 }
 
 void flushRXBuffer()
 {
     rxIndex = 0;
-    memset(RX_BUFFER, 0, RX_BUFFER_SIZE);    
+    memset(RX_BUFFER, 0, RX_BUFFER_SIZE);
 }
 
-
-int sendMessage(uint8_t address, uint8_t * txBuffer, uint8_t txLength)
+int sendMessage(uint8_t address, uint8_t *txBuffer, uint8_t txLength)
 {
     flushRXBuffer();
     DiscardWaitingRxJunk(address);
     EnableTxMode(address);
 
-    for (int i=0; i<txLength; i++) {
+    for (int i = 0; i < txLength; i++)
+    {
         max14830_write(EE_NBIOT_01_ADDRESS, THR_REGISTER, *txBuffer++);
     }
 
@@ -199,71 +209,68 @@ int sendMessage(uint8_t address, uint8_t * txBuffer, uint8_t txLength)
 
     // // We can do this, in order to fake synchronicity, or we can implement a full fledged event driven command / response stack thingy...
     k_sleep(2000);
-    
+
     return 0;
 }
 
-
-
-void readFromRxFifo(uint8_t address) 
+void readFromRxFifo(uint8_t address)
 {
     uint8_t fifo_level = 0;
     uint8_t ch;
-    while (true) 
+    while (true)
     {
         fifo_level = max14830_read(address, RxFIFOLvl_REGISTER);
-        if (0 == fifo_level) 
+        if (0 == fifo_level)
         {
             break;
         }
         ch = max14830_read(address, RHR_REGISTER);
 
-        printk("%c ", ch);
-        if ('\r' == ch) 
+        printf("%c ", ch);
+        if ('\r' == ch)
         {
-            printk("\n");
+            printf("\n");
             // TODO: Copy RX_BUFFER into response message and flushrx
         }
         k_sleep(1);
 
         RX_BUFFER[rxIndex] = ch;
-        RX_BUFFER[rxIndex+1] = 0;
+        RX_BUFFER[rxIndex + 1] = 0;
         rxIndex++;
-        
-        if (rxIndex > RX_BUFFER_SIZE-1)
+
+        if (rxIndex > RX_BUFFER_SIZE - 1)
         {
             rxIndex = 0;
             LOG_ERR("Woops. Slight case of buffer overrun here...\n");
             break;
         }
-    } 
+    }
 
-    printk("\n");
+    printf("\n");
     k_sleep(1);
-
 }
 
 void readReply()
 {
-    // The trigger can be read from any UART 
-    uint8_t uart_trigger = max14830_read(EE_NBIOT_01_ADDRESS  , GLOBAL_IRQ_REGISTER); 
+    // The trigger can be read from any UART
+    uint8_t uart_trigger = max14830_read(EE_NBIOT_01_ADDRESS, GLOBAL_IRQ_REGISTER);
 
     uint8_t uart_address = 0;
     uart_trigger &= 0x0F;
     if (uart_trigger == 0x0F)
         return;
     // The UART multiplexer supports up to 4 channels (so far, we're only using UART0)
-    if ((uart_trigger & 0b0001) == 0) 
+    if ((uart_trigger & 0b0001) == 0)
     {
-        uart_address = EE_NBIOT_01_ADDRESS; 
-    } 
+        uart_address = EE_NBIOT_01_ADDRESS;
+    }
     // else {
     //     // uart_address = <other device>
     // }
 
-    // Check interrupt cause. 
+    // Check interrupt cause.
     uint8_t cause = max14830_read(uart_address, INTERRUPT_STATUS_REGISTER);
-    if (cause & LSRErrInt) 
+    if (cause & LSRErrInt)
     {
         // Check the line status register
         uint8_t line_status = max14830_read(uart_address, LSR_REGISTER);
@@ -280,23 +287,24 @@ void irq_handler(struct device *gpiob, struct gpio_callback *cb, u32_t pins)
 }
 
 void EnableRxFIFOIrq(uint8_t address)
-{   
+{
     gpio_device = get_GPIO_device();
-    int	ret = gpio_pin_configure(gpio_device, MAX14830_IRQ, GPIO_INT | GPIO_PUD_PULL_UP | GPIO_INT_EDGE | GPIO_INT_ACTIVE_LOW | GPIO_DIR_IN);
-    if (ret) {
-		printk("Error configuring %d!\n", MAX14830_IRQ);
-	}
-	gpio_init_callback(&gpio_cb, irq_handler, BIT(MAX14830_IRQ));
-	ret = gpio_add_callback(gpio_device, &gpio_cb);
-    if (ret) 
+    int ret = gpio_pin_configure(gpio_device, MAX14830_IRQ, GPIO_INT | GPIO_PUD_PULL_UP | GPIO_INT_EDGE | GPIO_INT_ACTIVE_LOW | GPIO_DIR_IN);
+    if (ret)
     {
-		LOG_ERR("Error enabling callback %d!\n", MAX14830_IRQ);
-	}
-	ret = gpio_pin_enable_callback(gpio_device, MAX14830_IRQ);
-    if (ret) 
+        LOG_ERR("Error configuring %d!\n", MAX14830_IRQ);
+    }
+    gpio_init_callback(&gpio_cb, irq_handler, BIT(MAX14830_IRQ));
+    ret = gpio_add_callback(gpio_device, &gpio_cb);
+    if (ret)
     {
-		LOG_ERR("Error enabling callback %d!\n", MAX14830_IRQ);
-	}
+        LOG_ERR("Error enabling callback %d!\n", MAX14830_IRQ);
+    }
+    ret = gpio_pin_enable_callback(gpio_device, MAX14830_IRQ);
+    if (ret)
+    {
+        LOG_ERR("Error enabling callback %d!\n", MAX14830_IRQ);
+    }
 
     max14830_write(address, IRQENABLE_REGISTER, RFifoTrgIEn | LSRErrIEn);
     max14830_write(address, FIFOTRIGLVL_REGISTER, (1 << 4));
@@ -306,25 +314,22 @@ void EnableRxFIFOIrq(uint8_t address)
     max14830_write(address, LSRINTEN_REGISTER, 0b00001111);
 }
 
-
-
 void MAX_init()
 {
     LOG_INF("Initializing MAX14830...\n");
     resetWait();
-    
+
     // Initialize baud rate, parity, word length and stop bits for each uart
     initUart(EE_NBIOT_01_ADDRESS, 9600, 8, NO_PARITY, 1);
     EnableRxFIFOIrq(EE_NBIOT_01_ADDRESS);
     max14830_read(EE_NBIOT_01_ADDRESS, INTERRUPT_STATUS_REGISTER); // What the actual .... ?
 
     flushRXBuffer();
-    
+
     k_sem_init(&rx_sem, 0, RX_SEM_SIZE);
 }
 
-
-void MAX_RX_entry_point(void * foo, void * bar, void * gazonk)
+void MAX_RX_entry_point(void *foo, void *bar, void *gazonk)
 {
     LOG_INF("MAX RX Thread running...\n");
 
@@ -341,7 +346,7 @@ void MAX_RX_entry_point(void * foo, void * bar, void * gazonk)
 // {
 //     LOG_INF("Initializing MAX14830...\n");
 //     resetWait();
-    
+
 //     // Initialize baud rate, parity, word length and stop bits for each uart
 //     initUart(EE_NBIOT_01_ADDRESS, 9600, 8, NO_PARITY, 1);
 //     EnableRxFIFOIrq(EE_NBIOT_01_ADDRESS);
@@ -351,15 +356,15 @@ void MAX_RX_entry_point(void * foo, void * bar, void * gazonk)
 
 //     // For the time being, we are just polling the 14830 IRQ pin
 //     u32_t irq_status = -1;
-//     while (true) 
+//     while (true)
 //     {
-//        printk("Waiting for rx...\n");
+//        printf("Waiting for rx...\n");
 //        k_sleep(200);
 
 //         int ret = gpio_pin_read(get_GPIO_device(), MAX14830_IRQ, &irq_status);
 //         if (0 == ret)
 //         {
-//             if (DATA_READY == irq_status) 
+//             if (DATA_READY == irq_status)
 //             {
 //                  readReply();
 //             }

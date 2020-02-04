@@ -1,4 +1,4 @@
-    #include <zephyr.h>
+#include <zephyr.h>
 #include <logging/log.h>
 #include <stdio.h>
 #include "messagebuffer.h"
@@ -9,23 +9,23 @@ uint8_t TRANSMIT_BUFFER_TEXT[TRANSMIT_BUFFER_TEXT_SIZE];
 
 char tmpBuf[256];
 
-void zepyr_annoying_printk(char * msg)
+void zepyr_annoying_printk(char *msg)
 {
-    printk("%s", msg);
+    printf("%s", msg);
     k_sleep(50);
 }
 
-void encodeUint32Value(uint8_t * buffer, unsigned int value)
+void encodeUint32Value(uint8_t *buffer, unsigned int value)
 {
     sprintf(buffer, "%02X%02X%02X%02X", (value & 0xff000000) >> 24, (value & 0x00ff0000) >> 16, (value & 0x0000ff00) >> 8, (value & 0x000000ff));
 }
 
-void encodeUint16Value(uint8_t * buffer, unsigned int value)
+void encodeUint16Value(uint8_t *buffer, unsigned int value)
 {
     sprintf(buffer, "%02X%02X", (value & 0x0000ff00) >> 8, (value & 0x000000ff));
 }
 
-void encodeUint8Value(uint8_t * buffer, unsigned int value)
+void encodeUint8Value(uint8_t *buffer, unsigned int value)
 {
     sprintf(buffer, "%02X", value);
 }
@@ -48,9 +48,7 @@ void append_encoded_8(unsigned int value)
     strcat(TRANSMIT_BUFFER_TEXT, tmpBuf);
 }
 
-
-
-uint8_t * encodeNBIotMessage()
+uint8_t *encodeNBIotMessage()
 {
     // Format is ASCII rerpresentation of hex
     memset(TRANSMIT_BUFFER_TEXT, 0, TRANSMIT_BUFFER_TEXT_SIZE);
@@ -115,7 +113,7 @@ uint8_t * encodeNBIotMessage()
     append_encoded_16(sensor_node_message.sample.opc_sample.fan_rev_count);
     append_encoded_16(sensor_node_message.sample.opc_sample.laser_status);
 
-    for (int i=0; i<OPC_BINS; i++) 
+    for (int i = 0; i < OPC_BINS; i++)
     {
         append_encoded_16(sensor_node_message.sample.opc_sample.bin[i]);
     }
@@ -123,8 +121,6 @@ uint8_t * encodeNBIotMessage()
 
     return &TRANSMIT_BUFFER_TEXT[0];
 }
-
-
 
 void DEBUG_CC2()
 {
@@ -167,7 +163,7 @@ void DEBUG_OPC()
     sprintf(tmpBuf, "    > Validity: %s\n", sensor_node_message.sample.opc_sample.valid ? "YES" : "NO");
     zepyr_annoying_printk(tmpBuf);
     zepyr_annoying_printk("    > Histogram:\n");
-    for (int i=0; i<OPC_BINS; i++) 
+    for (int i = 0; i < OPC_BINS; i++)
     {
         sprintf(tmpBuf, "        bin%02d : %d\n", i, sensor_node_message.sample.opc_sample.bin[i]);
         zepyr_annoying_printk(tmpBuf);

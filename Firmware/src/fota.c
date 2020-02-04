@@ -9,7 +9,6 @@
 
 #include "fota.h"
 
-
 LOG_MODULE_REGISTER(fota, LOG_LEVEL_DBG);
 
 #define FLASH_AREA_IMAGE_SECONDARY DT_FLASH_AREA_IMAGE_1_ID
@@ -185,7 +184,7 @@ static int init_lwm2m_resources()
 		LOG_ERR("Error getting LwM2M server URL data: %d", ret);
 		return ret;
 	}
-	snprintk(server_url, server_url_len, "coap://172.16.15.14:5683");
+	snprintf(server_url, server_url_len, "coap://172.16.15.14:5683");
 
 	// Security Mode (3 == NoSec)
 	ret = lwm2m_engine_set_u8("0/0/2", 3);

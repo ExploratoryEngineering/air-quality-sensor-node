@@ -9,7 +9,7 @@
   "files": [
     {
       "id": "bin",
-      "name": "build/zephyr/zephyr.bin",
+      "name": "build/zephyr/zephyr.signed.bin",
       "target": "nrf25"
     }
   ],
