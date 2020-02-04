@@ -42,7 +42,7 @@ extern struct device *gpio_device;
 static struct k_sem rx_sem;
 #define RX_SEM_SIZE 128
 
-uint8_t RX_BUFFER[RX_BUFFER_SIZE];
+static max_char_callback_t char_callback;
 
 static struct gpio_callback gpio_cb;
 
@@ -194,21 +194,14 @@ void DiscardWaitingRxJunk(uint8_t address)
     } while (fifo != 0);
 }
 
-void flushRXBuffer()
+int sendMessage(uint8_t address, const uint8_t *txBuffer, uint8_t txLength)
 {
-    rxIndex = 0;
-    memset(RX_BUFFER, 0, RX_BUFFER_SIZE);
-}
-
-int sendMessage(uint8_t address, uint8_t *txBuffer, uint8_t txLength)
-{
-    flushRXBuffer();
     DiscardWaitingRxJunk(address);
     EnableTxMode(address);
 
     for (int i = 0; i < txLength; i++)
     {
-        max14830_write(EE_NBIOT_01_ADDRESS, THR_REGISTER, *txBuffer++);
+        max14830_write(address, THR_REGISTER, *txBuffer++);
     }
 
     WaitForTx(address);
@@ -233,28 +226,10 @@ void readFromRxFifo(uint8_t address)
         }
         ch = max14830_read(address, RHR_REGISTER);
 
-        printf("%c ", ch);
-        if ('\r' == ch)
-        {
-            printf("\n");
-            // TODO: Copy RX_BUFFER into response message and flushrx
-        }
-        k_sleep(1);
-
-        RX_BUFFER[rxIndex] = ch;
-        RX_BUFFER[rxIndex + 1] = 0;
-        rxIndex++;
-
-        if (rxIndex > RX_BUFFER_SIZE - 1)
-        {
-            rxIndex = 0;
-            LOG_ERR("Woops. Slight case of buffer overrun here...\n");
-            break;
+        if (char_callback) {
+            char_callback(ch);
         }
     }
-
-    printf("\n");
-    k_sleep(1);
 }
 
 void readReply()
@@ -271,9 +246,6 @@ void readReply()
     {
         uart_address = EE_NBIOT_01_ADDRESS;
     }
-    // else {
-    //     // uart_address = <other device>
-    // }
 
     // Check interrupt cause.
     uint8_t cause = max14830_read(uart_address, INTERRUPT_STATUS_REGISTER);
@@ -329,23 +301,27 @@ void MAX_RX_entry_point(void *foo, void *bar, void *gazonk)
     {
         k_sem_take(&rx_sem, K_FOREVER);
         LOG_INF("GOT a response!");
+        // why this? Are there any things we should know about?
         k_sleep(1000);
+
         readReply();
     }
 }
 
 
-void MAX_init()
+static max_char_callback_t char_callback = NULL;
+
+void MAX_init(max_char_callback_t cb)
 {
     LOG_INF("Initializing MAX14830...\n");
     resetWait();
+
+    char_callback = cb;
 
     // Initialize baud rate, parity, word length and stop bits for each uart
     initUart(EE_NBIOT_01_ADDRESS, 9600, 8, NO_PARITY, 1);
     EnableRxFIFOIrq(EE_NBIOT_01_ADDRESS);
     max14830_read(EE_NBIOT_01_ADDRESS, INTERRUPT_STATUS_REGISTER); // What the actual .... ?
-
-    flushRXBuffer();
 
     k_sem_init(&rx_sem, 0, RX_SEM_SIZE);
 

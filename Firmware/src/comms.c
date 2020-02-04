@@ -12,6 +12,7 @@ LOG_MODULE_REGISTER(n2_comms);
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "max14830.h"
 #include "comms.h"
 #include "at_commands.h"
 
@@ -96,46 +97,35 @@ void urc_threadproc(void)
 /**
  * @brief The ISR for UART rx
  */
-static void uart_isr(void *user_data)
+void comms_handle_char(uint8_t data)
 {
     static char prev = '\n';
     static bool in_urc = false;
-    struct device *dev = (struct device *)user_data;
-    uint8_t data;
-    int rx, rb;
-    while (uart_irq_update(dev) &&
-           uart_irq_rx_ready(dev))
-    {
-        rx = uart_fifo_read(dev, &data, 1);
-        if (rx == 0)
-        {
-            return;
-        }
+    int rb;
 #if DUMP_MODEM
         printf("%c", data);
 #endif
-        if (prev == '\n' && data == '+')
-        {
-            in_urc = true;
-        }
-        if (in_urc)
-        {
-            ring_buf_put(&urc_rb, &data, 1);
-            k_sem_give(&urc_sem);
-        }
-        if (in_urc && data == '\r')
-        {
-            in_urc = false;
-        }
-        rb = ring_buf_put(&rx_rb, &data, 1);
-        if (rb != rx)
-        {
-            LOG_ERR("RX buffer is full. Bytes pending: %d, written: %d", rx, rb);
-            return;
-        }
-        prev = data;
-        k_sem_give(&rx_sem);
+    if (prev == '\n' && data == '+')
+    {
+        in_urc = true;
     }
+    if (in_urc)
+    {
+        ring_buf_put(&urc_rb, &data, 1);
+        k_sem_give(&urc_sem);
+    }
+    if (in_urc && data == '\r')
+    {
+        in_urc = false;
+    }
+    rb = ring_buf_put(&rx_rb, &data, 1);
+    if (rb != 1)
+    {
+        LOG_ERR("RX buffer is full");
+        return;
+    }
+    prev = data;
+    k_sem_give(&rx_sem);
 }
 
 void modem_write(const char *cmd)
@@ -143,17 +133,7 @@ void modem_write(const char *cmd)
 #if DUMP_MODEM
     printf("%s", cmd);
 #endif
-    struct device *uart_dev = device_get_binding(UART_NAME);
-    if (!uart_dev)
-    {
-        LOG_ERR("Cannot get UART device");
-        return;
-    }
-
-    for (int i = 0; i < strlen(cmd); i++)
-    {
-        uart_poll_out(uart_dev, (unsigned char)cmd[i]);
-    }
+    sendMessage(EE_NBIOT_01_ADDRESS, cmd, strlen(cmd));
 }
 
 bool modem_read(uint8_t *b, int32_t timeout)
@@ -205,16 +185,7 @@ void modem_init(void)
                     (k_thread_entry_t)urc_threadproc,
                     NULL, NULL, NULL, K_PRIO_COOP(URC_THREAD_PRIORITY), 0, K_NO_WAIT);
 
-    struct device *uart_dev = device_get_binding(UART_NAME);
-    if (!uart_dev)
-    {
-        LOG_ERR("Unable to load UART device\n");
-        return;
-    }
-
-    uart_irq_callback_user_data_set(uart_dev, uart_isr, uart_dev);
-    uart_irq_rx_enable(uart_dev);
-
+    MAX_init(comms_handle_char);
     // Set up the modem. Might also include AT+CGPADDR to set up PDP context
     // here.
     modem_restart();

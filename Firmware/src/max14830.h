@@ -78,19 +78,17 @@
 #define DATA_READY 0
 #define RTimeout 0b00000001
 
+
+typedef void (*max_char_callback_t)(uint8_t data);
+
 void init_max14830();
 void initUart(uint8_t address, int baudrate, uint8_t wordlength, uint8_t parity, uint8_t stopBits);
 int max14830_write(uint8_t address, uint8_t reg, uint8_t data);
 uint8_t max14830_read(uint8_t address, uint8_t reg);
-int sendMessage(uint8_t address, uint8_t * txBuffer, uint8_t txLength);
+int sendMessage(uint8_t address, const uint8_t * txBuffer, uint8_t txLength);
 //void MAX_entry_point(void * foo, void * bar, void * gazonk);
 void MAX_RX_entry_point(void * foo, void * bar, void * gazonk);
-void MAX_init();
-
-// FOTA interface
-// bool uart_write(uint8_t c);
-// bool uart_poll(uint8_t * c);
-
+void MAX_init(max_char_callback_t cb);
 
 #endif
 

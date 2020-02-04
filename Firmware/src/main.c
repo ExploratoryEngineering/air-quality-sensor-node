@@ -93,8 +93,6 @@ void main(void)
 
 	LOG_INF("Message size: %d", sizeof(SENSOR_NODE_MESSAGE));
 
-	MAX_init();
-
 	while (1)
 	{
 		// LOG_INF("Sampling...");
