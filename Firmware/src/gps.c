@@ -117,9 +117,9 @@ static void GPS_entry_point(void *foo, void *bar, void *gazonk)
     while (true)
     {
         k_sched_lock();
-        if (gps_get_fix(&sensor_node_message.sample.gps_fix))
+        if (gps_get_fix(&sensor_node_message.gps_fix))
         {
-            LOG_INF("----- GPS has fix : %d, %d\n", (int)(sensor_node_message.sample.gps_fix.longitude * 1000), (int)(sensor_node_message.sample.gps_fix.latitude * 1000));
+            LOG_INF("----- GPS has fix : %d, %d\n", (int)(sensor_node_message.gps_fix.longitude * 1000), (int)(sensor_node_message.gps_fix.latitude * 1000));
         }
         else
         {

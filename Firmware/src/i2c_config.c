@@ -27,21 +27,23 @@ LOG_MODULE_REGISTER(I2C_CONFIG);
 
 #define I2C_DEV "I2C_0"
 
+static struct device *i2c_dev = NULL;
+
 struct device *get_I2C_device()
 {
-	struct device *i2c_dev;
-	i2c_dev = device_get_binding(I2C_DEV);
-	if (!i2c_dev)
-	{
-		LOG_ERR("I2C device driver not found");
-		return NULL;
+	if (!i2c_dev) {
+		i2c_dev = device_get_binding(I2C_DEV);
+		if (!i2c_dev)
+		{
+			LOG_ERR("I2C device driver not found");
+			return NULL;
+		}
+		if (i2c_configure(i2c_dev, I2C_SPEED_SET(I2C_SPEED_STANDARD)))
+		{
+			LOG_ERR("I2C configuration failed");
+			return NULL;
+		}
 	}
-	if (i2c_configure(i2c_dev, I2C_SPEED_SET(I2C_SPEED_STANDARD)))
-	{
-		LOG_ERR("I2C configuration failed");
-		return NULL;
-	}
-
 	return i2c_dev;
 }
 

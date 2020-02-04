@@ -339,22 +339,22 @@ OPC_SAMPLE decode_historgram(bool valid)
 {
     for (int i=0; i<OPC_BINS; i++)
     {
-        sensor_node_message.sample.opc_sample.bin[i] = get_uint16_value(&histogram[i*2]);
+        sensor_node_message.opc_sample.bin[i] = get_uint16_value(&histogram[i*2]);
     }
-    sensor_node_message.sample.opc_sample.period = get_uint16_value(&histogram[OPC_SAMPLING_PERIOD_INDEX]);
-    sensor_node_message.sample.opc_sample.flowrate = get_uint16_value(&histogram[OPC_SAMPLE_FLOWRATE_INDEX]);
+    sensor_node_message.opc_sample.period = get_uint16_value(&histogram[OPC_SAMPLING_PERIOD_INDEX]);
+    sensor_node_message.opc_sample.flowrate = get_uint16_value(&histogram[OPC_SAMPLE_FLOWRATE_INDEX]);
     uint16_t raw_sample_temp = get_uint16_value(&histogram[OPC_TEMPERATURE_INDEX]);
-    sensor_node_message.sample.opc_sample.temperature = -45 +175*raw_sample_temp/65535;
+    sensor_node_message.opc_sample.temperature = -45 +175*raw_sample_temp/65535;
     uint16_t raw_sample_humidity = get_uint16_value(&histogram[OPC_HUMIDITY_INDEX]);
-    sensor_node_message.sample.opc_sample.humidity =  100*raw_sample_humidity/65535;
-    sensor_node_message.sample.opc_sample.pm_a = get_float_value(&histogram[OPC_PM_A_INDEX]);
-    sensor_node_message.sample.opc_sample.pm_b = get_float_value(&histogram[OPC_PM_B_INDEX]);
-    sensor_node_message.sample.opc_sample.pm_c = get_float_value(&histogram[OPC_PM_C_INDEX]);
-    sensor_node_message.sample.opc_sample.fan_rev_count = get_uint16_value(&histogram[OPC_FAN_REV_COUNT_INDEX]);
-    sensor_node_message.sample.opc_sample.laser_status = get_uint16_value(&histogram[OPC_LASER_STATUS_INDEX]);
-    sensor_node_message.sample.opc_sample.valid = valid;
+    sensor_node_message.opc_sample.humidity =  100*raw_sample_humidity/65535;
+    sensor_node_message.opc_sample.pm_a = get_float_value(&histogram[OPC_PM_A_INDEX]);
+    sensor_node_message.opc_sample.pm_b = get_float_value(&histogram[OPC_PM_B_INDEX]);
+    sensor_node_message.opc_sample.pm_c = get_float_value(&histogram[OPC_PM_C_INDEX]);
+    sensor_node_message.opc_sample.fan_rev_count = get_uint16_value(&histogram[OPC_FAN_REV_COUNT_INDEX]);
+    sensor_node_message.opc_sample.laser_status = get_uint16_value(&histogram[OPC_LASER_STATUS_INDEX]);
+    sensor_node_message.opc_sample.valid = valid;
 
-    return sensor_node_message.sample.opc_sample;
+    return sensor_node_message.opc_sample;
 }
 
 void log_sample(OPC_SAMPLE sample)

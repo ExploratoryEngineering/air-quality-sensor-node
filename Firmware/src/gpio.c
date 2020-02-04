@@ -49,21 +49,7 @@ int ConfigureInputPin(u32_t pin)
     return ret;
 }
 
-struct device *get_GPIO_device()
-{
-    if (gpio_dev == NULL)
-    {
-        gpio_dev = device_get_binding(DT_GPIO_P0_DEV_NAME);
-        if (!gpio_dev)
-        {
-            printf("YIKES ! Cannot find %s!\n", DT_GPIO_P0_DEV_NAME);
-            return NULL;
-        }
-    }
-    return gpio_dev;
-}
-
-void init_GPIO()
+static void init_GPIO()
 {
     // CS_SX1276
     LOG_INF("Disable ANT_HF_CONTROL");
@@ -114,7 +100,7 @@ void init_GPIO()
     int ret = gpio_pin_configure(gpio_dev, MAX14830_IRQ, GPIO_DIR_IN | GPIO_PUD_PULL_UP);
     if (ret)
     {
-        printf("Error configuring %d!\n", MAX14830_IRQ);
+        printf("Error configuring %d: %d\n", MAX14830_IRQ, ret);
     }
 
     // EE-NBIOT-01/02
@@ -123,6 +109,22 @@ void init_GPIO()
 
     LOG_INF("InitGPIO - done.");
 }
+
+struct device *get_GPIO_device()
+{
+    if (gpio_dev == NULL)
+    {
+        gpio_dev = device_get_binding(DT_GPIO_P0_DEV_NAME);
+        if (!gpio_dev)
+        {
+            printf("YIKES ! Cannot find %s!\n", DT_GPIO_P0_DEV_NAME);
+            return NULL;
+        }
+        init_GPIO();
+    }
+    return gpio_dev;
+}
+
 
 void gps_reset()
 {

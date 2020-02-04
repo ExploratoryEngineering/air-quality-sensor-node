@@ -1,75 +1,60 @@
 #include <zephyr.h>
-#include <logging/log.h>
 #include <stdio.h>
+#include <string.h>
 #include "messagebuffer.h"
 #include "gps_cache.h"
 
 SENSOR_NODE_MESSAGE sensor_node_message;
-uint8_t TRANSMIT_BUFFER_TEXT[TRANSMIT_BUFFER_TEXT_SIZE];
 
-char tmpBuf[256];
+#define TRANSMIT_BUFFER_SIZE sizeof(SENSOR_NODE_MESSAGE)+1
 
-void zepyr_annoying_printk(char *msg)
-{
-    printf("%s", msg);
-    k_sleep(50);
+static uint8_t index = 0;
+static uint8_t txbuffer[TRANSMIT_BUFFER_SIZE];
+
+static void mb_reset() {
+    index = 0;
+    memset(txbuffer, 0, TRANSMIT_BUFFER_SIZE);
 }
 
-void encodeUint32Value(uint8_t *buffer, unsigned int value)
+static void mb_append_uint32(uint32_t value)
 {
-    sprintf(buffer, "%02X%02X%02X%02X", (value & 0xff000000) >> 24, (value & 0x00ff0000) >> 16, (value & 0x0000ff00) >> 8, (value & 0x000000ff));
+    txbuffer[index++] = (uint8_t)((value & 0xff000000) >> 24);
+    txbuffer[index++] = (uint8_t)((value & 0x00ff0000) >> 16);
+    txbuffer[index++] = (uint8_t)((value & 0x0000ff00) >> 8);
+    txbuffer[index++] = (uint8_t)(value & 0x000000ff);
 }
 
-void encodeUint16Value(uint8_t *buffer, unsigned int value)
+static void mb_append_uint16(uint16_t value)
 {
-    sprintf(buffer, "%02X%02X", (value & 0x0000ff00) >> 8, (value & 0x000000ff));
+    txbuffer[index++] = (uint8_t)((value & 0xff00) >> 8);
+    txbuffer[index++] = (uint8_t)(value & 0x00ff);
 }
 
-void encodeUint8Value(uint8_t *buffer, unsigned int value)
+static void mb_append_uint8(uint8_t value)
 {
-    sprintf(buffer, "%02X", value);
+    txbuffer[index++] = value;
 }
 
-void append_encoded_32(unsigned int value)
+uint8_t *mb_encode()
 {
-    encodeUint32Value(tmpBuf, value);
-    strcat(TRANSMIT_BUFFER_TEXT, tmpBuf);
-}
-
-void append_encoded_16(unsigned int value)
-{
-    encodeUint16Value(tmpBuf, value);
-    strcat(TRANSMIT_BUFFER_TEXT, tmpBuf);
-}
-
-void append_encoded_8(unsigned int value)
-{
-    encodeUint8Value(tmpBuf, value);
-    strcat(TRANSMIT_BUFFER_TEXT, tmpBuf);
-}
-
-uint8_t *encodeNBIotMessage()
-{
-    // Format is ASCII rerpresentation of hex
-    memset(TRANSMIT_BUFFER_TEXT, 0, TRANSMIT_BUFFER_TEXT_SIZE);
-
+    mb_reset();
     // GPS
     // Index    Description
     // 0 - 8    GPS timestamp
     // 9 - 16   GPS longitude
     // 17 - 24  GPS latitude
     // 25 - 32  GPS altitude
-    append_encoded_32(sensor_node_message.sample.gps_fix.timestamp);
-    append_encoded_32(sensor_node_message.sample.gps_fix.longitude);
-    append_encoded_32(sensor_node_message.sample.gps_fix.latitude);
-    append_encoded_32(sensor_node_message.sample.gps_fix.altitude);
+    mb_append_uint32(sensor_node_message.gps_fix.timestamp);
+    mb_append_uint32(sensor_node_message.gps_fix.longitude);
+    mb_append_uint32(sensor_node_message.gps_fix.latitude);
+    mb_append_uint32(sensor_node_message.gps_fix.altitude);
 
     // Board stats
     // Index    Description
     // 33 - 40  Board temperature
     // 41 - 48  Board humidity
-    append_encoded_32(sensor_node_message.sample.cc2_sample.Temp_C);
-    append_encoded_32(sensor_node_message.sample.cc2_sample.RH);
+    mb_append_uint32(sensor_node_message.cc2_sample.Temp_C);
+    mb_append_uint32(sensor_node_message.cc2_sample.RH);
 
     // AFE ADC
     // Index    Description
@@ -80,13 +65,13 @@ uint8_t *encodeNBIotMessage()
     // 81 - 88  OP5 ADC reading - Nitric Oxide Working electrode
     // 89 - 96  OP6 ADC reading - Nitric Oxide auxillary electrode
     // 97 - 104  Pt1000 ADC reading - AFE-3 ambient temperature
-    append_encoded_32(sensor_node_message.sample.afe3_sample.op1);
-    append_encoded_32(sensor_node_message.sample.afe3_sample.op2);
-    append_encoded_32(sensor_node_message.sample.afe3_sample.op3);
-    append_encoded_32(sensor_node_message.sample.afe3_sample.op4);
-    append_encoded_32(sensor_node_message.sample.afe3_sample.op5);
-    append_encoded_32(sensor_node_message.sample.afe3_sample.op6);
-    append_encoded_32(sensor_node_message.sample.afe3_sample.pt);
+    mb_append_uint32(sensor_node_message.afe3_sample.op1);
+    mb_append_uint32(sensor_node_message.afe3_sample.op2);
+    mb_append_uint32(sensor_node_message.afe3_sample.op3);
+    mb_append_uint32(sensor_node_message.afe3_sample.op4);
+    mb_append_uint32(sensor_node_message.afe3_sample.op5);
+    mb_append_uint32(sensor_node_message.afe3_sample.op6);
+    mb_append_uint32(sensor_node_message.afe3_sample.pt);
 
     // OPC-N3
     // Index    Description
@@ -104,87 +89,66 @@ uint8_t *encodeNBIotMessage()
     // ...
     // 241 - 244  Histogram count - bin 24
     // 245 - 246  Valid / invalid data (bool)
-    append_encoded_32(sensor_node_message.sample.opc_sample.pm_a);
-    append_encoded_32(sensor_node_message.sample.opc_sample.pm_b);
-    append_encoded_32(sensor_node_message.sample.opc_sample.pm_c);
-    append_encoded_16(sensor_node_message.sample.opc_sample.period);
-    append_encoded_16(sensor_node_message.sample.opc_sample.flowrate);
-    append_encoded_16(sensor_node_message.sample.opc_sample.temperature);
-    append_encoded_16(sensor_node_message.sample.opc_sample.fan_rev_count);
-    append_encoded_16(sensor_node_message.sample.opc_sample.laser_status);
+    mb_append_uint32(sensor_node_message.opc_sample.pm_a);
+    mb_append_uint32(sensor_node_message.opc_sample.pm_b);
+    mb_append_uint32(sensor_node_message.opc_sample.pm_c);
+    mb_append_uint16(sensor_node_message.opc_sample.period);
+    mb_append_uint16(sensor_node_message.opc_sample.flowrate);
+    mb_append_uint16(sensor_node_message.opc_sample.temperature);
+    mb_append_uint16(sensor_node_message.opc_sample.fan_rev_count);
+    mb_append_uint16(sensor_node_message.opc_sample.laser_status);
 
     for (int i = 0; i < OPC_BINS; i++)
     {
-        append_encoded_16(sensor_node_message.sample.opc_sample.bin[i]);
+        mb_append_uint16(sensor_node_message.opc_sample.bin[i]);
     }
-    append_encoded_8(sensor_node_message.sample.opc_sample.valid);
+    mb_append_uint8(sensor_node_message.opc_sample.valid);
 
-    return &TRANSMIT_BUFFER_TEXT[0];
+    return txbuffer;
 }
 
 void DEBUG_CC2()
 {
-    zepyr_annoying_printk("Chipcap 2 / board status:\n");
-    sprintf(tmpBuf, "   > Main board temperature: %.2f (C)\n", sensor_node_message.sample.cc2_sample.Temp_C);
-    zepyr_annoying_printk(tmpBuf);
-    sprintf(tmpBuf, "   > Main board humidity: %.2f (%%)\n", sensor_node_message.sample.cc2_sample.RH);
-    zepyr_annoying_printk(tmpBuf);
+    printf("Chipcap 2 / board status:\n");
+    printf("   > Main board temperature: %.2f (C)\n", sensor_node_message.cc2_sample.Temp_C);
+    printf("   > Main board humidity: %.2f (%%)\n", sensor_node_message.cc2_sample.RH);
 }
 
 void DEBUG_GPS()
 {
-    zepyr_annoying_printk("GPS - status:\n");
+    printf("GPS - status:\n");
 
-    sprintf(tmpBuf, "   > Timestamp: %f\n", sensor_node_message.sample.gps_fix.timestamp);
-    zepyr_annoying_printk(tmpBuf);
-    sprintf(tmpBuf, "   > Altitude: %f \n", sensor_node_message.sample.gps_fix.altitude);
-    zepyr_annoying_printk(tmpBuf);
-    sprintf(tmpBuf, "   > Longitude: %f (rad)\n", sensor_node_message.sample.gps_fix.longitude);
-    zepyr_annoying_printk(tmpBuf);
-    sprintf(tmpBuf, "   > Latitude: %f (rad)\n", sensor_node_message.sample.gps_fix.latitude);
-    zepyr_annoying_printk(tmpBuf);
+    printf("   > Timestamp: %f\n", sensor_node_message.gps_fix.timestamp);
+    printf("   > Altitude: %f \n", sensor_node_message.gps_fix.altitude);
+    printf("   > Longitude: %f (rad)\n", sensor_node_message.gps_fix.longitude);
+    printf("   > Latitude: %f (rad)\n", sensor_node_message.gps_fix.latitude);
 }
 
 void DEBUG_OPC()
 {
-    zepyr_annoying_printk("OPC-N3 - status:\n");
-    sprintf(tmpBuf, "   > PM A: %f\n", sensor_node_message.sample.opc_sample.pm_a);
-    zepyr_annoying_printk(tmpBuf);
-    sprintf(tmpBuf, "   > PM B: %f\n", sensor_node_message.sample.opc_sample.pm_b);
-    zepyr_annoying_printk(tmpBuf);
-    sprintf(tmpBuf, "   > PM C: %f\n", sensor_node_message.sample.opc_sample.pm_c);
-    zepyr_annoying_printk(tmpBuf);
-    sprintf(tmpBuf, "    > Period: %d\n", sensor_node_message.sample.opc_sample.period);
-    zepyr_annoying_printk(tmpBuf);
-    sprintf(tmpBuf, "    > Temperature: %d\n", sensor_node_message.sample.opc_sample.temperature);
-    zepyr_annoying_printk(tmpBuf);
-    sprintf(tmpBuf, "    > Humidity: %d\n", sensor_node_message.sample.opc_sample.humidity);
-    zepyr_annoying_printk(tmpBuf);
-    sprintf(tmpBuf, "    > Validity: %s\n", sensor_node_message.sample.opc_sample.valid ? "YES" : "NO");
-    zepyr_annoying_printk(tmpBuf);
-    zepyr_annoying_printk("    > Histogram:\n");
+    printf("OPC-N3 - status:\n");
+    printf("   > PM A: %f\n", sensor_node_message.opc_sample.pm_a);
+    printf("   > PM B: %f\n", sensor_node_message.opc_sample.pm_b);
+    printf("   > PM C: %f\n", sensor_node_message.opc_sample.pm_c);
+    printf("    > Period: %d\n", sensor_node_message.opc_sample.period);
+    printf("    > Temperature: %d\n", sensor_node_message.opc_sample.temperature);
+    printf("    > Humidity: %d\n", sensor_node_message.opc_sample.humidity);
+    printf("    > Validity: %s\n", sensor_node_message.opc_sample.valid ? "YES" : "NO");
+    printf("    > Histogram:\n");
     for (int i = 0; i < OPC_BINS; i++)
     {
-        sprintf(tmpBuf, "        bin%02d : %d\n", i, sensor_node_message.sample.opc_sample.bin[i]);
-        zepyr_annoying_printk(tmpBuf);
+        printf("        bin%02d : %d\n", i, sensor_node_message.opc_sample.bin[i]);
     }
 }
 
 void DEBUG_AFE()
 {
-    zepyr_annoying_printk("AFE - status:\n");
-    sprintf(tmpBuf, "    > OP1: %u\n", sensor_node_message.sample.afe3_sample.op1);
-    zepyr_annoying_printk(tmpBuf);
-    sprintf(tmpBuf, "    > OP2: %u\n", sensor_node_message.sample.afe3_sample.op2);
-    zepyr_annoying_printk(tmpBuf);
-    sprintf(tmpBuf, "    > OP3: %u\n", sensor_node_message.sample.afe3_sample.op3);
-    zepyr_annoying_printk(tmpBuf);
-    sprintf(tmpBuf, "    > OP4: %u\n", sensor_node_message.sample.afe3_sample.op4);
-    zepyr_annoying_printk(tmpBuf);
-    sprintf(tmpBuf, "    > OP5: %u\n", sensor_node_message.sample.afe3_sample.op5);
-    zepyr_annoying_printk(tmpBuf);
-    sprintf(tmpBuf, "    > OP6: %u\n", sensor_node_message.sample.afe3_sample.op6);
-    zepyr_annoying_printk(tmpBuf);
-    sprintf(tmpBuf, "    > PT: %u\n", sensor_node_message.sample.afe3_sample.pt);
-    zepyr_annoying_printk(tmpBuf);
+    printf("AFE - status:\n");
+    printf("    > OP1: %u\n", sensor_node_message.afe3_sample.op1);
+    printf("    > OP2: %u\n", sensor_node_message.afe3_sample.op2);
+    printf("    > OP3: %u\n", sensor_node_message.afe3_sample.op3);
+    printf("    > OP4: %u\n", sensor_node_message.afe3_sample.op4);
+    printf("    > OP5: %u\n", sensor_node_message.afe3_sample.op5);
+    printf("    > OP6: %u\n", sensor_node_message.afe3_sample.op6);
+    printf("    > PT: %u\n", sensor_node_message.afe3_sample.pt);
 }

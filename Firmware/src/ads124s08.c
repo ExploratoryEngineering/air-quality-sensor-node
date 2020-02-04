@@ -425,11 +425,11 @@ void ADC_main(void *foo, void *bar, void *gazonk)
 	// dumpRegisters();
 	// float LSB = 0.0000005960464478;
 
-	sensor_node_message.sample.afe3_sample.op1 = sampleChannel(ADS_P_AIN0);
-	sensor_node_message.sample.afe3_sample.op2 = sampleChannel(ADS_P_AIN1);
-	sensor_node_message.sample.afe3_sample.op3 = sampleChannel(ADS_P_AIN2);
-	sensor_node_message.sample.afe3_sample.op4 = sampleChannel(ADS_P_AIN3);
-	sensor_node_message.sample.afe3_sample.op5 = sampleChannel(ADS_P_AIN4);
-	sensor_node_message.sample.afe3_sample.op6 = sampleChannel(ADS_P_AIN5);
-	sensor_node_message.sample.afe3_sample.pt = sampleChannel(ADS_P_AIN8);
+	sensor_node_message.afe3_sample.op1 = sampleChannel(ADS_P_AIN0);
+	sensor_node_message.afe3_sample.op2 = sampleChannel(ADS_P_AIN1);
+	sensor_node_message.afe3_sample.op3 = sampleChannel(ADS_P_AIN2);
+	sensor_node_message.afe3_sample.op4 = sampleChannel(ADS_P_AIN3);
+	sensor_node_message.afe3_sample.op5 = sampleChannel(ADS_P_AIN4);
+	sensor_node_message.afe3_sample.op6 = sampleChannel(ADS_P_AIN5);
+	sensor_node_message.afe3_sample.pt = sampleChannel(ADS_P_AIN8);
 }

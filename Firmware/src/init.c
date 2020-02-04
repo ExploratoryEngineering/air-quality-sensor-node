@@ -10,18 +10,16 @@ LOG_MODULE_REGISTER(INIT);
 #include "i2c_config.h"
 #include "ads124s08.h"
 
-struct device *gpio_device;
 
 void init_board() {
     LOG_INF("Initialising board");
 
-    gpio_device = get_GPIO_device();
-	init_GPIO(gpio_device);
-	if (NULL == gpio_device)
+	if (NULL == get_GPIO_device())
 	{
 		LOG_ERR("Unable to initialize GPIO device");
 		k_fatal_halt(1);
 	}
+
 	if (NULL == get_I2C_device())
 	{
 		LOG_ERR("Unable to initialize I2C device");

@@ -65,10 +65,10 @@ void CC2_sample()
 
     float RH_H = (rxBuffer[0] & 0b00111111);
     float RH_L = rxBuffer[1];
-    sensor_node_message.sample.cc2_sample.RH = ((RH_H*256 + RH_L)/16384)*100;
+    sensor_node_message.cc2_sample.RH = ((RH_H*256 + RH_L)/16384)*100;
     float TempC_H = rxBuffer[2];
     float TempC_L = rxBuffer[3] >> 4;
-    sensor_node_message.sample.cc2_sample.Temp_C = ((TempC_H*64+TempC_L)/16384)*165-40;
+    sensor_node_message.cc2_sample.Temp_C = ((TempC_H*64+TempC_L)/16384)*165-40;
 
     // Send a new measurement request after reading. Cannot be sent before first read
     uint8_t MEASUREMENT_REQUEST[] = {};
@@ -79,8 +79,8 @@ void CC2_sample()
         LOG_ERR("Unable to send measurement request to Chipcap2 sensor. i2c_write failed with error: %d", err);
     }
 
-    // LOG_INF("Chipcap2: Temperature: %d", (int)sensor_node_message.sample.cc2_sample.Temp_C);
-    // LOG_INF("Chipcap2: Relative humidity: %d", (int)sensor_node_message.sample.cc2_sample.RH);
+    // LOG_INF("Chipcap2: Temperature: %d", (int)sensor_node_message.cc2_sample.Temp_C);
+    // LOG_INF("Chipcap2: Relative humidity: %d", (int)sensor_node_message.cc2_sample.RH);
 }
 
 void CC2_main(void * foo, void * bar, void * gazonk)
