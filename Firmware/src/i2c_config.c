@@ -19,9 +19,11 @@
 #include <stdio.h>
 #include <device.h>
 #include <i2c.h>
-#include <logging/log.h>
 
-LOG_MODULE_DECLARE(EE06);
+
+#define LOG_LEVEL CONFIG_EE06_LOG_LEVEL
+#include <logging/log.h>
+LOG_MODULE_REGISTER(I2C_CONFIG);
 
 #define I2C_DEV "I2C_0"
 

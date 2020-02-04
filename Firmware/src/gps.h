@@ -18,6 +18,4 @@
 
 // void init_gps();
 
-
-void GPS_entry_point(void * foo, void * bar, void * gazonk);
-
+void gps_init();

@@ -16,7 +16,6 @@
 
 #include <zephyr.h>
 #include <stdio.h>
-#include <logging/log.h>
 #include <uart.h>
 #include "gps.h"
 #include "gps_cache.h"
@@ -24,7 +23,8 @@
 #include "messagebuffer.h"
 
 #define LOG_LEVEL CONFIG_EE06_LOG_LEVEL
-LOG_MODULE_DECLARE(EE06);
+#include <logging/log.h>
+LOG_MODULE_REGISTER(GPS);
 
 #define GPS_FIX_RETRY_LIMIT 120
 #define MAX_NMEA_BUFFER 254
@@ -100,7 +100,7 @@ static void uart_fifo_callback(struct device *dev)
     }
 }
 
-void GPS_entry_point(void *foo, void *bar, void *gazonk)
+static void GPS_entry_point(void *foo, void *bar, void *gazonk)
 {
     LOG_INF("GPS Thread running...");
 
@@ -136,4 +136,21 @@ void GPS_entry_point(void *foo, void *bar, void *gazonk)
 
         k_sleep(5000);
     }
+}
+
+#define GPS_THREAD_PRIORITY -5
+#define GPS_THREAD_STACK_SIZE 1024
+
+struct k_thread gps_thread;
+
+K_THREAD_STACK_DEFINE(gps_thread_stack, GPS_THREAD_STACK_SIZE);
+
+K_THREAD_DEFINE(gps_thread_id, GPS_THREAD_STACK_SIZE, GPS_entry_point, NULL, NULL, NULL, GPS_THREAD_PRIORITY, 0, 30000);
+
+
+void gps_init() {
+    k_thread_create(&gps_thread, gps_thread_stack,
+                    K_THREAD_STACK_SIZEOF(gps_thread_stack),
+                    (k_thread_entry_t)GPS_entry_point,
+                    NULL, NULL, NULL, GPS_THREAD_PRIORITY, 0, K_NO_WAIT);
 }

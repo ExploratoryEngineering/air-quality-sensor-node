@@ -20,21 +20,23 @@
 #include "pinout.h"
 #include <spi.h>
 #include "spi_config.h"
-#include <logging/log.h>
 #include <math.h>
 #include "messagebuffer.h"
 
+
+#define LOG_LEVEL CONFIG_EE06_LOG_LEVEL
+#include <logging/log.h>
+LOG_MODULE_REGISTER(OPC_N3);
+
+
 // Note:
-//          1) The first histogram must be discarded, since it doesn't contain PM-data (although it has temperature, 
+//          1) The first histogram must be discarded, since it doesn't contain PM-data (although it has temperature,
 //             humidity data and a correct checksum).
-//          2) Option 0x05 is frequently set in examples on github, but this seems to prevent sampling without resetting the OPC. 
-//             The documentation mentions that the Autogain toggle will cease until the next reset, but it is rather vague 
+//          2) Option 0x05 is frequently set in examples on github, but this seems to prevent sampling without resetting the OPC.
+//             The documentation mentions that the Autogain toggle will cease until the next reset, but it is rather vague
 //             regarding the effects of the gain settings and autogain.
 
 extern SENSOR_NODE_MESSAGE sensor_node_message;
-
-#define LOG_LEVEL CONFIG_EE06_LOG_LEVEL
-LOG_MODULE_DECLARE(EE06);
 
 struct spi_config OPC_config;
 //struct spi_cs_control OPC_control;
@@ -80,7 +82,7 @@ void OPC_init()
 
 OPC_N3_RESULT OPC_command(uint8_t command_byte, uint8_t option_byte, uint8_t * buffer, int rxBytes)
 {
-    
+
     OPC_spi_tx_buffer[0] = command_byte;
 	OPC_spi_rx_buffer[0] = 0x00;
 
@@ -108,16 +110,16 @@ OPC_N3_RESULT OPC_command(uint8_t command_byte, uint8_t option_byte, uint8_t * b
 		LOG_ERR("Unexpected response byte 1 (%02X)from OPC-N3 when sending command : %02X", OPC_spi_rx_buffer[0], command_byte);
     }
     k_sleep(10);
-    
+
     int retryCount = 0;
-    while (true) 
+    while (true)
     {
         int err = spi_transceive(OPC_spi_dev, &OPC_config, &OPC_buf_set_tx, &OPC_buf_set_rx);
 	    if (err)
 	    {
 		    LOG_ERR("OPC_command failed (2) with error: %d, Retry count: %d", err, retryCount);
 	    }
-        if (OPC_spi_rx_buffer[0] == OPC_N3_DATA_READY) 
+        if (OPC_spi_rx_buffer[0] == OPC_N3_DATA_READY)
         {
             break;
         }
@@ -146,12 +148,12 @@ OPC_N3_RESULT OPC_command(uint8_t command_byte, uint8_t option_byte, uint8_t * b
         }
     }
 
-    if (rxBytes != 0) 
+    if (rxBytes != 0)
     {
         memset(OPC_spi_tx_buffer, command_byte, SPI_BUF_SIZE);
         memset(OPC_spi_rx_buffer, 0x00, SPI_BUF_SIZE);
 
-        for (int i=0; i<rxBytes; i++) 
+        for (int i=0; i<rxBytes; i++)
         {
             err = spi_transceive(OPC_spi_dev, &OPC_config, &OPC_buf_set_tx, &OPC_buf_set_rx);
             if (err)
@@ -192,7 +194,7 @@ void OPC_read_information_string()
 void OPC_trace_historgram()
 {
     printk("OPC-N3 histogram");
-    for (int i=0; i<OPC_HISTOGRAM_SIZE; i++)  
+    for (int i=0; i<OPC_HISTOGRAM_SIZE; i++)
     {
         printk("%d:%d ", i, histogram[i]);
         k_sleep(10);
@@ -203,7 +205,7 @@ void OPC_trace_historgram()
 
 uint16_t get_uint16_value(uint8_t * buffer)
 {
-  union histogram_t 
+  union histogram_t
   {
     uint8_t b[2];
     uint16_t value;
@@ -217,7 +219,7 @@ uint16_t get_uint16_value(uint8_t * buffer)
 
 float get_float_value(uint8_t * buffer)
 {
-  union histogram_t 
+  union histogram_t
   {
     uint8_t b[4];
     float value;
@@ -243,14 +245,14 @@ uint16_t OPC_calcCRC(uint8_t data[], uint8_t number_of_bytes)
     for (byteCounter=0; byteCounter < number_of_bytes; byteCounter++)
     {
         crc ^= (uint16_t)data[byteCounter];
-        for (bit=0; bit<8; bit++) 
+        for (bit=0; bit<8; bit++)
         {
             if (crc & 0b00000001)
             {
                 crc >>= 1;
                 crc ^= PLYNOMIAL;
             }
-            else 
+            else
             {
                 crc >>= 1;
             }
@@ -365,7 +367,7 @@ void log_sample(OPC_SAMPLE sample)
     LOG_INF("Flowrate: %d", sample.flowrate);
     LOG_INF("Temperature: %d", sample.temperature);
     LOG_INF("Humidity: %d", sample.humidity);
-    LOG_INF("PM A: %d", (int)round(sample.pm_a));   
+    LOG_INF("PM A: %d", (int)round(sample.pm_a));
     LOG_INF("PM B: %d", (int)round(sample.pm_b));
     LOG_INF("PM C: %d", (int)round(sample.pm_c));
     LOG_INF("Rev count: %d", sample.fan_rev_count);

@@ -17,7 +17,6 @@
 #include <zephyr.h>
 #include "chipcap2.h"
 #include <stdio.h>
-#include <logging/log.h>
 #include <device.h>
 #include <i2c.h>
 #include "i2c_config.h"
@@ -25,10 +24,11 @@
 
 
 // Note: The Chipcap sensor is onlys used for monitoring ambient temperature and humidity in the controller housing
-//       The particle and gas sensors will provide temperature and RH data for the environmentl measurements. 
+//       The particle and gas sensors will provide temperature and RH data for the environmentl measurements.
 
 #define LOG_LEVEL CONFIG_EE06_LOG_LEVEL
-LOG_MODULE_DECLARE(EE06);
+#include <logging/log.h>
+LOG_MODULE_REGISTER(CHIPCAP2);
 
 extern SENSOR_NODE_MESSAGE sensor_node_message;
 
@@ -37,7 +37,7 @@ extern SENSOR_NODE_MESSAGE sensor_node_message;
 
 struct device * i2c_dev;
 
-void CC2_init() 
+void CC2_init()
 {
     // LOG_DBG("Initializing ChipCap2 ");
 
@@ -68,7 +68,7 @@ void CC2_sample()
     sensor_node_message.sample.cc2_sample.RH = ((RH_H*256 + RH_L)/16384)*100;
     float TempC_H = rxBuffer[2];
     float TempC_L = rxBuffer[3] >> 4;
-    sensor_node_message.sample.cc2_sample.Temp_C = ((TempC_H*64+TempC_L)/16384)*165-40; 
+    sensor_node_message.sample.cc2_sample.Temp_C = ((TempC_H*64+TempC_L)/16384)*165-40;
 
     // Send a new measurement request after reading. Cannot be sent before first read
     uint8_t MEASUREMENT_REQUEST[] = {};

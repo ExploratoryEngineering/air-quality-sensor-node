@@ -6,7 +6,7 @@
 
 #define LOG_LEVEL LOG_LEVEL_INF
 #include <logging/log.h>
-LOG_MODULE_REGISTER(n2_offload);
+LOG_MODULE_REGISTER(N2);
 
 #include <stdio.h>
 #include <stdbool.h>
@@ -19,7 +19,6 @@ LOG_MODULE_REGISTER(n2_offload);
 #include <net/socket_offload.h>
 #include <stdio.h>
 
-#include "config.h"
 #include "comms.h"
 #include "at_commands.h"
 
@@ -27,6 +26,7 @@ LOG_MODULE_REGISTER(n2_offload);
 #define MDM_MAX_SOCKETS 7
 #define INVALID_FD -1
 #define MAX_RECEIVE 512
+#define N2_MAX_PACKET_SIZE 512
 
 struct n2_socket
 {
@@ -254,7 +254,7 @@ static int offload_sendto(int sfd, const void *buf, size_t len,
         return -EINVAL;
     }
 
-    if (len > CONFIG_N2_MAX_PACKET_SIZE)
+    if (len > N2_MAX_PACKET_SIZE)
     {
         return -EINVAL;
     }
@@ -447,7 +447,7 @@ static void receive_cb(int fd, size_t bytes)
 static int n2_init(struct device *dev)
 {
     ARG_UNUSED(dev);
-
+    LOG_INF("Initalise N2 offloading");
     k_sem_init(&mdm_sem, 1, 1);
 
     receive_callback(receive_cb);
@@ -456,7 +456,10 @@ static int n2_init(struct device *dev)
     return 0;
 }
 
+#define CONFIG_N2_NAME "SARA_N2"
+#define CONFIG_N2_INIT_PRIORITY 35
+
 NET_DEVICE_OFFLOAD_INIT(sara_n2, CONFIG_N2_NAME,
                         n2_init, NULL, NULL,
                         CONFIG_N2_INIT_PRIORITY, &api_funcs,
-                        CONFIG_N2_MAX_PACKET_SIZE);
+                        N2_MAX_PACKET_SIZE);

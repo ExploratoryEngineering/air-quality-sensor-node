@@ -21,9 +21,6 @@
 #include "gps_std.h"
 #include "nmealib.h"
 
-#define LOG_LEVEL CONFIG_EE06_LOG_LEVEL
-LOG_MODULE_DECLARE(EE06);
-
 // Convert a string into float. Empty string is interpreted as 0, trims
 // leading zeroes from the string before converting.
 static float nmea_atof(uint8_t* str) {
@@ -75,7 +72,7 @@ static float nmea_lotof(uint8_t* str) {
 	return nmea_deg_min_to_rad(degrees, minutes);
 }
 
-void nmea_decode_rmc(const nmea_sentence_t* param, gps_rmc_t* output) 
+void nmea_decode_rmc(const nmea_sentence_t* param, gps_rmc_t* output)
 {
 	output->active = (param->fields[3][0] == 'A') ? true : false;
 	if (output->active) {

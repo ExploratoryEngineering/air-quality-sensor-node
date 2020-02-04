@@ -25,7 +25,5 @@ struct device * get_SPI_device();
 
 #define SPI_DEV "SPI_1"
 
-extern struct device * spi_dev;
-extern struct device * gpio_dev;
 
 #endif // _SPI_CONFIG_H_

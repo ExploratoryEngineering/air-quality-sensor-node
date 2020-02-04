@@ -22,10 +22,10 @@
 #include <gpio.h>
 #include <misc/util.h>
 #include <stdio.h>
-#include <logging/log.h>
 
 #define LOG_LEVEL CONFIG_EE06_LOG_LEVEL
-LOG_MODULE_DECLARE(EE06);
+#include <logging/log.h>
+LOG_MODULE_REGISTER(GPIO);
 
 static struct device *gpio_dev = NULL;
 

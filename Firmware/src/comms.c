@@ -1,12 +1,5 @@
-#include "config.h"
-
-#define LOG_LEVEL LOG_LEVEL_INF
-#include <logging/log.h>
-LOG_MODULE_REGISTER(n2_comms);
-
 #include <zephyr.h>
 #include <device.h>
-#include <uart.h>
 #include <kernel.h>
 #include <sys/ring_buffer.h>
 #include <errno.h>
@@ -15,6 +8,11 @@ LOG_MODULE_REGISTER(n2_comms);
 #include "max14830.h"
 #include "comms.h"
 #include "at_commands.h"
+#include "init.h"
+
+#define LOG_LEVEL CONFIG_EE06_LOG_LEVEL
+#include <logging/log.h>
+LOG_MODULE_REGISTER(COMMS);
 
 // Ring buffer for received data
 #define RB_SIZE 128
@@ -30,7 +28,6 @@ static struct k_sem rx_sem;
 
 #define URC_THREAD_STACK 512
 #define URC_THREAD_PRIORITY (CONFIG_NUM_COOP_PRIORITIES)
-#define UART_NAME "UART_0"
 #define DUMP_MODEM 0
 
 struct k_thread urc_thread;
@@ -87,15 +84,9 @@ void urc_threadproc(void)
         }
     }
 }
-/*
- * Modem comms. It's quite a mechanism - the UART is read from an ISR, then
- * sent to a processing thread via a ring buffer. The processing thread
- * parses the incoming data stream and when OK or ERROR is received the
- * data is forwarded to the consuming library via modem_read_line.
- */
 
 /**
- * @brief The ISR for UART rx
+ * @brief Callback for chars from the modem
  */
 void comms_handle_char(uint8_t data)
 {
@@ -175,6 +166,8 @@ void modem_restart()
 
 void modem_init(void)
 {
+    init_board();
+    LOG_INF("Init modem");
     k_sem_init(&rx_sem, 0, RB_SIZE);
     ring_buf_init(&rx_rb, RB_SIZE, buffer);
     k_sem_init(&urc_sem, 0, URC_SIZE);

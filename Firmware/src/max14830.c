@@ -21,14 +21,15 @@
 #include <zephyr.h>
 #include <i2c.h>
 #include "i2c_config.h"
-#include <logging/log.h>
 #include <stdio.h>
 #include <gpio.h>
 #include "gpio.h"
 #include "pinout.h"
+#include "init.h"
 
 #define LOG_LEVEL CONFIG_EE06_LOG_LEVEL
-LOG_MODULE_DECLARE(EE06);
+#include <logging/log.h>
+LOG_MODULE_REGISTER(MAX14830);
 
 #define MAX_THREAD_PRIORITY -4
 #define MAX_THREAD_STACK_SIZE 1024
@@ -37,16 +38,12 @@ struct k_thread max_thread;
 
 K_THREAD_STACK_DEFINE(max_thread_stack, MAX_THREAD_STACK_SIZE);
 
-extern struct device *gpio_device;
-
 static struct k_sem rx_sem;
 #define RX_SEM_SIZE 128
 
 static max_char_callback_t char_callback;
 
 static struct gpio_callback gpio_cb;
-
-int rxIndex = 0;
 
 int max14830_write(uint8_t address, uint8_t reg, uint8_t data)
 {
@@ -208,6 +205,9 @@ int sendMessage(uint8_t address, const uint8_t *txBuffer, uint8_t txLength)
     EnableRxMode(address);
 
     // // We can do this, in order to fake synchronicity, or we can implement a full fledged event driven command / response stack thingy...
+
+    // (stalehd): )We should fix this :) CoAP and LwM2M requires a slightly quicker send/response
+    // thing.
     k_sleep(2000);
 
     return 0;
@@ -267,7 +267,7 @@ void irq_handler(struct device *gpiob, struct gpio_callback *cb, u32_t pins)
 
 void EnableRxFIFOIrq(uint8_t address)
 {
-    gpio_device = get_GPIO_device();
+    struct device *gpio_device = get_GPIO_device();
     int ret = gpio_pin_configure(gpio_device, MAX14830_IRQ, GPIO_INT | GPIO_PUD_PULL_UP | GPIO_INT_EDGE | GPIO_INT_ACTIVE_LOW | GPIO_DIR_IN);
     if (ret)
     {
@@ -293,7 +293,7 @@ void EnableRxFIFOIrq(uint8_t address)
     max14830_write(address, LSRINTEN_REGISTER, 0b00001111);
 }
 
-void MAX_RX_entry_point(void *foo, void *bar, void *gazonk)
+static void MAX_RX_entry_point(void *foo, void *bar, void *gazonk)
 {
     LOG_INF("MAX RX Thread running...\n");
 

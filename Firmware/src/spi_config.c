@@ -17,9 +17,10 @@
 #include <zephyr.h>
 #include <spi.h>
 #include "spi_config.h"
-#include <logging/log.h>
 
-LOG_MODULE_DECLARE(EE06);
+#define LOG_LEVEL CONFIG_EE06_LOG_LEVEL
+#include <logging/log.h>
+LOG_MODULE_REGISTER(SPI_CONFIG);
 
 struct device * spi_dev;
 

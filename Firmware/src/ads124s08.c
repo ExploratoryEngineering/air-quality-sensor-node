@@ -33,7 +33,6 @@
 #include <zephyr.h>
 #include <spi.h>
 #include <device.h>
-#include <logging/log.h>
 #include <stdio.h>
 #include "spi_config.h"
 #include "ADS124S08.h"
@@ -42,7 +41,9 @@
 #include "opc_n3.h"
 #include "messagebuffer.h"
 
-LOG_MODULE_DECLARE(EE06);
+#define LOG_LEVEL CONFIG_EE06_LOG_LEVEL
+#include <logging/log.h>
+LOG_MODULE_REGISTER(ADS123S08);
 
 uint8_t ADS124S08__drdy_pin;
 uint8_t ADS124S08__start_pin;
