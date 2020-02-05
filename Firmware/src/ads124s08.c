@@ -80,24 +80,40 @@ void ADS124S08_init(void)
 	ADS124S08_stopConversion();
 }
 
+static int counter = 0;
+
 void ADS124S08_begin()
 {
-	LOG_DBG("ADS124S08_begin");
+	LOG_DBG("ADS124S08_begin %d", counter++);
+	k_sleep(1000);
 
 	ADS124S08_config.cs = NULL;
 	ADS124S08_config.frequency = 1000000;
 	ADS124S08_config.operation = SPI_OP_MODE_MASTER | SPI_WORD_SET(8) | SPI_TRANSFER_MSB | SPI_MODE_CPHA;
 	ADS124S08_config.slave = 0;
-	ADS124S08_spi_dev = device_get_binding(SPI_DEV);
+	LOG_INF("Get binding");
+	k_sleep(1000);
+	ADS124S08_spi_dev = get_SPI_device();
+	LOG_INF("Get binding done");
+	k_sleep(1000);
 	if (!ADS124S08_spi_dev)
 	{
 		LOG_ERR("SPI device driver not found");
+		return;
 	}
 
 	LOG_INF("ADS124S08_config cs: %d", (int)ADS124S08_config.cs);
+	k_sleep(1000);
+
 	LOG_INF("ADS124S08_config frequency: %d", (int)ADS124S08_config.frequency);
+	LOG_INF("Freq 1");
+
 	LOG_INF("ADS124S08_config operation: %d", (int)ADS124S08_config.operation);
+	LOG_INF("Freq 2");
+
 	LOG_INF("ADS124S08_config slave: %d", (int)ADS124S08_config.slave);
+	LOG_INF("Freq 3");
+	k_sleep(1000);
 }
 
 // Reads a single register contents from the specified address
@@ -420,7 +436,7 @@ unsigned int sampleChannel(unsigned char channel)
 
 void ADC_main(void *foo, void *bar, void *gazonk)
 {
-	// LOG_INF("Initializing ADS124S08...\n");
+	//	LOG_INF("Initializing ADS124S08...\n");
 	// configureAdc(ADS_P_AIN5);
 	// dumpRegisters();
 	// float LSB = 0.0000005960464478;

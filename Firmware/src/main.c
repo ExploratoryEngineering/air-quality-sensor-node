@@ -21,7 +21,8 @@
 #include "gps.h"
 #include "messagebuffer.h"
 #include "version.h"
-
+#include "init.h"
+#include "n2_offload.h"
 #define LOG_LEVEL CONFIG_EE06_LOG_LEVEL
 LOG_MODULE_REGISTER(EE06);
 
@@ -29,6 +30,8 @@ LOG_MODULE_REGISTER(EE06);
 
 void main(void)
 {
+	printk("Init board\n");
+	init_board();
 	// TODO: Watchdog init
 
 	// TODO: FOTA init and processing
@@ -39,10 +42,13 @@ void main(void)
 
 	gps_init();
 
+	wait_for_sockets();
+
+	LOG_INF("I'm so totally ready");
 	while (true)
 	{
 		k_sleep(MIN_SEND_INTERVAL);
-/*
+		/*
 		SENSOR_NODE_MESSAGE last_message;
 		n3_wait_for_sample();
 

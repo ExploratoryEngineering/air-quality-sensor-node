@@ -22,14 +22,18 @@
 #include <logging/log.h>
 LOG_MODULE_REGISTER(SPI_CONFIG);
 
-struct device * spi_dev;
+static struct device *spi_dev;
 
-struct device * get_SPI_device()
+struct device *get_SPI_device()
 {
-  spi_dev = device_get_binding(SPI_DEV);
-  if (!spi_dev) {
-    LOG_ERR("SPI device driver not found");
-    return NULL;
+  if (!spi_dev)
+  {
+    spi_dev = device_get_binding(SPI_DEV);
+    if (!spi_dev)
+    {
+      LOG_ERR("SPI device driver not found");
+      return NULL;
+    }
   }
 
   return spi_dev;

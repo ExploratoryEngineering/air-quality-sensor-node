@@ -10,9 +10,9 @@ LOG_MODULE_REGISTER(INIT);
 #include "i2c_config.h"
 #include "ads124s08.h"
 
-
-void init_board() {
-    LOG_INF("Initialising board");
+void init_board()
+{
+	LOG_INF("Initialising board");
 
 	if (NULL == get_GPIO_device())
 	{
@@ -30,6 +30,8 @@ void init_board() {
 		LOG_ERR("Unable to initialize SPI device");
 		k_fatal_halt(3);
 	}
+	LOG_INF("ADS init");
 	ADS124S08_init();
+	LOG_INF("ADS Begin");
 	ADS124S08_begin();
 }

@@ -226,7 +226,8 @@ void readFromRxFifo(uint8_t address)
         }
         ch = max14830_read(address, RHR_REGISTER);
 
-        if (char_callback) {
+        if (char_callback)
+        {
             char_callback(ch);
         }
     }
@@ -300,14 +301,9 @@ static void MAX_RX_entry_point(void *foo, void *bar, void *gazonk)
     while (true)
     {
         k_sem_take(&rx_sem, K_FOREVER);
-        LOG_INF("GOT a response!");
-        // why this? Are there any things we should know about?
-        k_sleep(1000);
-
         readReply();
     }
 }
-
 
 static max_char_callback_t char_callback = NULL;
 

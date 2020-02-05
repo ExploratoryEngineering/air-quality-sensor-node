@@ -94,7 +94,7 @@ void comms_handle_char(uint8_t data)
     static bool in_urc = false;
     int rb;
 #if DUMP_MODEM
-        printf("%c", data);
+    printf("%c", data);
 #endif
     if (prev == '\n' && data == '+')
     {
@@ -166,7 +166,6 @@ void modem_restart()
 
 void modem_init(void)
 {
-    init_board();
     LOG_INF("Init modem");
     k_sem_init(&rx_sem, 0, RB_SIZE);
     ring_buf_init(&rx_rb, RB_SIZE, buffer);
@@ -179,6 +178,8 @@ void modem_init(void)
                     NULL, NULL, NULL, K_PRIO_COOP(URC_THREAD_PRIORITY), 0, K_NO_WAIT);
 
     MAX_init(comms_handle_char);
+
+    LOG_INF("Restart modem");
     // Set up the modem. Might also include AT+CGPADDR to set up PDP context
     // here.
     modem_restart();

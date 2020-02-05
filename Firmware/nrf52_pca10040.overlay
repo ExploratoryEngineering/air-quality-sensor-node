@@ -2,7 +2,7 @@
 
 &i2c0 {
 	status = "okay";
-
+	compatible = "nordic,nrf-twi";
     sda-pin = <27>;
 	scl-pin = <26>;
 	clock-frequency = <I2C_BITRATE_STANDARD>;
@@ -10,6 +10,7 @@
 
 &spi1 {
 	status = "okay";
+	compatible = "nordic,nrf-spi";
 	mosi-pin = <23>;
 	sck-pin = <25>;
 	miso-pin = <24>;

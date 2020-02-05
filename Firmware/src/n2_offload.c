@@ -54,6 +54,7 @@ static char modem_command_buffer[CMD_BUFFER_SIZE];
 #define VALID_SOCKET(s) (s >= 100 && s <= (100 + MDM_MAX_SOCKETS) && sockets[s - 100].in_use)
 
 static struct k_sem mdm_sem;
+static struct k_sem socket_sem;
 
 /**
  * @brief Clear socket state
@@ -449,17 +450,25 @@ static int n2_init(struct device *dev)
     ARG_UNUSED(dev);
     LOG_INF("Initalise N2 offloading");
     k_sem_init(&mdm_sem, 1, 1);
+    k_sem_init(&socket_sem, 0, 1);
 
     receive_callback(receive_cb);
 
     modem_init();
+    LOG_DBG("***** sockets are ready to use");
+    k_sem_give(&socket_sem);
     return 0;
 }
 
 #define CONFIG_N2_NAME "SARA_N2"
-#define CONFIG_N2_INIT_PRIORITY 35
+#define CONFIG_N2_INIT_PRIORITY 95
 
 NET_DEVICE_OFFLOAD_INIT(sara_n2, CONFIG_N2_NAME,
                         n2_init, NULL, NULL,
                         CONFIG_N2_INIT_PRIORITY, &api_funcs,
                         N2_MAX_PACKET_SIZE);
+
+void wait_for_sockets()
+{
+    k_sem_take(&socket_sem, K_FOREVER);
+}
