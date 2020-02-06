@@ -15,7 +15,8 @@
 */
 
 #pragma once
-
-// void init_gps();
+#include "gps_cache.h"
 
 void gps_init();
+
+void gps_get_sample(gps_fix_t *msg);

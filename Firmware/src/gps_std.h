@@ -16,8 +16,7 @@
 
 // Standard GPS sentence decoding. GGA and GSA is the most relevant alternatives
 // to decode. GSV, RMC and GSV plus ZDA might be relevant later
-#ifndef GPS_STD_H
-#define GPS_STD_H
+#pragma once
 
 #include <stdint.h>
 
@@ -25,8 +24,8 @@
 
 #define M_PI 3.14159265359
 
-#define DEG_TO_RAD(x) ((x)*(M_PI/180.0f))
-#define RAD_TO_DEG(x) ((x) * (180.0f/M_PI))
+#define DEG_TO_RAD(x) ((x) * (M_PI / 180.0f))
+#define RAD_TO_DEG(x) ((x) * (180.0f / M_PI))
 
 #define FIX_Q_INVALID 0
 #define FIX_Q_GPS 1
@@ -44,43 +43,53 @@
 
 #define MAX_GSA_PRNS 12
 
-
 // GGA: Essiential fix data
-typedef struct {
-	float timestamp;      // time (HHMMSS.fff) 
-	float latitude;       // latitude (positive: north, negative: south) 
-	float longitude;      // longitude (positive: east, negative: west) 
-	uint8_t fix_quality;  // fix quality, see constants 
-	uint8_t num_svs;      // number of satellites 
-	float hdop;           // height dilution of precision 
-	float alt;            // altitude (over sea level), meters 
-	float geoid_height;   // height over geoid (usually WGS84), meters 
+typedef struct
+{
+	float timestamp;	 // time (HHMMSS.fff)
+	float latitude;		 // latitude (positive: north, negative: south)
+	float longitude;	 // longitude (positive: east, negative: west)
+	uint8_t fix_quality; // fix quality, see constants
+	uint8_t num_svs;	 // number of satellites
+	float hdop;			 // height dilution of precision
+	float alt;			 // altitude (over sea level), meters
+	float geoid_height;	 // height over geoid (usually WGS84), meters
 } gps_gga_t;
 
 // GSA: GPS DOP and active satellites
-typedef struct {
-	uint8_t auto_selection;      // auto selection 3D fix ('A') or manual ('M') 
-	uint8_t fix_type;            // Fix type, see constants 
-	uint8_t prns[MAX_GSA_PRNS];  // PRNs for satellites used (max 12) 
-	float pdop;                  // precision dilution of position 
-	float vdop;                  // vertical dilution of precision 
+typedef struct
+{
+	uint8_t auto_selection;		// auto selection 3D fix ('A') or manual ('M')
+	uint8_t fix_type;			// Fix type, see constants
+	uint8_t prns[MAX_GSA_PRNS]; // PRNs for satellites used (max 12)
+	float pdop;					// precision dilution of position
+	float vdop;					// vertical dilution of precision
 } gps_gsa_t;
 
-typedef struct {
-	float speed;	// Speed over the ground in knots 
-	bool active;	// Void / Active 
-	bool moving;	// defined as "speed > 20 km/h" 
+typedef struct
+{
+	float speed; // Speed over the ground in knots
+	bool active; // Void / Active
+	bool moving; // defined as "speed > 20 km/h"
 	float track_angle;
 } gps_rmc_t;
 
-
+typedef struct
+{
+	float true_track;
+	float magnetic_track;
+	float ground_speed_kts;
+	float ground_speed_kmh;
+} gps_vtg_t;
 
 // Decode GGA sentence.
-void nmea_decode_gga(const nmea_sentence_t* param, gps_gga_t* output);
+void nmea_decode_gga(const nmea_sentence_t *param, gps_gga_t *output);
 
 // Decode GSA sentence.
-void nmea_decode_gsa(const nmea_sentence_t* param, gps_gsa_t* output);
+void nmea_decode_gsa(const nmea_sentence_t *param, gps_gsa_t *output);
 
 // Decode RMC sentence.
-void nmea_decode_rmc(const nmea_sentence_t* param, gps_rmc_t* output);
-#endif
+void nmea_decode_rmc(const nmea_sentence_t *param, gps_rmc_t *output);
+
+// Decode VTG sentence
+void nmea_decode_vtg(const nmea_sentence_t *param, gps_vtg_t *output);

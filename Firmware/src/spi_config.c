@@ -18,9 +18,9 @@
 #include <spi.h>
 #include "spi_config.h"
 
-#define LOG_LEVEL CONFIG_EE06_LOG_LEVEL
+#define LOG_LEVEL CONFIG_EESPI_LOG_LEVEL
 #include <logging/log.h>
-LOG_MODULE_REGISTER(SPI_CONFIG);
+LOG_MODULE_REGISTER(EESPI);
 
 static struct device *spi_dev;
 
@@ -31,7 +31,7 @@ struct device *get_SPI_device()
     spi_dev = device_get_binding(SPI_DEV);
     if (!spi_dev)
     {
-      LOG_ERR("SPI device driver not found");
+      LOG_ERR("Device driver not found");
       return NULL;
     }
   }

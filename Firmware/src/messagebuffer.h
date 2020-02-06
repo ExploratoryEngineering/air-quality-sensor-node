@@ -1,5 +1,4 @@
-#ifndef _MESSAGE_BUFFER_H_
-#define _MESSAGE_BUFFER_H_
+#pragma once
 
 #include "opc_n3.h"
 #include "gps_cache.h"
@@ -8,9 +7,9 @@
 
 typedef struct
 {
-    gps_fix_t   gps_fix;
-    CC2_SAMPLE  cc2_sample;
-    OPC_SAMPLE  opc_sample;
+    gps_fix_t gps_fix;
+    CC2_SAMPLE cc2_sample;
+    OPC_SAMPLE opc_sample;
     AFE3_SAMPLE afe3_sample;
 
 } SENSOR_NODE_MESSAGE;
@@ -18,13 +17,9 @@ typedef struct
 /**
  * @brief Encode message
  */
-uint8_t * mb_encode();
+size_t mb_encode(SENSOR_NODE_MESSAGE *msg, char *buf, size_t max);
 
-void DEBUG_CC2();
-void DEBUG_GPS();
-void DEBUG_OPC();
-void DEBUG_AFE();
-
-#endif
-
-
+/**
+ * @brief Dump the message (debug)
+ */
+void mb_dump_message(SENSOR_NODE_MESSAGE *msg);

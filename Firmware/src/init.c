@@ -30,8 +30,6 @@ void init_board()
 		LOG_ERR("Unable to initialize SPI device");
 		k_fatal_halt(3);
 	}
-	LOG_INF("ADS init");
 	ADS124S08_init();
-	LOG_INF("ADS Begin");
 	ADS124S08_begin();
 }

@@ -41,7 +41,7 @@
 #include "opc_n3.h"
 #include "messagebuffer.h"
 
-#define LOG_LEVEL CONFIG_EE06_LOG_LEVEL
+#define LOG_LEVEL CONFIG_ADSL_LOG_LEVEL
 #include <logging/log.h>
 LOG_MODULE_REGISTER(ADS123S08);
 
@@ -56,21 +56,22 @@ struct spi_buf ADS124S08_buf_rx;
 struct spi_buf_set ADS124S08_buf_set_rx;
 struct device *ADS124S08_spi_dev;
 
-extern SENSOR_NODE_MESSAGE sensor_node_message;
-
 u8_t ADS124S08_spi_tx_buffer[SPI_BUF_SIZE];
 u8_t ADS124S08_spi_rx_buffer[SPI_BUF_SIZE];
+
+// TODO(stalehd): Might not need this
+#define CS_DWELL_TIME_MS 1
 
 void ADS124S08_select(void)
 {
 	digitalWrite(CS_PIN, LOW);
-	k_sleep(1);
+	k_sleep(CS_DWELL_TIME_MS);
 }
 
 void ADS124S08_release(void)
 {
 	digitalWrite(CS_PIN, HIGH);
-	k_sleep(1);
+	k_sleep(CS_DWELL_TIME_MS);
 }
 
 void ADS124S08_init(void)
@@ -85,35 +86,21 @@ static int counter = 0;
 void ADS124S08_begin()
 {
 	LOG_DBG("ADS124S08_begin %d", counter++);
-	k_sleep(1000);
-
 	ADS124S08_config.cs = NULL;
 	ADS124S08_config.frequency = 1000000;
 	ADS124S08_config.operation = SPI_OP_MODE_MASTER | SPI_WORD_SET(8) | SPI_TRANSFER_MSB | SPI_MODE_CPHA;
 	ADS124S08_config.slave = 0;
-	LOG_INF("Get binding");
-	k_sleep(1000);
 	ADS124S08_spi_dev = get_SPI_device();
-	LOG_INF("Get binding done");
-	k_sleep(1000);
 	if (!ADS124S08_spi_dev)
 	{
 		LOG_ERR("SPI device driver not found");
 		return;
 	}
 
-	LOG_INF("ADS124S08_config cs: %d", (int)ADS124S08_config.cs);
-	k_sleep(1000);
-
-	LOG_INF("ADS124S08_config frequency: %d", (int)ADS124S08_config.frequency);
-	LOG_INF("Freq 1");
-
-	LOG_INF("ADS124S08_config operation: %d", (int)ADS124S08_config.operation);
-	LOG_INF("Freq 2");
-
-	LOG_INF("ADS124S08_config slave: %d", (int)ADS124S08_config.slave);
-	LOG_INF("Freq 3");
-	k_sleep(1000);
+	LOG_DBG("ADS124S08_config cs: %d", (int)ADS124S08_config.cs);
+	LOG_DBG("ADS124S08_config frequency: %d", (int)ADS124S08_config.frequency);
+	LOG_DBG("ADS124S08_config operation: %d", (int)ADS124S08_config.operation);
+	LOG_DBG("ADS124S08_config slave: %d", (int)ADS124S08_config.slave);
 }
 
 // Reads a single register contents from the specified address
@@ -122,7 +109,7 @@ void ADS124S08_begin()
 //
 char ADS124S08_regRead(unsigned int regnum)
 {
-	LOG_INF("ADS124S08_regRead - register: %d", regnum);
+	LOG_DBG("ADS124S08_regRead - register: %d", regnum);
 	ADS124S08_spi_tx_buffer[0] = REGRD_OPCODE_MASK + (regnum & 0x1f);
 	ADS124S08_spi_tx_buffer[1] = 0x00;
 	ADS124S08_spi_tx_buffer[2] = 0x00;
@@ -149,10 +136,10 @@ char ADS124S08_regRead(unsigned int regnum)
 	}
 	ADS124S08_release();
 
-	LOG_INF("ADS124S08_regRead tx: %02x %02x %02x", ADS124S08_spi_tx_buffer[0],
+	LOG_DBG("ADS124S08_regRead tx: %02x %02x %02x", ADS124S08_spi_tx_buffer[0],
 			ADS124S08_spi_tx_buffer[1],
 			ADS124S08_spi_tx_buffer[2]);
-	LOG_INF("ADS124S08_regRead rx: %02x %02x %02x", ADS124S08_spi_rx_buffer[0],
+	LOG_DBG("ADS124S08_regRead rx: %02x %02x %02x", ADS124S08_spi_rx_buffer[0],
 			ADS124S08_spi_rx_buffer[1],
 			ADS124S08_spi_rx_buffer[2]);
 
@@ -203,8 +190,7 @@ void ADS124S08_readRegs(unsigned int regnum, unsigned int count, uint8_t *data)
 
 	for (int i = 0; i < count; i++)
 	{
-		printf("ADS124S08_regRead reg: %d: value: %d\n", i, (int)ADS124S08_spi_rx_buffer[i]);
-		k_sleep(100);
+		LOG_DBG("regRead reg: %d: value: %d\n", i, (int)ADS124S08_spi_rx_buffer[i]);
 		data[i] = ADS124S08_spi_rx_buffer[i];
 	}
 }
@@ -241,8 +227,6 @@ void ADS124S08_regWrite(unsigned int regnum, unsigned char data)
 //
 void ADS124S08_sendCommand(uint8_t op_code)
 {
-	LOG_DBG("ADS124S08_sendCommand");
-
 	ADS124S08_spi_tx_buffer[0] = op_code;
 	ADS124S08_spi_rx_buffer[0] = 0x00;
 
@@ -267,12 +251,16 @@ void ADS124S08_sendCommand(uint8_t op_code)
 	ADS124S08_release();
 }
 
+#define MAGIC_TIME_TO_SLEEP_AFTER_RESTART 100
+
 //  Sends a STOP/START command sequence to the ADS124S08 to restart conversions (SYNC)
 //
 void ADS124S08_reStart(void)
 {
 	ADS124S08_sendCommand(STOP_OPCODE_MASK);
 	ADS124S08_sendCommand(START_OPCODE_MASK);
+	k_sleep(MAGIC_TIME_TO_SLEEP_AFTER_RESTART);
+
 	return;
 }
 
@@ -281,7 +269,7 @@ void ADS124S08_reStart(void)
 void ADS124S08_startConversion()
 {
 	digitalWrite(START_PIN, HIGH);
-	k_sleep(2);
+	k_sleep(CS_DWELL_TIME_MS);
 }
 
 //  Sets the GPIO hardware START pin low
@@ -289,15 +277,17 @@ void ADS124S08_startConversion()
 void ADS124S08_stopConversion()
 {
 	digitalWrite(START_PIN, LOW);
-	k_sleep(2);
+	k_sleep(CS_DWELL_TIME_MS);
 }
 
+// TODO(stalehd): Might not need that
+#define RESET_DWELL_TIME_MS 200
 void ADS124S08_hardReset()
 {
 	gpio_pin_write(get_GPIO_device(), ADC_RESET, 0);
-	k_sleep(200);
+	k_sleep(RESET_DWELL_TIME_MS);
 	gpio_pin_write(get_GPIO_device(), ADC_RESET, 1);
-	k_sleep(200);
+	k_sleep(RESET_DWELL_TIME_MS);
 }
 
 //  Read the last conversion result
@@ -387,21 +377,6 @@ unsigned int ADS124S08_dataRead(uint8_t *status, uint8_t *crc)
 	return iData;
 }
 
-void dumpRegisters(void)
-{
-	unsigned int index;
-	uint8_t registers[18];
-	ADS124S08_readRegs(0, 18, registers);
-	printf("Register Contents\n");
-	printf("-----------------\n");
-
-	for (index = 0; index < 18; index++)
-	{
-		printf("Register %02X = %02X\n", index, registers[index]);
-		k_sleep(100);
-	}
-}
-
 void configureAdc(unsigned char channel)
 {
 	ADS124S08_sendCommand(WAKE_OPCODE_MASK);
@@ -410,7 +385,6 @@ void configureAdc(unsigned char channel)
 	ADS124S08_regWrite(REF_ADDR_MASK, 0b00110000);
 	ADS124S08_regWrite(SYS_ADDR_MASK, 0b00000011);
 	ADS124S08_reStart();
-	k_sleep(10);
 }
 
 unsigned int sampleChannel(unsigned char channel)
@@ -419,7 +393,6 @@ unsigned int sampleChannel(unsigned char channel)
 	uint8_t crc = 0;
 
 	configureAdc(channel);
-	k_sleep(100);
 
 	ADS124S08_startConversion();
 	unsigned int data = ADS124S08_dataRead(&status, &crc);
@@ -434,18 +407,20 @@ unsigned int sampleChannel(unsigned char channel)
 	return data;
 }
 
-void ADC_main(void *foo, void *bar, void *gazonk)
-{
-	//	LOG_INF("Initializing ADS124S08...\n");
-	// configureAdc(ADS_P_AIN5);
-	// dumpRegisters();
-	// float LSB = 0.0000005960464478;
+static AFE3_SAMPLE current;
 
-	sensor_node_message.afe3_sample.op1 = sampleChannel(ADS_P_AIN0);
-	sensor_node_message.afe3_sample.op2 = sampleChannel(ADS_P_AIN1);
-	sensor_node_message.afe3_sample.op3 = sampleChannel(ADS_P_AIN2);
-	sensor_node_message.afe3_sample.op4 = sampleChannel(ADS_P_AIN3);
-	sensor_node_message.afe3_sample.op5 = sampleChannel(ADS_P_AIN4);
-	sensor_node_message.afe3_sample.op6 = sampleChannel(ADS_P_AIN5);
-	sensor_node_message.afe3_sample.pt = sampleChannel(ADS_P_AIN8);
+void adc_sample_data()
+{
+	current.op1 = sampleChannel(ADS_P_AIN0);
+	current.op2 = sampleChannel(ADS_P_AIN1);
+	current.op3 = sampleChannel(ADS_P_AIN2);
+	current.op4 = sampleChannel(ADS_P_AIN3);
+	current.op5 = sampleChannel(ADS_P_AIN4);
+	current.op6 = sampleChannel(ADS_P_AIN5);
+	current.pt = sampleChannel(ADS_P_AIN8);
+}
+
+void adc_get_sample(AFE3_SAMPLE *msg)
+{
+	memcpy(msg, &current, sizeof(current));
 }

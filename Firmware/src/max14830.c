@@ -27,7 +27,7 @@
 #include "pinout.h"
 #include "init.h"
 
-#define LOG_LEVEL CONFIG_EE06_LOG_LEVEL
+#define LOG_LEVEL CONFIG_MAX14830_LOG_LEVEL
 #include <logging/log.h>
 LOG_MODULE_REGISTER(MAX14830);
 
@@ -93,7 +93,7 @@ void initUart(uint8_t address, int baud, uint8_t wordlength, uint8_t parity, uin
             div = clk / baud;
         }
     }
-    LOG_INF("MAX14830: Base clock frequency: %d, Address: %02X, UART baudrate: %d, divisor: %d, mode: %d\n", CLOCK_FREQUENCY, address, baud, div, mode);
+    LOG_DBG("MAX14830: Base clock frequency: %d, Address: %02X, UART baudrate: %d, divisor: %d, mode: %d", CLOCK_FREQUENCY, address, baud, div, mode);
 
     max14830_write(address, DIVLSB_REGISTER, div / 16);
     max14830_write(address, DIVMSB_REGISTER, (div / 16) >> 8);
@@ -142,12 +142,11 @@ void initUart(uint8_t address, int baud, uint8_t wordlength, uint8_t parity, uin
 
 void resetWait()
 {
-    LOG_INF("MAX14830: Waiting for reset signal...\n");
+    LOG_DBG("MAX14830: Waiting for reset signal...");
     u32_t resetVal;
     do
     {
-        LOG_INF("MAX14830: Waiting...\n");
-        k_sleep(1);
+        LOG_DBG("MAX14830: Waiting...");
         gpio_pin_read(get_GPIO_device(), MAX14830_IRQ, &resetVal);
     } while (0 == resetVal);
 }
@@ -191,7 +190,7 @@ void DiscardWaitingRxJunk(uint8_t address)
     } while (fifo != 0);
 }
 
-int sendMessage(uint8_t address, const uint8_t *txBuffer, uint8_t txLength)
+int max_send_message(uint8_t address, const uint8_t *txBuffer, uint8_t txLength)
 {
     DiscardWaitingRxJunk(address);
     EnableTxMode(address);
@@ -203,12 +202,6 @@ int sendMessage(uint8_t address, const uint8_t *txBuffer, uint8_t txLength)
 
     WaitForTx(address);
     EnableRxMode(address);
-
-    // // We can do this, in order to fake synchronicity, or we can implement a full fledged event driven command / response stack thingy...
-
-    // (stalehd): )We should fix this :) CoAP and LwM2M requires a slightly quicker send/response
-    // thing.
-    k_sleep(2000);
 
     return 0;
 }
@@ -272,18 +265,18 @@ void EnableRxFIFOIrq(uint8_t address)
     int ret = gpio_pin_configure(gpio_device, MAX14830_IRQ, GPIO_INT | GPIO_PUD_PULL_UP | GPIO_INT_EDGE | GPIO_INT_ACTIVE_LOW | GPIO_DIR_IN);
     if (ret)
     {
-        LOG_ERR("Error configuring %d!\n", MAX14830_IRQ);
+        LOG_ERR("Error configuring %d!", MAX14830_IRQ);
     }
     gpio_init_callback(&gpio_cb, irq_handler, BIT(MAX14830_IRQ));
     ret = gpio_add_callback(gpio_device, &gpio_cb);
     if (ret)
     {
-        LOG_ERR("Error enabling callback %d!\n", MAX14830_IRQ);
+        LOG_ERR("Error enabling callback %d!", MAX14830_IRQ);
     }
     ret = gpio_pin_enable_callback(gpio_device, MAX14830_IRQ);
     if (ret)
     {
-        LOG_ERR("Error enabling callback %d!\n", MAX14830_IRQ);
+        LOG_ERR("Error enabling callback %d!", MAX14830_IRQ);
     }
 
     max14830_write(address, IRQENABLE_REGISTER, RFifoTrgIEn | LSRErrIEn);
@@ -296,7 +289,7 @@ void EnableRxFIFOIrq(uint8_t address)
 
 static void MAX_RX_entry_point(void *foo, void *bar, void *gazonk)
 {
-    LOG_INF("MAX RX Thread running...\n");
+    LOG_DBG("MAX RX Thread running");
 
     while (true)
     {
@@ -309,7 +302,7 @@ static max_char_callback_t char_callback = NULL;
 
 void MAX_init(max_char_callback_t cb)
 {
-    LOG_INF("Initializing MAX14830...\n");
+    LOG_INF("Initializing");
     resetWait();
 
     char_callback = cb;

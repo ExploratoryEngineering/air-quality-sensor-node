@@ -20,9 +20,9 @@
 #include <device.h>
 #include <i2c.h>
 
-#define LOG_LEVEL CONFIG_EE06_LOG_LEVEL
+#define LOG_LEVEL CONFIG_EEI2C_LOG_LEVEL
 #include <logging/log.h>
-LOG_MODULE_REGISTER(I2C_CONFIG);
+LOG_MODULE_REGISTER(EEI2C);
 
 static struct device *i2c_dev = NULL;
 
@@ -33,12 +33,12 @@ struct device *get_I2C_device()
 		i2c_dev = device_get_binding(I2C_DEV);
 		if (!i2c_dev)
 		{
-			LOG_ERR("I2C device driver not found");
+			LOG_ERR("Device driver not found");
 			return NULL;
 		}
 		if (i2c_configure(i2c_dev, I2C_SPEED_SET(I2C_SPEED_STANDARD)))
 		{
-			LOG_ERR("I2C configuration failed");
+			LOG_ERR("Configuration failed");
 			return NULL;
 		}
 	}

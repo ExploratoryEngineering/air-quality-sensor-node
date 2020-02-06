@@ -10,7 +10,7 @@
 #include "at_commands.h"
 #include "init.h"
 
-#define LOG_LEVEL CONFIG_EE06_LOG_LEVEL
+#define LOG_LEVEL CONFIG_COMMS_LOG_LEVEL
 #include <logging/log.h>
 LOG_MODULE_REGISTER(COMMS);
 
@@ -124,7 +124,7 @@ void modem_write(const char *cmd)
 #if DUMP_MODEM
     printf("%s", cmd);
 #endif
-    sendMessage(EE_NBIOT_01_ADDRESS, cmd, strlen(cmd));
+    max_send_message(EE_NBIOT_01_ADDRESS, cmd, strlen(cmd));
 }
 
 bool modem_read(uint8_t *b, int32_t timeout)
@@ -179,16 +179,19 @@ void modem_init(void)
 
     MAX_init(comms_handle_char);
 
-    LOG_INF("Restart modem");
+    // OK. This is clutching at straws
+    k_sleep(1000);
+    LOG_DBG("Restart modem");
     // Set up the modem. Might also include AT+CGPADDR to set up PDP context
     // here.
     modem_restart();
 
-    LOG_INF("Waiting for modem to connect...");
+    LOG_DBG("Waiting for modem to connect...");
     while (!modem_is_ready())
     {
         k_sleep(K_MSEC(2000));
     }
+
     modem_write("AT+CIMI\r");
     char imsi[24];
     if (atcimi_decode((char *)&imsi) != AT_OK)

@@ -1,5 +1,45 @@
-module = EE06
-module-str = EE06
+module = MAIN
+module-str = MAIN
 source "subsys/logging/Kconfig.template.log_config"
 
 source "Kconfig.zephyr"
+
+module = COMMS
+module-str = COMMS
+source "subsys/logging/Kconfig.template.log_config"
+
+module = CHIPCAP2
+module-str = CHIPCAP2
+source "subsys/logging/Kconfig.template.log_config"
+
+module = MAX14830
+module-str = MAX14830
+source "subsys/logging/Kconfig.template.log_config"
+
+module = OPCN3
+module-str = OPCN3
+source "subsys/logging/Kconfig.template.log_config"
+
+module = GPS
+module-str = GPS
+source "subsys/logging/Kconfig.template.log_config"
+
+module = ADSL
+module-str = ADSL
+source "subsys/logging/Kconfig.template.log_config"
+
+module = N2
+module-str = N2
+source "subsys/logging/Kconfig.template.log_config"
+
+module = EEGPIO
+module-str = EEGPIO
+source "subsys/logging/Kconfig.template.log_config"
+
+module = EEI2C
+module-str = EEI2C
+source "subsys/logging/Kconfig.template.log_config"
+
+module = EESPI
+module-str = EESPI
+source "subsys/logging/Kconfig.template.log_config"

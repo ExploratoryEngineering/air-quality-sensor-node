@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#define LOG_LEVEL LOG_LEVEL_INF
+#define LOG_LEVEL CONFIG_N2_LOG_LEVEL
 #include <logging/log.h>
 LOG_MODULE_REGISTER(N2);
 
@@ -209,6 +209,9 @@ static int offload_recvfrom(int sfd, void *buf, short int len,
     return -ENOMEM;
 }
 
+// Could cut down on this
+#define WAIT_SLEEP_FOR_RECV 100
+
 static int offload_recv(int sfd, void *buf, size_t max_len, int flags)
 {
     ARG_UNUSED(flags);
@@ -238,7 +241,7 @@ static int offload_recv(int sfd, void *buf, size_t max_len, int flags)
     while (curcount == 0)
     {
         // busy wait for data
-        k_sleep(1000);
+        k_sleep(WAIT_SLEEP_FOR_RECV);
         k_sem_take(&mdm_sem, K_FOREVER);
         curcount = sockets[sock_fd].incoming_len;
         k_sem_give(&mdm_sem);
@@ -448,14 +451,13 @@ static void receive_cb(int fd, size_t bytes)
 static int n2_init(struct device *dev)
 {
     ARG_UNUSED(dev);
-    LOG_INF("Initalise N2 offloading");
+    LOG_INF("Initalise offloading");
     k_sem_init(&mdm_sem, 1, 1);
     k_sem_init(&socket_sem, 0, 1);
 
     receive_callback(receive_cb);
 
     modem_init();
-    LOG_DBG("***** sockets are ready to use");
     k_sem_give(&socket_sem);
     return 0;
 }

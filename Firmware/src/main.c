@@ -17,20 +17,58 @@
 #include <zephyr.h>
 #include <stdio.h>
 #include <logging/log.h>
+#include <net/socket.h>
 
 #include "gps.h"
 #include "messagebuffer.h"
 #include "version.h"
 #include "init.h"
+#include "chipcap2.h"
 #include "n2_offload.h"
-#define LOG_LEVEL CONFIG_EE06_LOG_LEVEL
-LOG_MODULE_REGISTER(EE06);
 
-#define MIN_SEND_INTERVAL K_MSEC(60 * 1000)
+#define LOG_LEVEL CONFIG_MAIN_LOG_LEVEL
+LOG_MODULE_REGISTER(MAIN);
+
+#define MIN_SEND_INTERVAL_SEC 5
+
+#define MAX_SEND_BUFFER 128
+static uint8_t buffer[MAX_SEND_BUFFER];
+
+int send_samples(uint8_t *buffer, size_t len)
+{
+	int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	if (sock < 0)
+	{
+		LOG_ERR("Error opening socket: %d", sock);
+		return sock;
+	}
+
+	static struct sockaddr_in remote_addr = {
+		sin_family : AF_INET,
+	};
+	remote_addr.sin_port = htons(1234);
+
+	net_addr_pton(AF_INET, "172.16.15.14", &remote_addr.sin_addr);
+
+	int err = connect(sock, (struct sockaddr *)&remote_addr, sizeof(remote_addr));
+	if (err < 0)
+	{
+		LOG_ERR("Unable to connect to backend: %d", err);
+		close(sock);
+		return err;
+	}
+	err = send(sock, buffer, len, 0);
+	if (err < 0)
+	{
+		LOG_ERR("Unable to send data: %d", err);
+		return err;
+	}
+	close(sock);
+	return err;
+}
 
 void main(void)
 {
-	printk("Init board\n");
 	init_board();
 	// TODO: Watchdog init
 
@@ -38,40 +76,48 @@ void main(void)
 
 	// fota_init();
 
-	LOG_INF("This is the AQ node with version %s (%s).\n", AQ_VERSION, AQ_NAME);
+	LOG_INF("This is the AQ node with version %s (%s)", AQ_VERSION, AQ_NAME);
 
 	gps_init();
+	opc_init();
 
+	LOG_INF("Waiting for modem");
 	wait_for_sockets();
+	LOG_DBG("Ready to run");
 
-	LOG_INF("I'm so totally ready");
 	while (true)
 	{
-		k_sleep(MIN_SEND_INTERVAL);
-		/*
+		k_sleep(MIN_SEND_INTERVAL_SEC * K_MSEC(1000));
+
+		LOG_DBG("Sampling sensors");
 		SENSOR_NODE_MESSAGE last_message;
-		n3_wait_for_sample();
 
-		if (!n3_get_sample(&last_message)) {
-			LOG_WRN("Could not read OPC N3 sample");
-			continue;
+		opc_n3_sample_data();
+		opc_n3_get_sample(&last_message.opc_sample);
+
+		adc_sample_data();
+		adc_get_sample(&last_message.afe3_sample);
+
+		cc2_sample_data();
+		cc2_get_sample(&last_message.cc2_sample);
+
+		gps_get_sample(&last_message.gps_fix);
+
+		int len = mb_encode(&last_message, buffer, MAX_SEND_BUFFER);
+		LOG_DBG("Sample complete, encoded buffer = %d bytes", len);
+
+		int ret = send_samples(buffer, len);
+		if (ret < len)
+		{
+			LOG_WRN("Could not send message to server: %d", ret);
+		}
+		else
+		{
+			LOG_DBG("Successfully sent %d bytes to backend", len);
 		}
 
-		if (!cc2_get_sample(&last_message)) {
-			LOG_WRN("Could not read ChipCap2 sample");
-			continue;
-		}
-		if (!adc_get_sample(&last_message)) {
-			LOG_WRN("Could not read ADC sample");
-			continue;
-		}
-		if (!gps_get_sample(&last_message)) {
-			LOG_WRN("Could not read GPS sample");
-			continue;
-		}
-
-		if (!send_nbiot_message(&last_message)) {
-			LOG_WRN("Could not send message to server");
-		}*/
+#if 0
+			mb_dump_message(&last_message);
+#endif
 	}
 }

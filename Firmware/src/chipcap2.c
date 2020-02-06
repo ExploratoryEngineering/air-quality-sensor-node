@@ -22,70 +22,61 @@
 #include "i2c_config.h"
 #include "messagebuffer.h"
 
-
 // Note: The Chipcap sensor is onlys used for monitoring ambient temperature and humidity in the controller housing
 //       The particle and gas sensors will provide temperature and RH data for the environmentl measurements.
 
-#define LOG_LEVEL CONFIG_EE06_LOG_LEVEL
+#define LOG_LEVEL CONFIG_CHIPCAP2_LOG_LEVEL
 #include <logging/log.h>
 LOG_MODULE_REGISTER(CHIPCAP2);
-
-extern SENSOR_NODE_MESSAGE sensor_node_message;
 
 #define CC2_VALID_DATA (0x00)
 #define CC2_STALE_DATA (0x01)
 
-struct device * i2c_dev;
-
-void CC2_init()
+int cc2_init()
 {
-    // LOG_DBG("Initializing ChipCap2 ");
-
-    i2c_dev = get_I2C_device();
-    uint8_t NORMAL_OPERATION_MODE[] = {CHIPCAP2_NORMAL_OPERATION_MODE,0,0};
-    int err = i2c_write(i2c_dev, NORMAL_OPERATION_MODE, 3, CHIPCAP2_ADDRESS);
-    if (0 != err)
-    {
-        LOG_ERR("Unable to set Chipcap2 sensor in normal operations mode. i2c_write failed with error: %d", err);
-    }
+    uint8_t NORMAL_OPERATION_MODE[] = {CHIPCAP2_NORMAL_OPERATION_MODE, 0, 0};
+    return i2c_write(get_I2C_device(), NORMAL_OPERATION_MODE, 3, CHIPCAP2_ADDRESS);
 }
 
-void CC2_sample()
-{
-    // LOG_DBG("Sampling Chipcap2 sensor.");
+static CC2_SAMPLE current;
 
-    uint8_t rxBuffer[] = {0,0,0,0};
-    int err = i2c_read(i2c_dev, rxBuffer, 4, CHIPCAP2_ADDRESS);
+void cc2_sample_data()
+{
+    int err = cc2_init();
+    if (err)
+    {
+        LOG_ERR("Unable to set Chipcap2 sensor in normal operations mode. i2c_write failed with error: %d", err);
+        return;
+    }
+
+    struct device *i2c_device = get_I2C_device();
+    uint8_t rxBuffer[] = {0, 0, 0, 0};
+    err = i2c_read(i2c_device, rxBuffer, 4, CHIPCAP2_ADDRESS);
     if (0 != err)
     {
         LOG_ERR("Unable to get Chipcap2 sensor reading. i2c_read failed with error: %d", err);
+        return;
     }
 
     // uint8_t status = rxBuffer[0] >> 6;
-
     float RH_H = (rxBuffer[0] & 0b00111111);
     float RH_L = rxBuffer[1];
-    sensor_node_message.cc2_sample.RH = ((RH_H*256 + RH_L)/16384)*100;
+    current.RH = ((RH_H * 256 + RH_L) / 16384) * 100;
     float TempC_H = rxBuffer[2];
     float TempC_L = rxBuffer[3] >> 4;
-    sensor_node_message.cc2_sample.Temp_C = ((TempC_H*64+TempC_L)/16384)*165-40;
+    current.Temp_C = ((TempC_H * 64 + TempC_L) / 16384) * 165 - 40;
 
     // Send a new measurement request after reading. Cannot be sent before first read
-    uint8_t MEASUREMENT_REQUEST[] = {};
+    //    uint8_t measurement_request = 1;
 
-    err = i2c_write(i2c_dev, MEASUREMENT_REQUEST, 1, CHIPCAP2_ADDRESS);
+    err = i2c_write(i2c_device, NULL, 0, CHIPCAP2_ADDRESS);
     if (0 != err)
     {
         LOG_ERR("Unable to send measurement request to Chipcap2 sensor. i2c_write failed with error: %d", err);
     }
-
-    // LOG_INF("Chipcap2: Temperature: %d", (int)sensor_node_message.cc2_sample.Temp_C);
-    // LOG_INF("Chipcap2: Relative humidity: %d", (int)sensor_node_message.cc2_sample.RH);
 }
 
-void CC2_main(void * foo, void * bar, void * gazonk)
+void cc2_get_sample(CC2_SAMPLE *msg)
 {
-   	CC2_init();
-    CC2_sample();
+    memcpy(msg, &current, sizeof(current));
 }
-
