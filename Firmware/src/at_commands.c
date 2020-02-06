@@ -75,7 +75,8 @@ typedef void (*char_callback_t)(void *ctx, struct buf *rb, char b, bool is_urc, 
 // so it might be truncated.
 int decode_input(int32_t timeout, void *ctx, char_callback_t char_cb, eol_callback_t eol_cb)
 {
-    if (timeout < 0) {
+    if (timeout < 0)
+    {
         timeout = -timeout;
     }
     struct buf rb;
@@ -125,15 +126,15 @@ int decode_input(int32_t timeout, void *ctx, char_callback_t char_cb, eol_callba
     return AT_TIMEOUT;
 }
 
+// Generic at decoding - wait for OK, ERROR or timeout
+#define at_decode() decode_input(CMD_TIMEOUT, NULL, NULL, NULL)
+
 // Decode AT+NRB responses. It just waits for OK or ERROR with a slightly
 // longer timeout than the default commands.
 int atnrb_decode()
 {
     return decode_input(CMD_REBOOT_TIMEOUT, NULL, NULL, NULL);
 }
-
-// AT responses - wait for OK (ERROR is quite rare here but it is handled)
-#define at_decode() decode_input(CMD_TIMEOUT, NULL, NULL, NULL)
 
 // Decode response for AT+NSOCL (close socket). There is no return from this
 // command, just OK or ERROR.
@@ -242,11 +243,13 @@ struct nsost_ctx
 void nsost_eol(void *ctx, struct buf *rb, bool is_urc)
 {
     struct nsost_ctx *c = (struct nsost_ctx *)ctx;
-        // Socket descriptor is *always* a single digit, ie the comma would be
-        // the 2nd char
-    if (!is_urc && *c->len == 0 && rb->size > 2 && rb->data[1] == ',') {
+    // Socket descriptor is *always* a single digit, ie the comma would be
+    // the 2nd char
+    if (!is_urc && *c->len == 0 && rb->size > 2 && rb->data[1] == ',')
+    {
         *c->sockfd = (int)(rb->data[0] - '0');
-        if (*c->sockfd >= 7) {
+        if (*c->sockfd >= 7)
+        {
             LOG_ERR("Socket fd should be <= 6 but is '%c'", rb->data[0]);
         }
         *c->len = atoi(rb->data + 2);
@@ -364,7 +367,6 @@ int atcpsms_decode()
     return at_decode();
 }
 
-
 // Decode AT+CIMI responses.
 struct cimi_ctx
 {
@@ -401,4 +403,9 @@ int atcimi_decode(char *imsi)
         .done = false,
     };
     return decode_input(CMD_TIMEOUT, &ctx, cimi_char, cimi_eol);
+}
+
+int at_generic_decode()
+{
+    return at_decode();
 }

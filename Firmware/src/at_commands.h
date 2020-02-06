@@ -64,4 +64,7 @@ int atcimi_decode(char *imsi);
  */
 int atcpsms_decode();
 
-
+/**
+ * @brief generic decode function. Waits for OK, ERROR or timeout
+ */
+int at_generic_decode();

@@ -1,8 +1,5 @@
 #pragma once
 
-#define UART_COMMS 1
-//#define I2C_COMMS 1
-
 /**
  * @brief Callback for receive notifications.
  */

@@ -145,7 +145,7 @@ bool modem_read(uint8_t *b, int32_t timeout)
 
 bool modem_is_ready()
 {
-    modem_write("AT+CGPADDR\r\n");
+    modem_write("AT+CGPADDR\r");
     char ip[16];
     size_t len = 0;
     if (atcgpaddr_decode((char *)&ip, &len) == AT_OK)
@@ -158,9 +158,23 @@ bool modem_is_ready()
     return false;
 }
 
+void modem_configure()
+{
+    modem_write("AT+CGDCONT=0,\"IP\",\"mda.ee\"\r");
+    if (at_generic_decode() != AT_OK)
+    {
+        LOG_ERR("AT+CGPADDR (APN config) did not return OK");
+    }
+    modem_write("AT+NCONFIG=\"AUTOCONNECT\",\"TRUE\"\r");
+    if (at_generic_decode() != AT_OK)
+    {
+        LOG_ERR("AT+NCONFIG (auto connect) did not return OK");
+    }
+}
+
 void modem_restart()
 {
-    modem_write("AT+NRB\r\n");
+    modem_write("AT+NRB\r");
     atnrb_decode();
 }
 
@@ -180,10 +194,15 @@ void modem_init(void)
     MAX_init(comms_handle_char);
 
     // OK. This is clutching at straws
-    k_sleep(1000);
-    LOG_DBG("Restart modem");
-    // Set up the modem. Might also include AT+CGPADDR to set up PDP context
-    // here.
+    LOG_DBG("Modem startup");
+    // Modem starts up rebooting so wait for the initial OK.
+    atnrb_decode();
+    LOG_DBG("Startup complete");
+
+    LOG_DBG("Configure APN");
+    modem_configure();
+
+    LOG_DBG("Modem restart");
     modem_restart();
 
     LOG_DBG("Waiting for modem to connect...");
