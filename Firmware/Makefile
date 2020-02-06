@@ -26,7 +26,7 @@ build_mcuboot:
 
 install_mcuboot:
 	cd mcuboot/boot/zephyr && \
-	west build && \
+	west build  --board nrf52_pca10040 && \
 	west flash
 
 clean_mcuboot:
