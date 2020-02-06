@@ -43,3 +43,7 @@ source "subsys/logging/Kconfig.template.log_config"
 module = EESPI
 module-str = EESPI
 source "subsys/logging/Kconfig.template.log_config"
+
+module = FOTA
+module-str = FOTA
+source "subsys/logging/Kconfig.template.log_config"

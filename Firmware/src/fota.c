@@ -9,12 +9,13 @@
 
 #include "fota.h"
 
-LOG_MODULE_REGISTER(fota, LOG_LEVEL_DBG);
+LOG_MODULE_REGISTER(FOTA, CONFIG_FOTA_LOG_LEVEL);
 
 #define FLASH_AREA_IMAGE_SECONDARY DT_FLASH_AREA_IMAGE_1_ID
 #define FLASH_BANK1_ID DT_FLASH_AREA_IMAGE_1_ID
 #define FLASH_BANK_SIZE DT_FLASH_AREA_IMAGE_1_SIZE
 
+static struct k_sem fota_sem;
 static struct k_delayed_work reboot_work;
 
 static void do_reboot(struct k_work *work)
@@ -30,7 +31,11 @@ static void do_reboot(struct k_work *work)
 
 static int firmware_update_cb(u16_t obj_inst_id)
 {
-	LOG_INF("Executing firmware update");
+	LOG_INF("Executing firmware update. Wait for ready signal");
+
+	k_sem_take(&fota_sem, K_SECONDS(30));
+
+	LOG_DBG("Now ready to reboot");
 
 	// Wait a few seconds before rebooting so that the lwm2m client has a chance
 	// to acknowledge having received the Update signal.
@@ -242,8 +247,22 @@ static int init_image()
 	return 0;
 }
 
+void fota_disable()
+{
+	LOG_DBG("FOTA reboots disabled");
+	k_sem_take(&fota_sem, K_FOREVER);
+}
+
+void fota_enable()
+{
+	LOG_DBG("FOTA reboots enabled");
+	k_sem_give(&fota_sem);
+}
+
 int fota_init()
 {
+	k_sem_init(&fota_sem, 1, 1);
+
 	int ret = init_lwm2m_resources();
 	if (ret)
 	{

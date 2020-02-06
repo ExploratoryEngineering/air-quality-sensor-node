@@ -25,6 +25,7 @@
 #include "init.h"
 #include "chipcap2.h"
 #include "n2_offload.h"
+#include "fota.h"
 
 #define LOG_LEVEL CONFIG_MAIN_LOG_LEVEL
 LOG_MODULE_REGISTER(MAIN);
@@ -72,12 +73,9 @@ void main(void)
 	init_board();
 	// TODO: Watchdog init
 
-	// TODO: FOTA init and processing
-
-	// fota_init();
-
 	LOG_INF("This is the AQ node with version %s (%s)", AQ_VERSION, AQ_NAME);
 
+	fota_init();
 	gps_init();
 	opc_init();
 
@@ -88,6 +86,8 @@ void main(void)
 	while (true)
 	{
 		k_sleep(MIN_SEND_INTERVAL_SEC * K_MSEC(1000));
+
+		fota_disable();
 
 		LOG_DBG("Sampling sensors");
 		SENSOR_NODE_MESSAGE last_message;
@@ -116,6 +116,7 @@ void main(void)
 			LOG_DBG("Successfully sent %d bytes to backend", len);
 		}
 
+		fota_enable();
 #if 0
 			mb_dump_message(&last_message);
 #endif

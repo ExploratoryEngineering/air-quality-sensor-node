@@ -19,3 +19,13 @@
 #define CLIENT_FIRMWARE_VER AQ_VERSION
 
 int fota_init();
+
+/**
+ * @brief Disable FOTA reboots temporarily.
+ */
+void fota_disable();
+
+/**
+ * @brief Enable FOTA reboots
+ */
+void fota_enable();
