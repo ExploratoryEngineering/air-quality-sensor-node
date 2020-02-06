@@ -19,5 +19,30 @@ You'll need `make` to build the image. Releases are managed via the `reto` relea
 
 ## Building
 
-* `make` builds the firmware for nRF52
-* `make flash` builds the firmware and flashes it to the board
+You'll need MCUBoot and a key for the application image. If you change the key
+you can't deploy the image on existing devices with a different key. A new key
+means you'll have to reinstall the bootloader on all your devices.
+
+### Initial setup
+
+Install the "reto" tool:
+
+`go get -u https://github.com/ExploratoryEngineering/reto`
+
+Ensure your Zephyr installation is up and running by running `west build`.
+
+Create a new key and install the bootloader on your device:
+
+```shell
+make fwkey
+make build_mcuboot
+make install_mcuboot
+```
+
+### Installing application image
+
+This will rebuild and flash the application image:
+
+```shell
+make flash
+```
