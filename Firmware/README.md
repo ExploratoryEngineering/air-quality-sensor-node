@@ -100,3 +100,37 @@ make flash
 | 1 | uint8 | OPC sample valid
 
 Total: 123 bytes
+
+## Enabling FOTA
+
+First make a release:
+
+`touch CMakeFiles.txt && make`
+
+(this ensures a new build with the updated version number)
+
+Upload the file to Horde:
+
+```shell
+curl -s -XPOST -F image=@build/zephyr/zephyr.signed.bin  -HX-API-Token:$(cat .apikey) https://api.nbiot.engineering/collections/$(cat .collectionid)/firmware > tmp.json
+cat tmp.json | jq -r ".imageId" > .firmwareid
+```
+
+
+Update the version number string on the file
+
+curl -HX-API-Token:$(cat .apikey) https://api.nbiot.engineering/collections
+curl -HX-API-Token:$(cat .apikey) https://api.nbiot.engineering/collections/17dh0cf43jfgl9/devices/17dh0cf43jg6n4
+curl -HX-API-Token:$(cat .apikey) -XDELETE  https://api.nbiot.engineering/collections/17dh0cf43jfgl9/devices/17dh0cf43jg6n4/fwerror
+curl -HX-API-Token:$(cat .apikey) https://api.nbiot.engineering/collections/17dh0cf43jfgl9/devices/17dh0cf43jg6n4
+curl -HX-API-Token:$(cat .apikey) https://api.nbiot.engineering/collections/$(cat .collectionid)/devices/$(cat .deviceid)
+curl -HX-API-Token:$(cat .apikey) https://api.nbiot.engineering/collections/$(cat .collectionid)/firmware
+curl -s -XPOST -F image=@build/zephyr/zephyr.signed.bin  -HX-API-Token:$(cat .apikey) https://api.nbiot.engineering/collections/$(cat .collectionid)/firmware > tmp.json
+cat tmp.json | jq -r ".imageId" > .firmwareid
+curl -XPATCH -d'{"version":"$(reto version)"}' -HX-API-Token:$(cat .apikey) https://api.nbiot.engineering/collections/$(cat .collectionid)/firmware/$(cat .firmwareid)
+curl -XPATCH -d'{"version":"`reto version`"}' -HX-API-Token:$(cat .apikey) https://api.nbiot.engineering/collections/$(cat .collectionid)/firmware/$(cat .firmwareid)
+curl -XPATCH -d'{"version":"0.0.3"}' -HX-API-Token:$(cat .apikey) https://api.nbiot.engineering/collections/$(cat .collectionid)/firmware/$(cat .firmwareid)
+curl -HX-API-Token:$(cat .apikey) https://api.nbiot.engineering/collections/$(cat .collectionid)
+curl -HX-API-Token:$(cat .apikey) https://api.nbiot.engineering/collections/$(cat .collectionid)/devices/$(cat .deviceid)
+curl -XPATCH -d'{"firmware":{"targetFirmwareId": "17dh0cf43jfh0g"}}' -HX-API-Token:$(cat .apikey) https://api.nbiot.engineering/collections/$(cat .collectionid)/devices/$(cat .deviceid)
+curl -HX-API-Token:$(cat .apikey) https://api.nbiot.engineering/collections/$(cat .collectionid)/devices/$(cat .deviceid)

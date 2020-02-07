@@ -28,8 +28,8 @@ module = ADSL
 module-str = ADSL
 source "subsys/logging/Kconfig.template.log_config"
 
-module = N2
-module-str = N2
+module = SARAN2
+module-str = SARAN2
 source "subsys/logging/Kconfig.template.log_config"
 
 module = EEGPIO

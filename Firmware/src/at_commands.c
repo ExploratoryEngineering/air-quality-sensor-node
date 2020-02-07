@@ -75,10 +75,6 @@ typedef void (*char_callback_t)(void *ctx, struct buf *rb, char b, bool is_urc, 
 // so it might be truncated.
 int decode_input(int32_t timeout, void *ctx, char_callback_t char_cb, eol_callback_t eol_cb)
 {
-    if (timeout < 0)
-    {
-        timeout = -timeout;
-    }
     struct buf rb;
     b_init(&rb);
     uint8_t b, prev = ' ';
@@ -283,12 +279,13 @@ struct nsorf_ctx
     int fieldindex;
     char field[MAX_FIELD_SIZE];
     int dataidx;
+    bool complete;
 };
 
 void nsorf_eol(void *ctx, struct buf *rb, bool is_urc)
 {
     struct nsorf_ctx *c = (struct nsorf_ctx *)ctx;
-    if (!is_urc && c->fieldindex > 0)
+    if (c->complete && c->fieldindex == 5)
     {
         *c->remaining = atoi(c->field);
     }
@@ -302,6 +299,10 @@ void nsorf_char(void *ctx, struct buf *rb, char b, bool is_urc, bool is_space)
     }
     struct nsorf_ctx *c = (struct nsorf_ctx *)ctx;
 
+    if (c->complete)
+    {
+        return;
+    }
     switch (b)
     {
     case ',':
@@ -321,8 +322,9 @@ void nsorf_char(void *ctx, struct buf *rb, char b, bool is_urc, bool is_space)
             // ignore
             break;
         case 4:
-            // ignore
-            break;
+            // ignore, this is the final buffer
+            c->complete = true;
+            return;
         default:
             // Should not encounter field #5 here
             LOG_ERR("Too many fields (%d) in response\n", c->fieldno);
@@ -357,8 +359,9 @@ int atnsorf_decode(int *sockfd, char *ip, int *port, uint8_t *data, size_t *rece
         .fieldindex = 0,
         .dataidx = 0,
         .received = received,
+        .complete = false,
     };
-    return decode_input(CMD_TIMEOUT, &ctx, nsorf_char, nsorf_eol);
+    return decode_input(CMD_TIMEOUT * 4, &ctx, nsorf_char, nsorf_eol);
 }
 
 // Decode AT+CPSMS responses. This just waits for ERROR or OK

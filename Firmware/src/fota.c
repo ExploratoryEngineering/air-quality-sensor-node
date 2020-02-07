@@ -2,23 +2,21 @@
 #include <logging/log.h>
 
 #include <dfu/mcuboot.h>
-#include <dfu/flash_img.h>
+
 #include <misc/reboot.h>
-#include <net/lwm2m.h>
 #include <stdio.h>
+#include <net/coap.h>
+#include <net/socket.h>
 
 #include "fota.h"
+#include "fota_tlv.h"
+#include "flash.h"
 
 LOG_MODULE_REGISTER(FOTA, CONFIG_FOTA_LOG_LEVEL);
 
-#define FLASH_AREA_IMAGE_SECONDARY DT_FLASH_AREA_IMAGE_1_ID
-#define FLASH_BANK1_ID DT_FLASH_AREA_IMAGE_1_ID
-#define FLASH_BANK_SIZE DT_FLASH_AREA_IMAGE_1_SIZE
-
 static struct k_sem fota_sem;
-static struct k_delayed_work reboot_work;
 
-static void do_reboot(struct k_work *work)
+/*static void do_reboot()
 {
 	int ret = boot_request_upgrade(BOOT_UPGRADE_TEST);
 	if (ret)
@@ -27,204 +25,7 @@ static void do_reboot(struct k_work *work)
 	}
 
 	sys_reboot(0);
-}
-
-static int firmware_update_cb(u16_t obj_inst_id)
-{
-	LOG_INF("Executing firmware update. Wait for ready signal");
-
-	k_sem_take(&fota_sem, K_SECONDS(30));
-
-	LOG_DBG("Now ready to reboot");
-
-	// Wait a few seconds before rebooting so that the lwm2m client has a chance
-	// to acknowledge having received the Update signal.
-	k_delayed_work_submit(&reboot_work, K_SECONDS(10));
-	return 0;
-}
-
-static void *firmware_get_buf(u16_t obj_inst_id, u16_t res_id, u16_t res_inst_id, size_t *data_len)
-{
-	static u8_t firmware_buf[CONFIG_LWM2M_COAP_BLOCK_SIZE];
-	*data_len = sizeof(firmware_buf);
-	return firmware_buf;
-}
-
-static struct flash_img_context dfu_ctx;
-
-static int firmware_block_received_cb(u16_t obj_inst_id, u16_t res_id, u16_t res_inst_id,
-									  u8_t *data, u16_t data_len, bool last_block, size_t total_size)
-{
-#if defined(CONFIG_FOTA_ERASE_PROGRESSIVELY)
-	static int last_offset = DT_FLASH_AREA_IMAGE_1_OFFSET;
-#endif
-	static u8_t percent_downloaded;
-	static u32_t bytes_downloaded;
-	u8_t downloaded;
-	int ret = 0;
-
-	if (total_size > FLASH_BANK_SIZE)
-	{
-		LOG_ERR("Artifact file size too big (%d)", total_size);
-		return -EINVAL;
-	}
-
-	if (!data_len)
-	{
-		LOG_ERR("Data len is zero, nothing to write.");
-		return -EINVAL;
-	}
-
-	/* Erase bank 1 before starting the write process */
-	if (bytes_downloaded == 0)
-	{
-		flash_img_init(&dfu_ctx);
-#if defined(CONFIG_FOTA_ERASE_PROGRESSIVELY)
-		LOG_INF("Download firmware started, erasing progressively.");
-		/* reset image data */
-		ret = boot_invalidate_slot1();
-		if (ret != 0)
-		{
-			LOG_ERR("Failed to reset image data in bank 1");
-			goto cleanup;
-		}
-#else
-		LOG_INF("Download firmware started, erasing second bank");
-		ret = boot_erase_img_bank(FLASH_BANK1_ID);
-		if (ret != 0)
-		{
-			LOG_ERR("Failed to erase flash bank 1");
-			goto cleanup;
-		}
-#endif
-	}
-
-	bytes_downloaded += data_len;
-	LOG_DBG("%d of %d bytes downloaded", bytes_downloaded, total_size);
-	/* display a % downloaded, if it's different */
-	if (total_size)
-	{
-		downloaded = bytes_downloaded * 100 / total_size;
-	}
-	else
-	{
-		/* Total size is empty when there is only one block */
-		downloaded = 100;
-	}
-
-	if (downloaded > percent_downloaded)
-	{
-		percent_downloaded = downloaded;
-		if (percent_downloaded % 10 == 0)
-		{
-			LOG_DBG("Flash %d%%", percent_downloaded);
-		}
-	}
-
-#if defined(CONFIG_FOTA_ERASE_PROGRESSIVELY)
-	/* Erase the sector that's going to be written to next */
-	while (last_offset <
-		   DT_FLASH_AREA_IMAGE_1_OFFSET + dfu_ctx.bytes_written +
-			   DT_FLASH_ERASE_BLOCK_SIZE)
-	{
-		LOG_INF("Erasing sector at offset 0x%x", last_offset);
-		flash_write_protection_set(flash_dev, false);
-		ret = flash_erase(flash_dev, last_offset,
-						  DT_FLASH_ERASE_BLOCK_SIZE);
-		flash_write_protection_set(flash_dev, true);
-		last_offset += DT_FLASH_ERASE_BLOCK_SIZE;
-		if (ret)
-		{
-			LOG_ERR("Error %d while erasing sector", ret);
-			goto cleanup;
-		}
-	}
-#endif
-
-	ret = flash_img_buffered_write(&dfu_ctx, data, data_len, last_block);
-	if (ret < 0)
-	{
-		LOG_ERR("Failed to write flash block");
-		goto cleanup;
-	}
-
-	if (!last_block)
-	{
-		/* Keep going */
-		return ret;
-	}
-
-	if (total_size && (bytes_downloaded != total_size))
-	{
-		LOG_ERR("Early last block, downloaded %d, expecting %d",
-				bytes_downloaded, total_size);
-		ret = -EIO;
-	}
-
-cleanup:
-#if defined(CONFIG_FOTA_ERASE_PROGRESSIVELY)
-	last_offset = DT_FLASH_AREA_IMAGE_1_OFFSET;
-#endif
-	bytes_downloaded = 0;
-	percent_downloaded = 0;
-
-	return ret;
-}
-
-static int init_lwm2m_resources()
-{
-	LOG_INF("Firmware version: %s", CLIENT_FIRMWARE_VER);
-	LOG_INF("Model number:     %s", CLIENT_MODEL_NUMBER);
-	LOG_INF("Serial numbera:   %s", CLIENT_SERIAL_NUMBER);
-	LOG_INF("Manufacturer:     %s", CLIENT_MANUFACTURER);
-
-	LOG_INF("This is the new version of the firmware!");
-
-	char *server_url;
-	u16_t server_url_len;
-	u8_t server_url_flags;
-	int ret = lwm2m_engine_get_res_data("0/0/0", (void **)&server_url, &server_url_len, &server_url_flags);
-	if (ret)
-	{
-		LOG_ERR("Error getting LwM2M server URL data: %d", ret);
-		return ret;
-	}
-	snprintf(server_url, server_url_len, "coap://172.16.15.14:5683");
-
-	// Security Mode (3 == NoSec)
-	ret = lwm2m_engine_set_u8("0/0/2", 3);
-	if (ret)
-	{
-		LOG_ERR("Error setting LwM2M security mode: %d", ret);
-		return ret;
-	}
-
-	// Firmware pull uses the buffer set by the Package resource (5/0/0) pre-write callback
-	// for passing downloaded firmware chunks to the firmware write callback.
-	lwm2m_engine_register_pre_write_callback("5/0/0", firmware_get_buf);
-	lwm2m_firmware_set_write_cb(firmware_block_received_cb);
-
-	lwm2m_engine_set_res_data("3/0/0", CLIENT_MANUFACTURER,
-							  sizeof(CLIENT_MANUFACTURER),
-							  LWM2M_RES_DATA_FLAG_RO);
-
-	lwm2m_engine_set_res_data("3/0/1", CLIENT_MODEL_NUMBER,
-							  sizeof(CLIENT_MODEL_NUMBER),
-							  LWM2M_RES_DATA_FLAG_RO);
-
-	lwm2m_engine_set_res_data("3/0/2", CLIENT_SERIAL_NUMBER,
-							  sizeof(CLIENT_SERIAL_NUMBER),
-							  LWM2M_RES_DATA_FLAG_RO);
-
-	lwm2m_engine_set_res_data("3/0/3", CLIENT_FIRMWARE_VER,
-							  sizeof(CLIENT_FIRMWARE_VER),
-							  LWM2M_RES_DATA_FLAG_RO);
-
-	k_delayed_work_init(&reboot_work, do_reboot);
-	lwm2m_firmware_set_update_cb(firmware_update_cb);
-
-	return 0;
-}
+}*/
 
 static int init_image()
 {
@@ -241,9 +42,7 @@ static int init_image()
 			return ret;
 		}
 		LOG_INF("Firmware update succeeded");
-		lwm2m_engine_set_u8("5/0/5", RESULT_SUCCESS);
 	}
-
 	return 0;
 }
 
@@ -259,26 +58,115 @@ void fota_enable()
 	k_sem_give(&fota_sem);
 }
 
+// This is the general buffer used by the FOTA and flash writing functions
+static uint8_t buffer[256];
+#define PHONE_HOME_PATH "d"
+
+#define CHECK_ERR(x)                   \
+	err = (x);                         \
+	if (err)                           \
+	{                                  \
+		LOG_ERR("Error exec:%d", err); \
+		return err;                    \
+	}
+
+#define FOTA_COAP_SERVER "172.16.7.197"
+#define FOTA_COAP_PORT 6683
+
+static int fota_report_version()
+{
+	struct coap_packet p;
+	int err = 0;
+	CHECK_ERR(coap_packet_init(&p, buffer, sizeof(buffer), 1, COAP_TYPE_CON, 8, coap_next_token(), COAP_METHOD_POST, coap_next_id()));
+	CHECK_ERR(coap_packet_append_option(&p, COAP_OPTION_URI_PATH, PHONE_HOME_PATH, strlen(PHONE_HOME_PATH)));
+	CHECK_ERR(coap_packet_append_payload_marker(&p));
+
+	uint8_t tmpBuf[64];
+
+	int len = encode_tlv_string(tmpBuf, FIRMWARE_VER_ID, CLIENT_FIRMWARE_VER);
+	CHECK_ERR(coap_packet_append_payload(&p, tmpBuf, len));
+
+	len = encode_tlv_string(tmpBuf, CLIENT_MANUFACTURER_ID, CLIENT_MANUFACTURER);
+	CHECK_ERR(coap_packet_append_payload(&p, tmpBuf, len));
+
+	len = encode_tlv_string(tmpBuf, SERIAL_NUMBER_ID, CLIENT_SERIAL_NUMBER);
+	CHECK_ERR(coap_packet_append_payload(&p, tmpBuf, len));
+
+	len = encode_tlv_string(tmpBuf, MODEL_NUMBER_ID, CLIENT_MODEL_NUMBER);
+	CHECK_ERR(coap_packet_append_payload(&p, tmpBuf, len));
+
+	LOG_INF("Sending %d bytes to %s:%d", p.offset, log_strdup(FOTA_COAP_SERVER), FOTA_COAP_PORT);
+
+	int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	if (sock < 0)
+	{
+		LOG_ERR("Error opening socket: %d", sock);
+		return sock;
+	}
+
+	struct sockaddr_in remote_addr = {
+		sin_family : AF_INET,
+	};
+	remote_addr.sin_port = htons(FOTA_COAP_PORT);
+	net_addr_pton(AF_INET, FOTA_COAP_SERVER, &remote_addr.sin_addr);
+
+	err = sendto(sock, buffer, p.offset, 0, (const struct sockaddr *)&remote_addr, sizeof(remote_addr));
+	if (err < 0)
+	{
+		LOG_ERR("Unable to send CoAP packet: %d", err);
+		close(sock);
+		return err;
+	}
+	LOG_DBG("Sent %d bytes, waiting for response", p.offset);
+
+	int received = 0;
+
+	while (received == 0)
+	{
+		received = recvfrom(sock, buffer, sizeof(buffer), 0, NULL, NULL);
+		if (received < 0)
+		{
+			k_sleep(K_MSEC(2000));
+			LOG_ERR("Error receiving data: %d", received);
+			close(sock);
+			return received;
+		}
+		if (received == 0)
+		{
+			k_sleep(K_MSEC(500));
+		}
+	}
+	k_sleep(K_MSEC(2000));
+	close(sock);
+
+	LOG_DBG("Got response (%d) bytes", received);
+	CHECK_ERR(coap_packet_parse(&p, buffer, received, NULL, 0));
+
+	LOG_INF("Successfully received a response from FOTA CoAP server");
+	return 0;
+}
+
 int fota_init()
 {
+	LOG_DBG("Firmware version: %s", CLIENT_FIRMWARE_VER);
+	LOG_DBG("Model number:     %s", CLIENT_MODEL_NUMBER);
+	LOG_DBG("Serial numbera:   %s", CLIENT_SERIAL_NUMBER);
+	LOG_DBG("Manufacturer:     %s", CLIENT_MANUFACTURER);
+
 	k_sem_init(&fota_sem, 1, 1);
 
-	int ret = init_lwm2m_resources();
+	int ret = init_image();
 	if (ret)
 	{
-		LOG_ERR("init_lwm2m_resources: %d", ret);
+		LOG_ERR("Error initialising image: %d", ret);
 		return ret;
 	}
 
-	ret = init_image();
+	// Ping home
+	ret = fota_report_version();
 	if (ret)
 	{
-		LOG_ERR("init_image: %d", ret);
-		return ret;
+		LOG_ERR("Error reporting version: %d", ret);
 	}
-
-	static struct lwm2m_ctx client;
-	lwm2m_rd_client_start(&client, "ee02", NULL);
-
-	return 0;
+	return ret;
 }

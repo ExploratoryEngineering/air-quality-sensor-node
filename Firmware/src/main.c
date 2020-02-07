@@ -30,7 +30,7 @@
 #define LOG_LEVEL CONFIG_MAIN_LOG_LEVEL
 LOG_MODULE_REGISTER(MAIN);
 
-#define MIN_SEND_INTERVAL_SEC 5
+#define MIN_SEND_INTERVAL_SEC 30
 
 #define MAX_SEND_BUFFER 128
 static uint8_t buffer[MAX_SEND_BUFFER];
@@ -75,7 +75,6 @@ void main(void)
 
 	LOG_INF("This is the AQ node with version %s (%s)", AQ_VERSION, AQ_NAME);
 
-	fota_init();
 	gps_init();
 	opc_init();
 
@@ -83,10 +82,17 @@ void main(void)
 	wait_for_sockets();
 	LOG_DBG("Ready to run");
 
+	fota_init();
+	LOG_INF("Sleeping");
+	while (true)
+	{
+		k_sleep(1000);
+	}
+
 	while (true)
 	{
 		k_sleep(MIN_SEND_INTERVAL_SEC * K_MSEC(1000));
-
+/*
 		fota_disable();
 
 		LOG_DBG("Sampling sensors");
@@ -116,7 +122,7 @@ void main(void)
 			LOG_DBG("Successfully sent %d bytes to backend", len);
 		}
 
-		fota_enable();
+		fota_enable();*/
 #if 0
 			mb_dump_message(&last_message);
 #endif

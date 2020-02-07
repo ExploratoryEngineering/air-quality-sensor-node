@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#define LOG_LEVEL CONFIG_N2_LOG_LEVEL
+#define LOG_LEVEL CONFIG_SARAN2_LOG_LEVEL
 #include <logging/log.h>
 LOG_MODULE_REGISTER(N2);
 
@@ -173,6 +173,8 @@ static int offload_recvfrom(int sfd, void *buf, short int len,
     {
         len = MAX_RECEIVE;
     }
+    LOG_DBG("Sending AT+NSORF to get %d bytes into %d bytes", sockets[sock_fd].incoming_len, len);
+
     sprintf(modem_command_buffer, "AT+NSORF=%d,%d\r", sockets[sock_fd].id, len);
     modem_write(modem_command_buffer);
 
@@ -202,14 +204,16 @@ static int offload_recvfrom(int sfd, void *buf, short int len,
         }
         sockets[sock_fd].incoming_len = remain;
         k_sem_give(&mdm_sem);
+        LOG_INF("Receievd %d bytes", received);
         return received;
     }
     k_sem_give(&mdm_sem);
     errno = -ENOMEM;
+    LOG_DBG("recvfrom returns -ENOMEM. res = %d", res);
     return -ENOMEM;
 }
 
-// Could cut down on this
+// Could *maybe* cut down on this?
 #define WAIT_SLEEP_FOR_RECV 100
 
 static int offload_recv(int sfd, void *buf, size_t max_len, int flags)
@@ -441,6 +445,7 @@ static void receive_cb(int fd, size_t bytes)
     {
         if (sockets[i].id == fd)
         {
+            LOG_DBG("Receive %d bytes on socket %d", bytes, fd);
             sockets[i].incoming_len += bytes;
         }
     }

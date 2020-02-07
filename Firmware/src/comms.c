@@ -28,7 +28,7 @@ static struct k_sem rx_sem;
 
 #define URC_THREAD_STACK 512
 #define URC_THREAD_PRIORITY (CONFIG_NUM_COOP_PRIORITIES)
-#define DUMP_MODEM 0
+#define DUMP_MODEM 1
 
 struct k_thread urc_thread;
 
@@ -37,11 +37,18 @@ K_THREAD_STACK_DEFINE(urc_thread_stack,
 
 static recv_callback_t recv_cb = NULL;
 
+/**
+ * Receive callback for the sockets. This calls receive_cb when
+ * +NSOMNMI URC is received
+ */
 void receive_callback(recv_callback_t receive_cb)
 {
     recv_cb = receive_cb;
 }
 
+/**
+ * URC detecting procedure
+ */
 void urc_threadproc(void)
 {
     char buf[URC_SIZE];
@@ -138,6 +145,7 @@ bool modem_read(uint8_t *b, int32_t timeout)
         }
         break;
     default:
+        LOG_DBG("Timed out with timeout set to %d", timeout);
         break;
     }
     return false;

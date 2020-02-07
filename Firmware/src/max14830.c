@@ -31,7 +31,7 @@
 #include <logging/log.h>
 LOG_MODULE_REGISTER(MAX14830);
 
-#define MAX_THREAD_PRIORITY -4
+#define MAX_THREAD_PRIORITY (CONFIG_NUM_COOP_PRIORITIES)
 #define MAX_THREAD_STACK_SIZE 1024
 
 struct k_thread max_thread;
@@ -180,6 +180,7 @@ void WaitForRx(uint8_t address)
     } while (0 == ret);
 }
 
+/*
 void DiscardWaitingRxJunk(uint8_t address)
 {
     uint8_t fifo = 0;
@@ -188,11 +189,10 @@ void DiscardWaitingRxJunk(uint8_t address)
         fifo = max14830_read(address, RxFIFOLvl_REGISTER);
         max14830_read(address, RHR_REGISTER);
     } while (fifo != 0);
-}
+}*/
 
 int max_send_message(uint8_t address, const uint8_t *txBuffer, uint8_t txLength)
 {
-    DiscardWaitingRxJunk(address);
     EnableTxMode(address);
 
     for (int i = 0; i < txLength; i++)
@@ -218,7 +218,6 @@ void readFromRxFifo(uint8_t address)
             break;
         }
         ch = max14830_read(address, RHR_REGISTER);
-
         if (char_callback)
         {
             char_callback(ch);
