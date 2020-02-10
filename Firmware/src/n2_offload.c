@@ -211,6 +211,9 @@ static int offload_recvfrom(int sfd, void *buf, short int len,
         return received;
     }
     k_sem_give(&mdm_sem);
+    LOG_DBG("Debug hack.");
+    at_generic_decode();
+
     errno = -ENOMEM;
     LOG_DBG("recvfrom returns -ENOMEM. res = %d", res);
     return -ENOMEM;
@@ -327,7 +330,6 @@ static int offload_sendto(int sfd, const void *buf, size_t len,
         break;
     }
     k_sem_give(&mdm_sem);
-
     return written;
 }
 

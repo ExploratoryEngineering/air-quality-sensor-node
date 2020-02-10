@@ -59,11 +59,16 @@ bool b_is_urc(struct buf *rb)
     return (rb->size > 0 && rb->data[0] == '+');
 }
 
+// Yes. This is a hack. The SARA N2 modem and the MAX-something UART multiplexer
+// isn't the best of friends when the buffer is exactly 128 bytes and the output
+// is truncated. 170 bytes? No problem. < 128 bytes? No problem. 128 bytes:
+// Definitively a problem.
+#define NSORF_HACK 99
+
 // Callbacks for the input processing. The context is used to maintain variables
 // between the invocations and are passed by the decode_input function below.
-
 // The end of line callback - called every time an end-of-line character is found
-typedef void (*eol_callback_t)(void *ctx, struct buf *rb, bool is_urc);
+typedef int (*eol_callback_t)(void *ctx, struct buf *rb, bool is_urc);
 
 // Character callback - called for every character in the input. Both the character callback
 // and the EOL callback is called when the processing reaches an end of line character
@@ -106,7 +111,10 @@ int decode_input(int32_t timeout, void *ctx, char_callback_t char_cb, eol_callba
         {
             if (eol_cb)
             {
-                eol_cb(ctx, &rb, is_urc);
+                if (eol_cb(ctx, &rb, is_urc) == NSORF_HACK)
+                {
+                    return AT_OK;
+                }
             }
             b_reset(&rb);
             is_urc = false;
@@ -155,7 +163,7 @@ struct cgp_ctx
     uint8_t i;
 };
 
-void cgpaddr_eol(void *ctx, struct buf *rb, bool is_urc)
+int cgpaddr_eol(void *ctx, struct buf *rb, bool is_urc)
 {
     struct cgp_ctx *c = (struct cgp_ctx *)ctx;
     if (c->in_address)
@@ -181,6 +189,7 @@ void cgpaddr_eol(void *ctx, struct buf *rb, bool is_urc)
         *c->len = n;
     }
     c->in_address = false;
+    return 0;
 }
 
 void cgpaddr_char(void *ctx, struct buf *rb, char b, bool is_urc, bool is_space)
@@ -214,13 +223,14 @@ int atcgpaddr_decode(char *address, size_t *len)
 // a single digit that is returned. We'll pass the pointer to the return
 // function as the context and assign it when the line ends.
 
-void nsocr_eol(void *ctx, struct buf *rb, bool is_urc)
+int nsocr_eol(void *ctx, struct buf *rb, bool is_urc)
 {
     if (!is_urc && rb->size > 2)
     {
         int *sockfd = (int *)ctx;
         *sockfd = atoi((const char *)rb->data);
     }
+    return 0;
 }
 
 int atnsocr_decode(int *sockfd)
@@ -238,7 +248,7 @@ struct nsost_ctx
     size_t *len;
 };
 
-void nsost_eol(void *ctx, struct buf *rb, bool is_urc)
+int nsost_eol(void *ctx, struct buf *rb, bool is_urc)
 {
     struct nsost_ctx *c = (struct nsost_ctx *)ctx;
     // Socket descriptor is *always* a single digit, ie the comma would be
@@ -252,6 +262,7 @@ void nsost_eol(void *ctx, struct buf *rb, bool is_urc)
         }
         *c->len = atoi(rb->data + 2);
     }
+    return 0;
 }
 
 int atnsost_decode(int *sock_fd, size_t *sent)
@@ -284,13 +295,15 @@ struct nsorf_ctx
     bool complete;
 };
 
-void nsorf_eol(void *ctx, struct buf *rb, bool is_urc)
+int nsorf_eol(void *ctx, struct buf *rb, bool is_urc)
 {
     struct nsorf_ctx *c = (struct nsorf_ctx *)ctx;
-    if (c->complete && c->fieldindex == 5)
+    if (c->complete)
     {
         *c->remaining = atoi(c->field);
+        return NSORF_HACK;
     }
+    return 0;
 }
 
 void nsorf_char(void *ctx, struct buf *rb, char b, bool is_urc, bool is_space)
@@ -390,7 +403,7 @@ void cimi_char(void *ctx, struct buf *rb, char b, bool is_urc, bool is_space)
     }
 }
 
-void cimi_eol(void *ctx, struct buf *rb, bool is_urc)
+int cimi_eol(void *ctx, struct buf *rb, bool is_urc)
 {
     struct cimi_ctx *c = (struct cimi_ctx *)ctx;
     if (!c->done && c->index > 0)
@@ -398,6 +411,7 @@ void cimi_eol(void *ctx, struct buf *rb, bool is_urc)
         c->imsi[c->index] = 0;
         c->done = true;
     }
+    return 0;
 }
 
 int atcimi_decode(char *imsi)

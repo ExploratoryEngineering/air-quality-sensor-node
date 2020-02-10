@@ -77,13 +77,17 @@ static int fota_report_version()
 {
 	struct coap_packet p;
 	int err = 0;
-	CHECK_ERR(coap_packet_init(&p, buffer, sizeof(buffer), 1, COAP_TYPE_CON, 8, coap_next_token(), COAP_METHOD_POST, coap_next_id()));
+#define TOKEN_SIZE 8
+	char token[TOKEN_SIZE];
+	sys_csrand_get(token, TOKEN_SIZE);
+
+	CHECK_ERR(coap_packet_init(&p, buffer, sizeof(buffer), 1, COAP_TYPE_CON, TOKEN_SIZE, token, COAP_METHOD_POST, coap_next_id()));
 	CHECK_ERR(coap_packet_append_option(&p, COAP_OPTION_URI_PATH, PHONE_HOME_PATH, strlen(PHONE_HOME_PATH)));
 	CHECK_ERR(coap_packet_append_payload_marker(&p));
 
 	uint8_t tmpBuf[64];
 
-	int len = encode_tlv_string(tmpBuf, FIRMWARE_VER_ID, "1.2.0.1");
+	int len = encode_tlv_string(tmpBuf, FIRMWARE_VER_ID, CLIENT_FIRMWARE_VER);
 	CHECK_ERR(coap_packet_append_payload(&p, tmpBuf, len));
 
 	len = encode_tlv_string(tmpBuf, CLIENT_MANUFACTURER_ID, CLIENT_MANUFACTURER);
@@ -92,7 +96,7 @@ static int fota_report_version()
 	len = encode_tlv_string(tmpBuf, SERIAL_NUMBER_ID, CLIENT_SERIAL_NUMBER);
 	CHECK_ERR(coap_packet_append_payload(&p, tmpBuf, len));
 
-	len = encode_tlv_string(tmpBuf, MODEL_NUMBER_ID, CLIENT_MODEL_NUMBER);
+	len = encode_tlv_string(tmpBuf, MODEL_NUMBER_ID, "2 holy cow");
 	CHECK_ERR(coap_packet_append_payload(&p, tmpBuf, len));
 
 	LOG_INF("Sending %d bytes to %s:%d", p.offset, log_strdup(FOTA_COAP_SERVER), FOTA_COAP_PORT);

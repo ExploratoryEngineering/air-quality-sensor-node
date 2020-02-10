@@ -88,7 +88,7 @@ LOG_MODULE_REGISTER(MAX14830);
 
 #define MAX_THREAD_STACK_SIZE 1024
 
-#define DUMP_OUTPUT 1
+//#define DUMP_OUTPUT 1
 
 struct k_thread max_thread;
 
@@ -217,7 +217,7 @@ static void enable_rx_mode(uint8_t address)
 static void enable_tx_mode(uint8_t address)
 {
     uint8_t mode1 = max_read(address, MODE1_REGISTER);
-    mode1 &= 0b11111101;
+    mode1 &= 0b10000001;
     max_write(address, MODE1_REGISTER, mode1);
 }
 
@@ -238,7 +238,8 @@ static void read_from_rx_fifo(uint8_t address)
         fifo_level = max_read(address, RxFIFOLvl_REGISTER);
         if (0 == fifo_level)
         {
-            break;
+            max_read(address, INTERRUPT_STATUS_REGISTER);
+            return;
         }
         ch = max_read(address, RHR_REGISTER);
         if (char_callback)
@@ -249,11 +250,6 @@ static void read_from_rx_fifo(uint8_t address)
             char_callback(ch);
         }
     }
-    // This clears one of the interrupt registers
-    ch = max_read(address, INTERRUPT_STATUS_REGISTER);
-#ifdef DUMP_OUTPUT
-    printf("|(%02x)", ch);
-#endif
 }
 
 static void read_reply()
