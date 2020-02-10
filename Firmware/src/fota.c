@@ -83,7 +83,7 @@ static int fota_report_version()
 
 	uint8_t tmpBuf[64];
 
-	int len = encode_tlv_string(tmpBuf, FIRMWARE_VER_ID, CLIENT_FIRMWARE_VER);
+	int len = encode_tlv_string(tmpBuf, FIRMWARE_VER_ID, "1.2.0.1");
 	CHECK_ERR(coap_packet_append_payload(&p, tmpBuf, len));
 
 	len = encode_tlv_string(tmpBuf, CLIENT_MANUFACTURER_ID, CLIENT_MANUFACTURER);

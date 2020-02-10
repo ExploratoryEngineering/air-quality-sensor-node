@@ -9,13 +9,14 @@
 #include "comms.h"
 #include "at_commands.h"
 #include "init.h"
+#include "priorities.h"
 
 #define LOG_LEVEL CONFIG_COMMS_LOG_LEVEL
 #include <logging/log.h>
 LOG_MODULE_REGISTER(COMMS);
 
 // Ring buffer for received data
-#define RB_SIZE 128
+#define RB_SIZE 255
 static u8_t buffer[RB_SIZE];
 static struct ring_buf rx_rb;
 static struct k_sem urc_sem;
@@ -27,8 +28,7 @@ static struct ring_buf urc_rb;
 static struct k_sem rx_sem;
 
 #define URC_THREAD_STACK 512
-#define URC_THREAD_PRIORITY (CONFIG_NUM_COOP_PRIORITIES)
-#define DUMP_MODEM 1
+#define DUMP_MODEM 0
 
 struct k_thread urc_thread;
 
@@ -131,7 +131,7 @@ void modem_write(const char *cmd)
 #if DUMP_MODEM
     printf("%s", cmd);
 #endif
-    max_send_message(EE_NBIOT_01_ADDRESS, cmd, strlen(cmd));
+    max_send(cmd, strlen(cmd));
 }
 
 bool modem_read(uint8_t *b, int32_t timeout)
@@ -197,9 +197,9 @@ void modem_init(void)
     k_thread_create(&urc_thread, urc_thread_stack,
                     K_THREAD_STACK_SIZEOF(urc_thread_stack),
                     (k_thread_entry_t)urc_threadproc,
-                    NULL, NULL, NULL, K_PRIO_COOP(URC_THREAD_PRIORITY), 0, K_NO_WAIT);
+                    NULL, NULL, NULL, URC_THREAD_PRIORITY, 0, K_NO_WAIT);
 
-    MAX_init(comms_handle_char);
+    max_init(comms_handle_char);
 
     // OK. This is clutching at straws
     LOG_DBG("Modem startup");

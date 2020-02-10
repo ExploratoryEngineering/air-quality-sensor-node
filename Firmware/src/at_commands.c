@@ -110,6 +110,8 @@ int decode_input(int32_t timeout, void *ctx, char_callback_t char_cb, eol_callba
             }
             b_reset(&rb);
             is_urc = false;
+            // Yield to the rest of the world
+            k_yield();
         }
         // Additional URCs to support:
         //  - CEREG

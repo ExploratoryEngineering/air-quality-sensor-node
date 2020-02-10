@@ -175,8 +175,11 @@ static int offload_recvfrom(int sfd, void *buf, short int len,
     }
     LOG_DBG("Sending AT+NSORF to get %d bytes into %d bytes", sockets[sock_fd].incoming_len, len);
 
-    sprintf(modem_command_buffer, "AT+NSORF=%d,%d\r", sockets[sock_fd].id, len);
+    sprintf(modem_command_buffer, "AT+NSORF=%d,%d\r\n", sockets[sock_fd].id, len);
     modem_write(modem_command_buffer);
+
+    // boop the modem
+    modem_write("ATI\r\n");
 
     char ip[16];
     int port = 0;
@@ -253,6 +256,8 @@ static int offload_recv(int sfd, void *buf, size_t max_len, int flags)
     return offload_recvfrom(sfd, buf, max_len, flags, NULL, NULL);
 }
 
+static char megabuf[1024];
+
 static int offload_sendto(int sfd, const void *buf, size_t len,
                           int flags, const struct sockaddr *to,
                           socklen_t tolen)
@@ -288,24 +293,24 @@ static int offload_sendto(int sfd, const void *buf, size_t len,
     //
     // IPv6 is a different story but N210 only supports IPv4.
 #pragma GCC diagnostic ignored "-Wformat-overflow"
-    sprintf(modem_command_buffer, "AT+NSOST=%d,\"%s\",%d,%d,\"",
+    sprintf(megabuf, "AT+NSOST=%d,\"%s\",%d,%d,\"",
             sockets[sock_fd].id, addr,
             ntohs(toaddr->sin_port),
             len);
 #pragma GCC diagnostic pop
 
-    modem_write(modem_command_buffer);
-
-    char byte[3];
+    //    modem_write(modem_command_buffer);
+    int pos = strlen(megabuf);
     for (int i = 0; i < len; i++)
     {
-        byte[0] = TO_HEX((((const char *)buf)[i] >> 4));
-        byte[1] = TO_HEX((((const char *)buf)[i] & 0xF));
-        byte[2] = 0;
-        modem_write(byte);
+        megabuf[pos++] = TO_HEX((((const char *)buf)[i] >> 4));
+        megabuf[pos++] = TO_HEX((((const char *)buf)[i] & 0xF));
     }
+    megabuf[pos++] = '\"';
+    megabuf[pos++] = '\r';
+    megabuf[pos++] = 0;
 
-    modem_write("\"\r");
+    modem_write(megabuf);
 
     int written = len;
     int fd = -1;

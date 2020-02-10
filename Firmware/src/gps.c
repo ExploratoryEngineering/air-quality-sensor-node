@@ -21,6 +21,7 @@
 #include "gps_cache.h"
 #include "gpio.h"
 #include "messagebuffer.h"
+#include "priorities.h"
 
 #define LOG_LEVEL CONFIG_GPS_LOG_LEVEL
 #include <logging/log.h>
@@ -164,7 +165,6 @@ static void GPS_entry_point(void *foo, void *bar, void *gazonk)
     }
 }
 
-#define GPS_THREAD_PRIORITY -5
 #define GPS_THREAD_STACK_SIZE 1024
 
 struct k_thread gps_thread;
