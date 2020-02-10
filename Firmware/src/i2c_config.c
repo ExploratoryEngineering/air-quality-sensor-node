@@ -16,50 +16,31 @@
 
 #include <zephyr.h>
 #include "i2c_config.h"
-#include <misc/printk.h>
+#include <stdio.h>
 #include <device.h>
 #include <i2c.h>
+
+#define LOG_LEVEL CONFIG_EEI2C_LOG_LEVEL
 #include <logging/log.h>
+LOG_MODULE_REGISTER(EEI2C);
 
+static struct device *i2c_dev = NULL;
 
-LOG_MODULE_DECLARE(EE06);
-
-#define I2C_DEV "I2C_0"
-
-struct device * get_I2C_device() 
+struct device *get_I2C_device()
 {
-	struct device * i2c_dev;
-	i2c_dev = device_get_binding(I2C_DEV);
-	if (!i2c_dev) {
-		LOG_ERR("I2C device driver not found");
-		return NULL;
-	}
-    if (i2c_configure(i2c_dev, I2C_SPEED_SET(I2C_SPEED_STANDARD))) {
-		LOG_ERR("I2C configuration failed");
-        return NULL;
-    }
-
-    return i2c_dev;
-}
-
-void I2CScan() 
-{
-	struct device * i2c_dev = get_I2C_device();
-
-	for (u8_t i = 4; i <= 0x77; i++) 
+	if (!i2c_dev)
 	{
-		struct i2c_msg msgs[1];
-		u8_t dst;
-
-		printk("Checking address : %02X\n", i);
-		/* Send the address to read from */
-		msgs[0].buf = &dst;
-		msgs[0].len = 0U;
-		msgs[0].flags = I2C_MSG_WRITE | I2C_MSG_STOP;
-
-		if (i2c_transfer(i2c_dev, &msgs[0], 1, i) == 0) {
-			printk("0x%2x FOUND\n", i);
+		i2c_dev = device_get_binding(I2C_DEV);
+		if (!i2c_dev)
+		{
+			LOG_ERR("Device driver not found");
+			return NULL;
 		}
-		k_sleep(100);
+		if (i2c_configure(i2c_dev, I2C_SPEED_SET(I2C_SPEED_STANDARD)))
+		{
+			LOG_ERR("Configuration failed");
+			return NULL;
+		}
 	}
+	return i2c_dev;
 }

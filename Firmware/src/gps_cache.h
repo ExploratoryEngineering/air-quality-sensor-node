@@ -24,9 +24,9 @@
 
 #include "gps_std.h"
 
-
 // Fix information; aggregates all of the relevant fix into a single struct
-typedef struct {
+typedef struct
+{
 	float timestamp;
 	float latitude;
 	float longitude;
@@ -42,7 +42,8 @@ typedef struct {
 	float track_angle;
 } gps_fix_t;
 
-typedef struct {
+typedef struct
+{
 	uint8_t max_time;
 	uint8_t min_time;
 	uint8_t last_time;
@@ -52,20 +53,21 @@ typedef struct {
 } gps_fix_stats_t;
 
 // Check if fix is valid
-bool gps_fix_is_valid(const gps_fix_t* fix);
-
+bool gps_fix_is_valid(const gps_fix_t *fix);
 
 // Get the latest fix. Returns false if no fix is available.
-bool gps_get_fix(gps_fix_t* fix);
+bool gps_get_fix(gps_fix_t *fix);
 
 // Update fix with GGA data (internal?)
-void gps_update_gga(gps_gga_t* gga);
+void gps_update_gga(gps_gga_t *gga);
 
 // Update fix with GSA data (internal?)
-void gps_update_gsa(gps_gsa_t* gsa);
+void gps_update_gsa(gps_gsa_t *gsa);
 
 // Update fix with RMC data (internal?)
-void gps_update_rmc(gps_rmc_t* rmc);
+void gps_update_rmc(gps_rmc_t *rmc);
+
+void gps_update_vtg(gps_vtg_t *vtg);
 
 // Add sample point
 void gps_add_fix_stat(const int seconds_to_fix);
@@ -73,12 +75,13 @@ void gps_add_fix_stat(const int seconds_to_fix);
 void gps_add_timeout_stat();
 
 // Get fix statistics
-void gps_get_fix_stat(gps_fix_stats_t* statcp);
+void gps_get_fix_stat(gps_fix_stats_t *statcp);
 
 // Reset fix cache
 void gps_reset_cache(void);
 
-typedef struct imu_data_s {
+typedef struct imu_data_s
+{
 	float accel_x;
 	float accel_y;
 	float accel_z;
@@ -94,6 +97,6 @@ void imu_update_temp(float temperature);
 
 void imu_update_mag(float x, float y, float z);
 
-void imu_get_data(imu_data_t* data);
+void imu_get_data(imu_data_t *data);
 
 #endif

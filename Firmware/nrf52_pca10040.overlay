@@ -1,32 +1,25 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 
 &i2c0 {
-	status = "ok";
-
+	status = "okay";
+	compatible = "nordic,nrf-twi";
     sda-pin = <27>;
 	scl-pin = <26>;
 	clock-frequency = <I2C_BITRATE_STANDARD>;
 };
 
 &spi1 {
-	status = "ok";
+	status = "okay";
+	compatible = "nordic,nrf-spi";
 	mosi-pin = <23>;
 	sck-pin = <25>;
 	miso-pin = <24>;
 };
 
 &uart0 {
- status = "ok";
+ status = "okay";
  compatible = "nordic,nrf-uart";
  current-speed = <9600>;
  tx-pin = <7>;
  rx-pin = <8>;
  };
-
-
-
-
-
-
-
-

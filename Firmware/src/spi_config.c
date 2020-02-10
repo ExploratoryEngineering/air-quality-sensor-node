@@ -17,18 +17,23 @@
 #include <zephyr.h>
 #include <spi.h>
 #include "spi_config.h"
+
+#define LOG_LEVEL CONFIG_EESPI_LOG_LEVEL
 #include <logging/log.h>
+LOG_MODULE_REGISTER(EESPI);
 
-LOG_MODULE_DECLARE(EE06);
+static struct device *spi_dev;
 
-struct device * spi_dev;
-
-struct device * get_SPI_device()
+struct device *get_SPI_device()
 {
-  spi_dev = device_get_binding(SPI_DEV);
-  if (!spi_dev) {
-    LOG_ERR("SPI device driver not found");
-    return NULL;
+  if (!spi_dev)
+  {
+    spi_dev = device_get_binding(SPI_DEV);
+    if (!spi_dev)
+    {
+      LOG_ERR("Device driver not found");
+      return NULL;
+    }
   }
 
   return spi_dev;

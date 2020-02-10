@@ -15,88 +15,116 @@
 */
 
 #include <zephyr.h>
-#include <device.h>
 #include <stdio.h>
 #include <logging/log.h>
-#include <device.h>
-#include <i2c.h>
-#include <uart.h>
+#include <net/socket.h>
 
-#include "pinout.h"
-#include "spi.h"
-#include "gpio.h"
-#include "spi_config.h"
-#include "opc_n3.h"
-#include "i2c_config.h"
-#include "spi_config.h"
-#include "ads124s08.h"
-#include "chipcap2.h"
 #include "gps.h"
-#include "max14830.h"
+#include "messagebuffer.h"
+#include "version.h"
+#include "init.h"
+#include "chipcap2.h"
+#include "n2_offload.h"
+#include "fota.h"
 
-#define LOG_LEVEL CONFIG_EE06_LOG_LEVEL
-LOG_MODULE_REGISTER(EE06);
+#define LOG_LEVEL CONFIG_MAIN_LOG_LEVEL
+LOG_MODULE_REGISTER(MAIN);
 
-#define GPS_THREAD_PRIORITY -5
-#define GPS_THREAD_STACK_SIZE 1024
-#define CC2_THREAD_PRIORITY -6
-#define CC2_THREAD_STACK_SIZE 1024
-#define OPC_THREAD_PRIORITY -4
-#define OPC_THREAD_STACK_SIZE 1024
-#define MAX_THREAD_PRIORITY -4
-#define MAX_THREAD_STACK_SIZE 1024
+#define MIN_SEND_INTERVAL_SEC 30
 
-// K_THREAD_DEFINE(gps_thread_id, GPS_THREAD_STACK_SIZE, GPS_entry_point, NULL, NULL, NULL, GPS_THREAD_PRIORITY, 0, 30000);
-// K_THREAD_DEFINE(cc2_thread_id, CC2_THREAD_STACK_SIZE, CC2_entry_point, NULL, NULL, NULL, GPS_THREAD_PRIORITY, 0, 20000);
-// K_THREAD_DEFINE(opc_thread_id, OPC_THREAD_STACK_SIZE, OPC_entry_point, NULL, NULL, NULL, OPC_THREAD_PRIORITY, 0, 25000);
-K_THREAD_DEFINE(max_thread_id, MAX_THREAD_STACK_SIZE, MAX_entry_point, NULL, NULL, NULL, MAX_THREAD_PRIORITY, 0, 15000);
+#define MAX_SEND_BUFFER 128
+static uint8_t buffer[MAX_SEND_BUFFER];
 
-struct device * gpio_device;
-
-bool initialize_board()
+int send_samples(uint8_t *buffer, size_t len)
 {
-	gpio_device = get_GPIO_device();
-	init_GPIO(gpio_device);
-	if (NULL == gpio_device) {
-		LOG_ERR("Unable to initialize GPIO device");
-		return false;
+	int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	if (sock < 0)
+	{
+		LOG_ERR("Error opening socket: %d", sock);
+		return sock;
 	}
-	if (NULL == get_I2C_device()) {
-		LOG_ERR("Unable to initialize I2C device");
-		return false;
+
+	static struct sockaddr_in remote_addr = {
+		sin_family : AF_INET,
+	};
+	remote_addr.sin_port = htons(1234);
+
+	net_addr_pton(AF_INET, "172.16.15.14", &remote_addr.sin_addr);
+
+	int err = connect(sock, (struct sockaddr *)&remote_addr, sizeof(remote_addr));
+	if (err < 0)
+	{
+		LOG_ERR("Unable to connect to backend: %d", err);
+		close(sock);
+		return err;
 	}
-	if (NULL == get_SPI_device()) {
-		LOG_ERR("Unable to initialize SPI device");
-		return false;
+	err = send(sock, buffer, len, 0);
+	if (err < 0)
+	{
+		LOG_ERR("Unable to send data: %d", err);
+		return err;
 	}
-	ADS124S08_init();
-	ADS124S08_begin();
-	return true;
+	close(sock);
+	return err;
 }
 
 void main(void)
 {
-#ifdef EE_04
-	printk("EE-04\n");
-	while (1)
-	{
-		k_sleep(2000);
-		LOG_INF("Nothing to see here...");
-	}
-#else
-	printk("Air quality sensor node\n");
-	k_sleep(5000);	// (Testing only) Delay for manual powercycling and JLink
+	init_board();
+	// TODO: Watchdog init
 
-	if (!initialize_board())
+	LOG_INF("This is the AQ node with version %s (%s)", AQ_VERSION, AQ_NAME);
+
+	gps_init();
+	opc_init();
+
+	LOG_INF("Waiting for modem");
+	wait_for_sockets();
+	LOG_DBG("Ready to run");
+
+	fota_init();
+	LOG_INF("Sleeping");
+	while (true)
 	{
-		LOG_ERR("Board initialization failed. Unable to start sensor node.");
-		return;
+		k_sleep(1000);
 	}
 
-	while (1)
+	while (true)
 	{
-		k_sleep(5000);
-		LOG_INF("Main thread is running...");
-	}
+		k_sleep(MIN_SEND_INTERVAL_SEC * K_MSEC(1000));
+/*
+		fota_disable();
+
+		LOG_DBG("Sampling sensors");
+		SENSOR_NODE_MESSAGE last_message;
+
+		opc_n3_sample_data();
+		opc_n3_get_sample(&last_message.opc_sample);
+
+		adc_sample_data();
+		adc_get_sample(&last_message.afe3_sample);
+
+		cc2_sample_data();
+		cc2_get_sample(&last_message.cc2_sample);
+
+		gps_get_sample(&last_message.gps_fix);
+
+		int len = mb_encode(&last_message, buffer, MAX_SEND_BUFFER);
+		LOG_DBG("Sample complete, encoded buffer = %d bytes", len);
+
+		int ret = send_samples(buffer, len);
+		if (ret < len)
+		{
+			LOG_WRN("Could not send message to server: %d", ret);
+		}
+		else
+		{
+			LOG_DBG("Successfully sent %d bytes to backend", len);
+		}
+
+		fota_enable();*/
+#if 0
+			mb_dump_message(&last_message);
 #endif
+	}
 }

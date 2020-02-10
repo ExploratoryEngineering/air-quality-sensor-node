@@ -1,0 +1,17 @@
+{
+  "sourceRoot": "..",
+  "name": "aqsensor",
+  "committerEmail": "stalehd@gmail.com",
+  "committerName": "Staale Dahl",
+  "targets": [
+    "nrf52"
+  ],
+  "files": [
+    {
+      "id": "bin",
+      "name": "build/zephyr/zephyr.signed.bin",
+      "target": "nrf25"
+    }
+  ],
+  "templates": []
+}

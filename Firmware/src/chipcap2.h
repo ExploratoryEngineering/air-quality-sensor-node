@@ -17,10 +17,16 @@
 #pragma once
 #include <stdint.h>
 
+typedef struct
+{
+    float RH;
+    float Temp_C;
+} CC2_SAMPLE;
+
 #define CHIPCAP2_ADDRESS 0x28
 
 #define CHIPCAP2_NORMAL_OPERATION_MODE 0x80
 
-void CC2_entry_point(void * foo, void * bar, void * gazonk);
-void CC2_init();
-void CC2_sample();
+int cc2_init();
+void cc2_sample_data();
+void cc2_get_sample(CC2_SAMPLE *msg);
