@@ -39,13 +39,9 @@ make build_mcuboot
 make install_mcuboot
 ```
 
-### Installing application image
+If you have an existing key put it into the `aq_fota.pem` file and skip this step. This is included in `.gitignore` so you won't check it in by accident.
 
-This will rebuild and flash the application image:
-
-```shell
-make flash
-```
+Flash it to the device with `make flash`.
 
 ### Message format
 
@@ -103,34 +99,26 @@ Total: 123 bytes
 
 ## Enabling FOTA
 
-First make a release:
+First commit everything verify the release is read (run `reto status` to see the current status), the build the release:
 
 `touch CMakeFiles.txt && make`
 
 (this ensures a new build with the updated version number)
 
-Upload the file to Horde:
+Upload firmware image, set version number and assign it to the device in Horde:
 
 ```shell
-curl -s -XPOST -F image=@build/zephyr/zephyr.signed.bin  -HX-API-Token:$(cat .apikey) https://api.nbiot.engineering/collections/$(cat .collectionid)/firmware > tmp.json
-cat tmp.json | jq -r ".imageId" > .firmwareid
+curl -s -HX-API-Token:$(cat .apikey) \
+    -XPOST -F image=@build/zephyr/zephyr.signed.bin \
+    https://api.nbiot.engineering/collections/$(cat .collectionid)/firmware | jq -r ".imageId" > .firmwareid
+
+curl -XPATCH -d'{"version":"0.0.3"}' -HX-API-Token:$(cat .apikey) \
+    https://api.nbiot.engineering/collections/$(cat .collectionid)/firmware/$(cat .firmwareid)
+
+FIRMWAREID=$(cat .firmwareid) curl  -HX-API-Token:$(cat .apikey)\
+    -XPATCH -d'{"firmware":{"targetFirmwareId": "${FIRMWAREID}"}}' \
+    https://api.nbiot.engineering/collections/$(cat .collectionid)/devices/$(cat .deviceid)
+
 ```
 
-
-Update the version number string on the file
-
-curl -HX-API-Token:$(cat .apikey) https://api.nbiot.engineering/collections
-curl -HX-API-Token:$(cat .apikey) https://api.nbiot.engineering/collections/17dh0cf43jfgl9/devices/17dh0cf43jg6n4
-curl -HX-API-Token:$(cat .apikey) -XDELETE  https://api.nbiot.engineering/collections/17dh0cf43jfgl9/devices/17dh0cf43jg6n4/fwerror
-curl -HX-API-Token:$(cat .apikey) https://api.nbiot.engineering/collections/17dh0cf43jfgl9/devices/17dh0cf43jg6n4
-curl -HX-API-Token:$(cat .apikey) https://api.nbiot.engineering/collections/$(cat .collectionid)/devices/$(cat .deviceid)
-curl -HX-API-Token:$(cat .apikey) https://api.nbiot.engineering/collections/$(cat .collectionid)/firmware
-curl -s -XPOST -F image=@build/zephyr/zephyr.signed.bin  -HX-API-Token:$(cat .apikey) https://api.nbiot.engineering/collections/$(cat .collectionid)/firmware > tmp.json
-cat tmp.json | jq -r ".imageId" > .firmwareid
-curl -XPATCH -d'{"version":"$(reto version)"}' -HX-API-Token:$(cat .apikey) https://api.nbiot.engineering/collections/$(cat .collectionid)/firmware/$(cat .firmwareid)
-curl -XPATCH -d'{"version":"`reto version`"}' -HX-API-Token:$(cat .apikey) https://api.nbiot.engineering/collections/$(cat .collectionid)/firmware/$(cat .firmwareid)
-curl -XPATCH -d'{"version":"0.0.3"}' -HX-API-Token:$(cat .apikey) https://api.nbiot.engineering/collections/$(cat .collectionid)/firmware/$(cat .firmwareid)
-curl -HX-API-Token:$(cat .apikey) https://api.nbiot.engineering/collections/$(cat .collectionid)
-curl -HX-API-Token:$(cat .apikey) https://api.nbiot.engineering/collections/$(cat .collectionid)/devices/$(cat .deviceid)
-curl -XPATCH -d'{"firmware":{"targetFirmwareId": "17dh0cf43jfh0g"}}' -HX-API-Token:$(cat .apikey) https://api.nbiot.engineering/collections/$(cat .collectionid)/devices/$(cat .deviceid)
-curl -HX-API-Token:$(cat .apikey) https://api.nbiot.engineering/collections/$(cat .collectionid)/devices/$(cat .deviceid)
+Prepare the files `.apikey` with the API token, `.collectionid` and `.deviceid` with the collection and device ID from Horde. These can be found and/or created in [The Horde console](https://nbiot.engineering)
