@@ -100,6 +100,7 @@ int decode_input(int32_t timeout, void *ctx, char_callback_t char_cb, eol_callba
             }
             if (b_is(&rb, "ERROR\r\n", 7))
             {
+                LOG_DBG("Got ERROR");
                 return AT_ERROR;
             }
         }
@@ -107,7 +108,6 @@ int decode_input(int32_t timeout, void *ctx, char_callback_t char_cb, eol_callba
         {
             if (eol_cb)
             {
-                LOG_DBG("EOL callback, rb.size=%d ", rb.size);
                 eol_cb(ctx, &rb, is_urc);
             }
             b_reset(&rb);
@@ -257,6 +257,7 @@ int nsost_eol(void *ctx, struct buf *rb, bool is_urc)
             LOG_ERR("Socket fd should be <= 6 but is '%c'", rb->data[0]);
         }
         *c->len = atoi(rb->data + 2);
+        LOG_DBG("Got EOL callback for NSOST");
     }
     return 0;
 }

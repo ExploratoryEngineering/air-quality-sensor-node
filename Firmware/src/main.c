@@ -51,14 +51,7 @@ int send_samples(uint8_t *buffer, size_t len)
 
 	net_addr_pton(AF_INET, "172.16.15.14", &remote_addr.sin_addr);
 
-	int err = connect(sock, (struct sockaddr *)&remote_addr, sizeof(remote_addr));
-	if (err < 0)
-	{
-		LOG_ERR("Unable to connect to backend: %d", err);
-		close(sock);
-		return err;
-	}
-	err = send(sock, buffer, len, 0);
+	int err = sendto(sock, buffer, len, 0, (struct sockaddr *)&remote_addr, sizeof(remote_addr));
 	if (err < 0)
 	{
 		LOG_ERR("Unable to send data: %d", err);
@@ -86,8 +79,6 @@ void main(void)
 
 	while (true)
 	{
-		k_sleep(MIN_SEND_INTERVAL_SEC * K_MSEC(1000));
-
 		LOG_DBG("Sampling sensors");
 		SENSOR_NODE_MESSAGE last_message;
 
@@ -114,7 +105,8 @@ void main(void)
 		{
 			LOG_DBG("Successfully sent %d bytes to backend", len);
 		}
-
+		LOG_DBG("Done sending, sending again in %d seconds", MIN_SEND_INTERVAL_SEC);
+		k_sleep(MIN_SEND_INTERVAL_SEC * K_MSEC(1000));
 #if 0
 			mb_dump_message(&last_message);
 #endif
