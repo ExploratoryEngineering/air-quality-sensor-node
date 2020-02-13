@@ -59,7 +59,7 @@ void fota_enable()
 }
 
 
-#define MAX_BUFFER_LEN 256
+#define MAX_BUFFER_LEN 512
 // This is the general buffer used by the FOTA and flash writing functions
 static uint8_t request_buffer[MAX_BUFFER_LEN];
 static uint8_t response_buffer[MAX_BUFFER_LEN];
@@ -72,7 +72,7 @@ static uint8_t response_buffer[MAX_BUFFER_LEN];
 		return err;                    \
 	}
 
-#define FOTA_COAP_SERVER "172.16.7.197"
+#define FOTA_COAP_SERVER "172.16.15.14"
 #define FOTA_COAP_PORT 6683
 #define FOTA_COAP_REPORT_PATH "u"
 
@@ -277,8 +277,8 @@ int fota_download_image(simple_fota_response_t *resp) {
 
 	int max_limit = 4096/BLOCK_BYTES;
 	int current_count = 0;
-	int block_offset = 1;
-	while (block_offset != 0) {
+	bool last_block = false;
+	while (!last_block) {
 		current_count++;
 		if (current_count > max_limit) {
 			LOG_ERR("This is going nowhere. I'm terminating");
@@ -343,7 +343,7 @@ int fota_download_image(simple_fota_response_t *resp) {
 		}
 		LOG_INF("Post => Block transfer block %d (total: %d) ", block_ctx.current/BLOCK_BYTES, block_ctx.total_size);
 
-		block_offset = coap_next_block(&reply, &block_ctx);
+		last_block = !coap_next_block(&reply, &block_ctx);
 		LOG_INF("Post 2> Block transfer block %d (total: %d) ", block_ctx.current/BLOCK_BYTES, block_ctx.total_size);
 //		uint16_t payload_len = 0;
 //		coap_packet_get_payload(&reply, &payload_len);
