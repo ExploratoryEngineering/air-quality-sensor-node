@@ -14,8 +14,6 @@
 
 LOG_MODULE_REGISTER(FOTA, CONFIG_FOTA_LOG_LEVEL);
 
-static struct k_sem fota_sem;
-
 /*static void do_reboot()
 {
 	int ret = boot_request_upgrade(BOOT_UPGRADE_TEST);
@@ -45,19 +43,6 @@ static int init_image()
 	}
 	return 0;
 }
-
-void fota_disable()
-{
-	LOG_DBG("FOTA reboots disabled");
-	k_sem_take(&fota_sem, K_FOREVER);
-}
-
-void fota_enable()
-{
-	LOG_DBG("FOTA reboots enabled");
-	k_sem_give(&fota_sem);
-}
-
 
 #define MAX_BUFFER_LEN 512
 // This is the general buffer used by the FOTA and flash writing functions
@@ -171,8 +156,6 @@ int fota_init()
 	LOG_DBG("Model number:     %s", CLIENT_MODEL_NUMBER);
 	LOG_DBG("Serial numbera:   %s", CLIENT_SERIAL_NUMBER);
 	LOG_DBG("Manufacturer:     %s", CLIENT_MANUFACTURER);
-
-	k_sem_init(&fota_sem, 1, 1);
 
 	int ret = init_image();
 	if (ret)
