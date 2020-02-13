@@ -68,6 +68,26 @@ int send_samples(uint8_t *buffer, size_t len)
 	return err;
 }
 
+static void make_the_fucking_network_not_cache_my_sends_assholes() {
+	int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	if (sock < 0)
+	{
+		LOG_ERR("Error opening socket: %d", sock);
+		return;
+	}
+
+	struct sockaddr_in remote_addr = {
+		sin_family : AF_INET,
+	};
+	remote_addr.sin_port = htons(1234);
+	net_addr_pton(AF_INET, "172.16.15.14", &remote_addr.sin_addr);
+
+	char *buffer = "ping";
+
+	sendto(sock, buffer, 4, 0, (const struct sockaddr *)&remote_addr, sizeof(remote_addr));
+	close(sock);
+}
+
 void main(void)
 {
 	init_board();
@@ -81,6 +101,8 @@ void main(void)
 	LOG_INF("Waiting for modem");
 	wait_for_sockets();
 	LOG_DBG("Ready to run");
+
+	make_the_fucking_network_not_cache_my_sends_assholes();
 
 	fota_init();
 	LOG_INF("Sleeping");

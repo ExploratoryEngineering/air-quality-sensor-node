@@ -7,8 +7,7 @@
 #include "comms.h"
 
 #include <logging/log.h>
-#define LOG_LEVEL LOG_LEVEL_DBG
-LOG_MODULE_REGISTER(at_commands);
+LOG_MODULE_REGISTER(AT_COMMANDS, CONFIG_COMMS_LOG_LEVEL);
 
 #define CMD_TIMEOUT K_MSEC(2000)
 #define CMD_REBOOT_TIMEOUT K_MSEC(15000)
@@ -59,11 +58,7 @@ bool b_is_urc(struct buf *rb)
     return (rb->size > 0 && rb->data[0] == '+');
 }
 
-// Yes. This is a hack. The SARA N2 modem and the MAX-something UART multiplexer
-// isn't the best of friends when the buffer is exactly 128 bytes and the output
-// is truncated. 170 bytes? No problem. < 128 bytes? No problem. 128 bytes:
-// Definitively a problem.
-#define NSORF_HACK 99
+
 
 // Callbacks for the input processing. The context is used to maintain variables
 // between the invocations and are passed by the decode_input function below.
@@ -100,6 +95,7 @@ int decode_input(int32_t timeout, void *ctx, char_callback_t char_cb, eol_callba
         {
             if (b_is(&rb, "OK\r\n", 4))
             {
+                LOG_DBG("Got OK");
                 return AT_OK;
             }
             if (b_is(&rb, "ERROR\r\n", 7))
@@ -111,10 +107,8 @@ int decode_input(int32_t timeout, void *ctx, char_callback_t char_cb, eol_callba
         {
             if (eol_cb)
             {
-                if (eol_cb(ctx, &rb, is_urc) == NSORF_HACK)
-                {
-                    return AT_OK;
-                }
+                LOG_DBG("EOL callback, rb.size=%d ", rb.size);
+                eol_cb(ctx, &rb, is_urc);
             }
             b_reset(&rb);
             is_urc = false;
@@ -207,6 +201,7 @@ void cgpaddr_char(void *ctx, struct buf *rb, char b, bool is_urc, bool is_space)
 
 int atcgpaddr_decode(char *address, size_t *len)
 {
+    LOG_DBG("cgpaddr");
     char buffer[20];
     memset(buffer, 0, sizeof(buffer));
     struct cgp_ctx ctx = {
@@ -235,6 +230,7 @@ int nsocr_eol(void *ctx, struct buf *rb, bool is_urc)
 
 int atnsocr_decode(int *sockfd)
 {
+    LOG_DBG("nsocr");
     *sockfd = -2;
     return decode_input(CMD_TIMEOUT, sockfd, NULL, nsocr_eol);
 }
@@ -267,12 +263,14 @@ int nsost_eol(void *ctx, struct buf *rb, bool is_urc)
 
 int atnsost_decode(int *sock_fd, size_t *sent)
 {
+    LOG_DBG("nsost");
     struct nsost_ctx ctx = {
         .sockfd = sock_fd,
         .len = sent,
     };
     return decode_input(CMD_TIMEOUT, &ctx, NULL, nsost_eol);
 }
+
 
 // Decode NSORF responses. Each field is decoded separately and stored off in
 // a temporary buffer (except the data field which might be large).
@@ -295,18 +293,17 @@ struct nsorf_ctx
     bool complete;
 };
 
-int nsorf_eol(void *ctx, struct buf *rb, bool is_urc)
+static int nsorf_eol(struct nsorf_ctx *ctx, struct buf *rb, bool is_urc)
 {
     struct nsorf_ctx *c = (struct nsorf_ctx *)ctx;
     if (c->complete)
     {
         *c->remaining = atoi(c->field);
-        return NSORF_HACK;
     }
     return 0;
 }
 
-void nsorf_char(void *ctx, struct buf *rb, char b, bool is_urc, bool is_space)
+static void nsorf_char(struct nsorf_ctx *ctx, struct buf *rb, char b, bool is_urc, bool is_space)
 {
     if (is_urc || is_space)
     {
@@ -362,8 +359,53 @@ void nsorf_char(void *ctx, struct buf *rb, char b, bool is_urc, bool is_space)
     }
 }
 
+static int nsorf_decode_input(int32_t timeout, struct nsorf_ctx *ctx)
+{
+    struct buf rb;
+    b_init(&rb);
+    uint8_t b, prev = ' ';
+    bool is_urc = false;
+
+    while (modem_read(&b, timeout))
+    {
+        if (b == '+' && rb.size == 0)
+        {
+            is_urc = true;
+        }
+        b_add(&rb, b);
+        nsorf_char(ctx, &rb, b, is_urc, isspace(b));
+        if (rb.size >= 4)
+        {
+            if (b_is(&rb, "OK\r\n", 4))
+            {
+                LOG_DBG("Got OK");
+                return AT_OK;
+            }
+            if (b_is(&rb, "ERROR\r\n", 7))
+            {
+                return AT_ERROR;
+            }
+        }
+        if (prev == '\r' && b == '\n')
+        {
+            nsorf_eol(ctx, &rb, is_urc);
+            b_reset(&rb);
+            is_urc = false;
+            k_yield();
+        }
+
+        prev = b;
+    }
+    if (ctx->complete) {
+        LOG_DBG("NSORF hack engaged");
+        return AT_OK;
+    }
+    return AT_TIMEOUT;
+}
+
 int atnsorf_decode(int *sockfd, char *ip, int *port, uint8_t *data, size_t *received, size_t *remaining)
 {
+    LOG_DBG("nsorf");
     struct nsorf_ctx ctx = {
         .sockfd = sockfd,
         .ip = ip,
@@ -376,12 +418,13 @@ int atnsorf_decode(int *sockfd, char *ip, int *port, uint8_t *data, size_t *rece
         .received = received,
         .complete = false,
     };
-    return decode_input(CMD_TIMEOUT * 4, &ctx, nsorf_char, nsorf_eol);
+    return nsorf_decode_input(CMD_TIMEOUT, &ctx);
 }
 
 // Decode AT+CPSMS responses. This just waits for ERROR or OK
 int atcpsms_decode()
 {
+    LOG_DBG("cpsms");
     return at_decode();
 }
 
@@ -416,6 +459,7 @@ int cimi_eol(void *ctx, struct buf *rb, bool is_urc)
 
 int atcimi_decode(char *imsi)
 {
+    LOG_DBG("cimi");
     struct cimi_ctx ctx = {
         .imsi = imsi,
         .index = 0,
@@ -426,5 +470,6 @@ int atcimi_decode(char *imsi)
 
 int at_generic_decode()
 {
+    LOG_DBG("generic");
     return at_decode();
 }

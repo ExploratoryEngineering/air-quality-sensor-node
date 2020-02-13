@@ -18,7 +18,7 @@
 #include "i2c_config.h"
 #include <stdio.h>
 #include <device.h>
-#include <i2c.h>
+#include <drivers/i2c.h>
 
 #define LOG_LEVEL CONFIG_EEI2C_LOG_LEVEL
 #include <logging/log.h>

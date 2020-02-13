@@ -29,3 +29,18 @@ void fota_disable();
  * @brief Enable FOTA reboots
  */
 void fota_enable();
+
+typedef struct
+{
+    char host[25];
+    uint32_t port;
+    char path[25];
+    bool scheduled_update;
+} simple_fota_response_t;
+
+int fota_report_version(simple_fota_response_t *resp);
+
+int fota_download_image(simple_fota_response_t *resp);
+
+int fota_encode_simple_report(uint8_t *buffer, size_t *len);
+int fota_decode_simple_response(simple_fota_response_t *resp, const uint8_t *buf, size_t len);

@@ -11,9 +11,8 @@
 #include "init.h"
 #include "priorities.h"
 
-#define LOG_LEVEL CONFIG_COMMS_LOG_LEVEL
 #include <logging/log.h>
-LOG_MODULE_REGISTER(COMMS);
+LOG_MODULE_REGISTER(COMMS, CONFIG_COMMS_LOG_LEVEL);
 
 // Ring buffer for received data
 #define RB_SIZE 255
@@ -67,6 +66,7 @@ void urc_threadproc(void)
                 {
                     if (recv_cb && strncmp(buf, "+NSONMI:", 8) == 0)
                     {
+                        LOG_DBG("nsonmi");
                         // This is a receive notification. Invoke callback
                         char *countptr = NULL;
                         char *fdptr = buf;

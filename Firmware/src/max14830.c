@@ -19,10 +19,10 @@
 #include "max14830.h"
 
 #include <zephyr.h>
-#include <i2c.h>
+#include <drivers/i2c.h>
 #include "i2c_config.h"
 #include <stdio.h>
-#include <gpio.h>
+#include <drivers/gpio.h>
 #include "gpio.h"
 #include "pinout.h"
 #include "init.h"

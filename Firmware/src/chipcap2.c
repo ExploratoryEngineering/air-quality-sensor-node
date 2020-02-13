@@ -18,7 +18,7 @@
 #include "chipcap2.h"
 #include <stdio.h>
 #include <device.h>
-#include <i2c.h>
+#include <drivers/i2c.h>
 #include "i2c_config.h"
 #include "messagebuffer.h"
 

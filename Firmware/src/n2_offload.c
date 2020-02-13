@@ -178,9 +178,6 @@ static int offload_recvfrom(int sfd, void *buf, short int len,
     sprintf(modem_command_buffer, "AT+NSORF=%d,%d\r\n", sockets[sock_fd].id, len);
     modem_write(modem_command_buffer);
 
-    // boop the modem
-    modem_write("ATI\r\n");
-
     char ip[16];
     int port = 0;
     size_t remain = 0;
@@ -193,6 +190,7 @@ static int offload_recvfrom(int sfd, void *buf, short int len,
         if (received == 0)
         {
             k_sem_give(&mdm_sem);
+            LOG_DBG("Received 0 bytes from command");
             return 0;
         }
         if (fromlen != NULL)
@@ -211,8 +209,6 @@ static int offload_recvfrom(int sfd, void *buf, short int len,
         return received;
     }
     k_sem_give(&mdm_sem);
-    LOG_DBG("Debug hack.");
-    at_generic_decode();
 
     errno = -ENOMEM;
     LOG_DBG("recvfrom returns -ENOMEM. res = %d", res);
@@ -220,7 +216,7 @@ static int offload_recvfrom(int sfd, void *buf, short int len,
 }
 
 // Could *maybe* cut down on this?
-#define WAIT_SLEEP_FOR_RECV 100
+#define WAIT_SLEEP_FOR_RECV 1000
 
 static int offload_recv(int sfd, void *buf, size_t max_len, int flags)
 {
@@ -256,6 +252,7 @@ static int offload_recv(int sfd, void *buf, size_t max_len, int flags)
         curcount = sockets[sock_fd].incoming_len;
         k_sem_give(&mdm_sem);
     }
+    LOG_DBG("%d bytes waiting for me", curcount);
     return offload_recvfrom(sfd, buf, max_len, flags, NULL, NULL);
 }
 
