@@ -83,11 +83,6 @@ void main(void)
 	LOG_DBG("Ready to run");
 
 	// fota_init();
-	LOG_INF("Sleeping");
-	while (true)
-	{
-		k_sleep(1000);
-	}
 
 	while (true)
 	{
