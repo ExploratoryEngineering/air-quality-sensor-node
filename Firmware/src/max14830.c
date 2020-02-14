@@ -88,7 +88,7 @@ LOG_MODULE_REGISTER(MAX14830);
 
 #define MAX_THREAD_STACK_SIZE 1024
 
-//#define DUMP_OUTPUT 1
+#define DUMP_OUTPUT 1
 
 struct k_thread max_thread;
 
@@ -210,7 +210,7 @@ static void wait_for_reset()
 static void enable_rx_mode(uint8_t address)
 {
     uint8_t mode1 = max_read(address, MODE1_REGISTER);
-    mode1 |= 0b00000010;
+    mode1 |= 0b10000010;
     max_write(address, MODE1_REGISTER, mode1);
 }
 
@@ -238,8 +238,7 @@ static void read_from_rx_fifo(uint8_t address)
         fifo_level = max_read(address, RxFIFOLvl_REGISTER);
         if (0 == fifo_level)
         {
-            max_read(address, INTERRUPT_STATUS_REGISTER);
-            return;
+            break;
         }
         ch = max_read(address, RHR_REGISTER);
         if (char_callback)
@@ -252,75 +251,14 @@ static void read_from_rx_fifo(uint8_t address)
     }
 }
 
-static void read_reply()
-{
-    // The trigger can be read from any UART
-    uint8_t uart_trigger = max_read(EE_NBIOT_01_ADDRESS, GLOBAL_IRQ_REGISTER);
-
-    uint8_t uart_address = 0;
-    uart_trigger &= 0x0F;
-    if (uart_trigger == 0x0F)
-        return;
-    // The UART multiplexer supports up to 4 channels (so far, we're only using UART0)
-    if ((uart_trigger & 0b0001) == 0)
-    {
-        uart_address = EE_NBIOT_01_ADDRESS;
-    }
-
-    // Check interrupt cause.
-    uint8_t cause = max_read(uart_address, INTERRUPT_STATUS_REGISTER);
-    if (cause & LSRErrInt)
-    {
-        // Check the line status register
-        uint8_t line_status = max_read(uart_address, LSR_REGISTER);
-        if ((line_status & RTimeout) || (line_status & RFifoTrigInt))
-        {
-            read_from_rx_fifo(uart_address);
-        }
-    }
-}
-
-static void irq_handler(struct device *gpiob, struct gpio_callback *cb, u32_t pins)
-{
-    k_sem_give(&rx_sem);
-}
-
-static void enable_rx_fifo_irq(uint8_t address)
-{
-    struct device *gpio_device = get_GPIO_device();
-    int ret = gpio_pin_configure(gpio_device, MAX14830_IRQ, GPIO_INT | GPIO_PUD_PULL_UP | GPIO_INT_EDGE | GPIO_INT_ACTIVE_LOW | GPIO_DIR_IN);
-    if (ret)
-    {
-        LOG_ERR("Error configuring %d!", MAX14830_IRQ);
-    }
-    gpio_init_callback(&gpio_cb, irq_handler, BIT(MAX14830_IRQ));
-    ret = gpio_add_callback(gpio_device, &gpio_cb);
-    if (ret)
-    {
-        LOG_ERR("Error enabling callback %d!", MAX14830_IRQ);
-    }
-    ret = gpio_pin_enable_callback(gpio_device, MAX14830_IRQ);
-    if (ret)
-    {
-        LOG_ERR("Error enabling callback %d!", MAX14830_IRQ);
-    }
-
-    max_write(address, IRQENABLE_REGISTER, RFifoEmptyInt | RFifoTrgIEn | LSRErrIEn);
-    max_write(address, FIFOTRIGLVL_REGISTER, 0b00010000);
-    max_write(address, MODE1_REGISTER, IRQSel);
-
-    // Enable RTimeout interrupt
-    max_write(address, LSRINTEN_REGISTER, 0b01001111);
-}
-
 static void max_proc(void *param)
 {
     LOG_DBG("MAX RX Thread running");
 
     while (true)
     {
-        k_sem_take(&rx_sem, K_FOREVER);
-        read_reply();
+        read_from_rx_fifo(EE_NBIOT_01_ADDRESS);
+        k_sleep(10);
     }
 }
 
@@ -350,8 +288,6 @@ void max_init(max_char_callback_t cb)
 
     // Initialize baud rate, parity, word length and stop bits for each uart
     init_uart(EE_NBIOT_01_ADDRESS, 9600, 8, NO_PARITY, 1);
-    enable_rx_fifo_irq(EE_NBIOT_01_ADDRESS);
-    max_read(EE_NBIOT_01_ADDRESS, INTERRUPT_STATUS_REGISTER); // What the actual .... ?
 
     k_sem_init(&rx_sem, 0, RX_SEM_SIZE);
 
