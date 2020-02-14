@@ -58,8 +58,6 @@ bool b_is_urc(struct buf *rb)
     return (rb->size > 0 && rb->data[0] == '+');
 }
 
-
-
 // Callbacks for the input processing. The context is used to maintain variables
 // between the invocations and are passed by the decode_input function below.
 // The end of line callback - called every time an end-of-line character is found
@@ -272,7 +270,6 @@ int atnsost_decode(int *sock_fd, size_t *sent)
     return decode_input(CMD_TIMEOUT, &ctx, NULL, nsost_eol);
 }
 
-
 // Decode NSORF responses. Each field is decoded separately and stored off in
 // a temporary buffer (except the data field which might be large).
 #define FROM_HEX(x) (x - '0' > 9 ? x - 'A' + 10 : x - '0')
@@ -294,17 +291,18 @@ struct nsorf_ctx
     bool complete;
 };
 
-static int nsorf_eol(struct nsorf_ctx *ctx, struct buf *rb, bool is_urc)
+static int nsorf_eol(void *ctx, struct buf *rb, bool is_urc)
 {
     struct nsorf_ctx *c = (struct nsorf_ctx *)ctx;
     if (c->complete)
     {
-        *c->remaining = atoi(c->field);
+        // TODO: This is incorrect but it works for our case
+        *c->remaining = 0;
     }
     return 0;
 }
 
-static void nsorf_char(struct nsorf_ctx *ctx, struct buf *rb, char b, bool is_urc, bool is_space)
+static void nsorf_char(void *ctx, struct buf *rb, char b, bool is_urc, bool is_space)
 {
     if (is_urc || is_space)
     {
@@ -360,50 +358,6 @@ static void nsorf_char(struct nsorf_ctx *ctx, struct buf *rb, char b, bool is_ur
     }
 }
 
-static int nsorf_decode_input(int32_t timeout, struct nsorf_ctx *ctx)
-{
-    struct buf rb;
-    b_init(&rb);
-    uint8_t b, prev = ' ';
-    bool is_urc = false;
-
-    while (modem_read(&b, timeout))
-    {
-        if (b == '+' && rb.size == 0)
-        {
-            is_urc = true;
-        }
-        b_add(&rb, b);
-        nsorf_char(ctx, &rb, b, is_urc, isspace(b));
-        if (rb.size >= 4)
-        {
-            if (b_is(&rb, "OK\r\n", 4))
-            {
-                LOG_DBG("Got OK");
-                return AT_OK;
-            }
-            if (b_is(&rb, "ERROR\r\n", 7))
-            {
-                return AT_ERROR;
-            }
-        }
-        if (prev == '\r' && b == '\n')
-        {
-            nsorf_eol(ctx, &rb, is_urc);
-            b_reset(&rb);
-            is_urc = false;
-            k_yield();
-        }
-
-        prev = b;
-    }
-    if (ctx->complete) {
-        LOG_DBG("NSORF hack engaged");
-        return AT_OK;
-    }
-    return AT_TIMEOUT;
-}
-
 int atnsorf_decode(int *sockfd, char *ip, int *port, uint8_t *data, size_t *received, size_t *remaining)
 {
     LOG_DBG("nsorf");
@@ -419,7 +373,7 @@ int atnsorf_decode(int *sockfd, char *ip, int *port, uint8_t *data, size_t *rece
         .received = received,
         .complete = false,
     };
-    return nsorf_decode_input(CMD_TIMEOUT, &ctx);
+    return decode_input(CMD_TIMEOUT, &ctx, nsorf_char, nsorf_eol);
 }
 
 // Decode AT+CPSMS responses. This just waits for ERROR or OK

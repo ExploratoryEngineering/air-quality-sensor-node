@@ -49,26 +49,12 @@ LOG_MODULE_REGISTER(MAX14830);
 #define MODE1_REGISTER 0x09
 #define MODE2_REGISTER 0x0A
 #define RXTIMEOUT_REGISTER 0x0C
-#define GLOBAL_IRQ_REGISTER 0x1F
 
 #define MODE2XBIT 0b00010000
 #define MODE4XBIT 0b00100000
 
-#define IRQENABLE_REGISTER 0x01
 #define RFifoTrgIEn (1 << 3)
 #define LSRErrIEn (1 << 0)
-
-#define INTERRUPT_STATUS_REGISTER 0x02
-#define LSRErrInt (1 << 0)
-#define SpCharInt (1 << 1)
-#define STSInt (1 << 2)
-#define RFifoTrigInt (1 << 3)
-#define TFifoTrigInt (1 << 4)
-#define TFifoEmptyInt (1 << 5)
-#define RFifoEmptyInt (1 << 6)
-#define CTSInt (1 << 7)
-
-#define IRQSel (1 << 7)
 
 #define FIFOTRIGLVL_REGISTER 0x10
 #define LSRINTEN_REGISTER 0x03
@@ -88,7 +74,7 @@ LOG_MODULE_REGISTER(MAX14830);
 
 #define MAX_THREAD_STACK_SIZE 1024
 
-#define DUMP_OUTPUT 1
+//#define DUMP_OUTPUT 1
 
 struct k_thread max_thread;
 
@@ -98,8 +84,6 @@ static struct k_sem rx_sem;
 #define RX_SEM_SIZE 255
 
 static max_char_callback_t char_callback;
-
-static struct gpio_callback gpio_cb;
 
 static int max_write(uint8_t address, uint8_t reg, uint8_t data)
 {

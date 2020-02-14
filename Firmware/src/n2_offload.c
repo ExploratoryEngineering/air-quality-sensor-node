@@ -205,7 +205,7 @@ static int offload_recvfrom(int sfd, void *buf, short int len,
         }
         sockets[sock_fd].incoming_len = remain;
         k_sem_give(&mdm_sem);
-        LOG_INF("Receievd %d bytes", received);
+        LOG_INF("Receievd %d bytes, %d remaining", received, remain);
         return received;
     }
     k_sem_give(&mdm_sem);
@@ -304,7 +304,6 @@ static int offload_sendto(int sfd, const void *buf, size_t len,
         modem_command_buffer[1] = TO_HEX((((const char *)buf)[i] & 0xF));
         modem_command_buffer[2] = 0;
         modem_write(modem_command_buffer);
-
     }
     modem_command_buffer[0] = '\"';
     modem_command_buffer[1] = '\r';
