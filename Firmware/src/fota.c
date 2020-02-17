@@ -256,7 +256,7 @@ static int fota_download_image(simple_fota_response_t *resp)
 	bool last_block = false;
 	const uint8_t token_length = 8;
 	uint8_t token[token_length];
-	uint16_t total_size = 0;
+	size_t total_size = 0;
 	memcpy(token, coap_next_token(), token_length);
 	while (!last_block)
 	{
