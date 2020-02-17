@@ -253,8 +253,6 @@ static int fota_download_image(simple_fota_response_t *resp)
 		return err;
 	}
 
-	int max_limit = 5100 / BLOCK_BYTES;
-	int current_count = 0;
 	bool last_block = false;
 	const uint8_t token_length = 8;
 	uint8_t token[token_length];
@@ -262,13 +260,6 @@ static int fota_download_image(simple_fota_response_t *resp)
 	memcpy(token, coap_next_token(), token_length);
 	while (!last_block)
 	{
-		current_count++;
-		if (current_count > max_limit)
-		{
-			LOG_ERR("This is going nowhere. I'm terminating");
-			close(sock);
-			return -1;
-		}
 		struct coap_packet request;
 		memset(request_buffer, 0, MAX_BUFFER_LEN);
 		if (coap_packet_init(&request, request_buffer, MAX_BUFFER_LEN, 1,
