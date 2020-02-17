@@ -30,7 +30,10 @@
 #define LOG_LEVEL CONFIG_MAIN_LOG_LEVEL
 LOG_MODULE_REGISTER(MAIN);
 
-#define MIN_SEND_INTERVAL_SEC 30
+#define SEND_INTERVAL_SEC 30
+#define FOTA_CHECK_INTERVAL_SEC 500
+
+#define FOTA_COUNTER (FOTA_CHECK_INTERVAL_SEC / SEND_INTERVAL_SEC)
 
 #define MAX_SEND_BUFFER 128
 static uint8_t buffer[MAX_SEND_BUFFER];
@@ -75,13 +78,14 @@ void main(void)
 	wait_for_sockets();
 	LOG_DBG("Ready to run");
 
-	/*	fota_init();
+	fota_init();
 
-	LOG_DBG("Sleeping");
-	while (true)
+	if (fota_run())
 	{
 		k_sleep(1000);
-	}*/
+	}
+
+	int fota_interval = 0;
 	while (true)
 	{
 		LOG_DBG("Sampling sensors");
@@ -110,8 +114,19 @@ void main(void)
 		{
 			LOG_DBG("Successfully sent %d bytes to backend", len);
 		}
-		LOG_DBG("Done sending, sending again in %d seconds", MIN_SEND_INTERVAL_SEC);
-		k_sleep(MIN_SEND_INTERVAL_SEC * K_MSEC(1000));
+		LOG_DBG("Done sending, sending again in %d seconds", SEND_INTERVAL_SEC);
+		k_sleep(SEND_INTERVAL_SEC * K_MSEC(1000));
+
+		fota_interval++;
+		if (fota_interval > FOTA_COUNTER)
+		{
+			LOG_DBG("Check for new firmware");
+			fota_interval = 0;
+			if (fota_run())
+			{
+				k_sleep(1000);
+			}
+		}
 #if 0
 			mb_dump_message(&last_message);
 #endif

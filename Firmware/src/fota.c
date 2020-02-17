@@ -45,6 +45,35 @@ static int init_image()
 	return 0;
 }
 
+static bool wait_for_response(int sock)
+{
+	// Poll for response.
+	struct pollfd poll_set[1];
+	poll_set[0].fd = sock;
+	poll_set[0].events = POLLIN;
+
+	bool data = false;
+	int wait = 0;
+	const int poll_wait_ms = 500;
+	const int max_wait_time_ms = 60000;
+	while (!data)
+	{
+		poll(poll_set, 1, poll_wait_ms);
+		if ((poll_set[0].revents & POLLIN) == POLLIN)
+		{
+			data = true;
+			continue;
+		}
+		wait++;
+		if (wait > (max_wait_time_ms / poll_wait_ms))
+		{
+			LOG_ERR("Server response timed out");
+			return false;
+		}
+	}
+	return true;
+}
+
 #define MAX_BUFFER_LEN 512
 // This is the general buffer used by the FOTA and flash writing functions
 static uint8_t request_buffer[MAX_BUFFER_LEN];
@@ -62,7 +91,7 @@ static uint8_t response_buffer[MAX_BUFFER_LEN];
 #define FOTA_COAP_PORT 9999
 #define FOTA_COAP_REPORT_PATH "u"
 
-int fota_encode_simple_report(uint8_t *buffer, size_t *len)
+static int fota_encode_simple_report(uint8_t *buffer, size_t *len)
 {
 	size_t sz = encode_tlv_string(buffer, FIRMWARE_VER_ID, CLIENT_FIRMWARE_VER);
 	sz += encode_tlv_string(buffer + sz, CLIENT_MANUFACTURER_ID, CLIENT_MANUFACTURER);
@@ -72,124 +101,7 @@ int fota_encode_simple_report(uint8_t *buffer, size_t *len)
 	return 0;
 }
 
-int fota_report_version(simple_fota_response_t *resp)
-{
-	struct coap_packet p;
-	int err = 0;
-#define TOKEN_SIZE 8
-	char token[TOKEN_SIZE];
-	sys_csrand_get(token, TOKEN_SIZE);
-
-	CHECK_ERR(coap_packet_init(&p, request_buffer, sizeof(request_buffer), 1, COAP_TYPE_CON,
-							   TOKEN_SIZE, token, COAP_METHOD_POST,
-							   coap_next_id()));
-	CHECK_ERR(coap_packet_append_option(&p, COAP_OPTION_URI_PATH,
-										FOTA_COAP_REPORT_PATH,
-										strlen(FOTA_COAP_REPORT_PATH)));
-	CHECK_ERR(coap_packet_append_payload_marker(&p));
-
-	uint8_t tmpBuf[256];
-	size_t len;
-	CHECK_ERR(fota_encode_simple_report(tmpBuf, &len));
-	CHECK_ERR(coap_packet_append_payload(&p, tmpBuf, len));
-
-	LOG_INF("Sending %d bytes to %s:%d", p.offset, log_strdup(FOTA_COAP_SERVER), FOTA_COAP_PORT);
-
-	int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-	if (sock < 0)
-	{
-		LOG_ERR("Error opening socket: %d", sock);
-		return sock;
-	}
-
-	struct sockaddr_in remote_addr = {
-		sin_family : AF_INET,
-	};
-	remote_addr.sin_port = htons(FOTA_COAP_PORT);
-	net_addr_pton(AF_INET, FOTA_COAP_SERVER, &remote_addr.sin_addr);
-
-	err = sendto(sock, request_buffer, p.offset, 0, (const struct sockaddr *)&remote_addr, sizeof(remote_addr));
-	if (err < 0)
-	{
-		LOG_ERR("Unable to send CoAP packet: %d", err);
-		close(sock);
-		return err;
-	}
-	LOG_DBG("Sent %d bytes, waiting for response", p.offset);
-
-	int received = 0;
-
-	while (received == 0)
-	{
-		received = recvfrom(sock, response_buffer, sizeof(response_buffer), 0, NULL, NULL);
-		if (received < 0)
-		{
-			LOG_ERR("Error receiving data: %d", received);
-			close(sock);
-			return received;
-		}
-		if (received == 0)
-		{
-			k_sleep(K_MSEC(500));
-		}
-	}
-	close(sock);
-
-	LOG_DBG("Got response (%d) bytes", received);
-	struct coap_packet reply;
-
-	CHECK_ERR(coap_packet_parse(&reply, response_buffer, received, NULL, 0));
-
-	LOG_INF("Successfully received a response from FOTA CoAP server");
-
-	uint16_t payload_len = 0;
-	const uint8_t *buf = coap_packet_get_payload(&reply, &payload_len);
-
-	// Decode the response
-	LOG_INF("Decode response (%d bytes)", len);
-	CHECK_ERR(fota_decode_simple_response(resp, buf, payload_len));
-
-	return 0;
-}
-
-int fota_init()
-{
-	LOG_DBG("Firmware version: %s", CLIENT_FIRMWARE_VER);
-	LOG_DBG("Model number:     %s", CLIENT_MODEL_NUMBER);
-	LOG_DBG("Serial numbera:   %s", CLIENT_SERIAL_NUMBER);
-	LOG_DBG("Manufacturer:     %s", CLIENT_MANUFACTURER);
-
-	int ret = init_image();
-	if (ret)
-	{
-		LOG_ERR("Error initialising image: %d", ret);
-		return ret;
-	}
-
-	// Ping home
-	simple_fota_response_t resp;
-	ret = fota_report_version(&resp);
-	if (ret)
-	{
-		LOG_ERR("Error reporting version: %d", ret);
-		return ret;
-	}
-	LOG_INF("Endpoint: coap://%s:%d/%s", log_strdup(resp.host), resp.port, log_strdup(resp.path));
-	if (resp.scheduled_update)
-	{
-		LOG_INF("Update is scheduled for this device");
-		ret = fota_download_image(&resp);
-		if (ret)
-		{
-			LOG_ERR("Unable to download image: %d", ret);
-			return ret;
-		}
-		do_reboot();
-	}
-	return ret;
-}
-
-int fota_decode_simple_response(simple_fota_response_t *resp, const uint8_t *buf, size_t len)
+static int fota_decode_simple_response(simple_fota_response_t *resp, const uint8_t *buf, size_t len)
 {
 	size_t idx = 0;
 	int err = 0;
@@ -233,13 +145,89 @@ int fota_decode_simple_response(simple_fota_response_t *resp, const uint8_t *buf
 	}
 	return 0;
 }
+
+static int fota_report_version(simple_fota_response_t *resp)
+{
+	struct coap_packet p;
+	int err = 0;
+#define TOKEN_SIZE 8
+	char token[TOKEN_SIZE];
+	sys_csrand_get(token, TOKEN_SIZE);
+
+	CHECK_ERR(coap_packet_init(&p, request_buffer, sizeof(request_buffer), 1, COAP_TYPE_CON,
+							   TOKEN_SIZE, token, COAP_METHOD_POST,
+							   coap_next_id()));
+	CHECK_ERR(coap_packet_append_option(&p, COAP_OPTION_URI_PATH,
+										FOTA_COAP_REPORT_PATH,
+										strlen(FOTA_COAP_REPORT_PATH)));
+	CHECK_ERR(coap_packet_append_payload_marker(&p));
+
+	uint8_t tmpBuf[256];
+	size_t len;
+	CHECK_ERR(fota_encode_simple_report(tmpBuf, &len));
+	CHECK_ERR(coap_packet_append_payload(&p, tmpBuf, len));
+
+	LOG_DBG("Sending %d bytes to %s:%d", p.offset, log_strdup(FOTA_COAP_SERVER), FOTA_COAP_PORT);
+
+	int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	if (sock < 0)
+	{
+		LOG_ERR("Error opening socket: %d", sock);
+		return sock;
+	}
+
+	struct sockaddr_in remote_addr = {
+		sin_family : AF_INET,
+	};
+	remote_addr.sin_port = htons(FOTA_COAP_PORT);
+	net_addr_pton(AF_INET, FOTA_COAP_SERVER, &remote_addr.sin_addr);
+
+	err = sendto(sock, request_buffer, p.offset, 0, (const struct sockaddr *)&remote_addr, sizeof(remote_addr));
+	if (err < 0)
+	{
+		LOG_ERR("Unable to send CoAP packet: %d", err);
+		close(sock);
+		return err;
+	}
+	LOG_DBG("Sent %d bytes, waiting for response", p.offset);
+
+	int received = 0;
+
+	if (!wait_for_response(sock))
+	{
+		return -1;
+	}
+	received = recvfrom(sock, response_buffer, sizeof(response_buffer), 0, NULL, NULL);
+	if (received < 0)
+	{
+		LOG_ERR("Error receiving data: %d", received);
+		close(sock);
+		return received;
+	}
+	close(sock);
+
+	struct coap_packet reply;
+
+	CHECK_ERR(coap_packet_parse(&reply, response_buffer, received, NULL, 0));
+
+	uint16_t payload_len = 0;
+	const uint8_t *buf = coap_packet_get_payload(&reply, &payload_len);
+
+	// Decode the response
+	LOG_DBG("Decode response (%d bytes)", len);
+	CHECK_ERR(fota_decode_simple_response(resp, buf, payload_len));
+
+	return 0;
+}
+
 // The blocks should be as big as possible; every roundtrip is painfully slow
 // so bigger packets = less roundtrips.
 #define BLOCK_SIZE COAP_BLOCK_256
 #define BLOCK_BYTES 256
 
-int fota_download_image(simple_fota_response_t *resp)
+static int fota_download_image(simple_fota_response_t *resp)
 {
+	LOG_INF("Downloading new firmware image...");
 	struct coap_block_context block_ctx;
 	memset(&block_ctx, 0, sizeof(block_ctx));
 	int err;
@@ -313,11 +301,15 @@ int fota_download_image(simple_fota_response_t *resp)
 			LOG_ERR("Error sending %d bytes on socket", request.offset);
 		}
 
-		// TODO: Enable timeout for response. Make it reasonably high, then
-		// retry. Three retries = give up.
+		if (!wait_for_response(sock))
+		{
+			close(sock);
+			return -4;
+		}
+
 		memset(response_buffer, 0, MAX_BUFFER_LEN);
-		int r = recv(sock, response_buffer, MAX_BUFFER_LEN, 0);
-		if (r < 0)
+		int r = recv(sock, response_buffer, MAX_BUFFER_LEN, MSG_DONTWAIT);
+		if (r <= 0)
 		{
 			LOG_ERR("Error receiving data: %d", r);
 			close(sock);
@@ -343,7 +335,7 @@ int fota_download_image(simple_fota_response_t *resp)
 		uint16_t payload_len = 0;
 		const uint8_t *payload = coap_packet_get_payload(&reply, &payload_len);
 		total_size += payload_len;
-		LOG_INF("Retreived block %d (%d of %d bytes) ", block_ctx.current / BLOCK_BYTES, total_size, block_ctx.total_size);
+		LOG_DBG("Retreived block %d (%d of %d bytes) ", block_ctx.current / BLOCK_BYTES, total_size, block_ctx.total_size);
 
 		bool first = total_size == payload_len;
 		bool last = total_size == block_ctx.total_size;
@@ -355,4 +347,46 @@ int fota_download_image(simple_fota_response_t *resp)
 	}
 	close(sock);
 	return 0;
+}
+
+bool fota_init()
+{
+	LOG_DBG("Firmware version: %s", CLIENT_FIRMWARE_VER);
+	LOG_DBG("Model number:     %s", CLIENT_MODEL_NUMBER);
+	LOG_DBG("Serial numbera:   %s", CLIENT_SERIAL_NUMBER);
+	LOG_DBG("Manufacturer:     %s", CLIENT_MANUFACTURER);
+
+	int ret = init_image();
+	if (ret)
+	{
+		LOG_ERR("Error initialising image: %d", ret);
+		return false;
+	}
+	return true;
+}
+
+bool fota_run()
+{
+	// Ping home
+	simple_fota_response_t resp;
+	int ret = fota_report_version(&resp);
+	if (ret)
+	{
+		LOG_ERR("Error reporting version: %d", ret);
+		return false;
+	}
+	LOG_INF("Endpoint: coap://%s:%d/%s", log_strdup(resp.host), resp.port, log_strdup(resp.path));
+	if (resp.scheduled_update)
+	{
+		LOG_INF("Update is scheduled for this device");
+		ret = fota_download_image(&resp);
+		if (ret)
+		{
+			LOG_ERR("Unable to download image: %d", ret);
+			return false;
+		}
+		do_reboot();
+		return true;
+	}
+	return false;
 }

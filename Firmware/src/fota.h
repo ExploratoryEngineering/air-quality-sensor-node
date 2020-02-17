@@ -18,8 +18,9 @@
 // images uploaded via the Horde API (at https://api.nbiot.engineering/)
 #define CLIENT_FIRMWARE_VER AQ_VERSION
 
-int fota_init();
+bool fota_init();
 
+bool fota_run();
 
 typedef struct
 {
@@ -28,10 +29,3 @@ typedef struct
     char path[25];
     bool scheduled_update;
 } simple_fota_response_t;
-
-int fota_report_version(simple_fota_response_t *resp);
-
-int fota_download_image(simple_fota_response_t *resp);
-
-int fota_encode_simple_report(uint8_t *buffer, size_t *len);
-int fota_decode_simple_response(simple_fota_response_t *resp, const uint8_t *buf, size_t len);
