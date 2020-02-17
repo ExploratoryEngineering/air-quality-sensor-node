@@ -205,7 +205,7 @@ static int offload_recvfrom(int sfd, void *buf, short int len,
         }
         sockets[sock_fd].incoming_len = remain;
         k_sem_give(&mdm_sem);
-        LOG_INF("Receievd %d bytes, %d remaining", received, remain);
+        LOG_DBG("Receievd %d bytes, %d remaining", received, remain);
         return received;
     }
     k_sem_give(&mdm_sem);

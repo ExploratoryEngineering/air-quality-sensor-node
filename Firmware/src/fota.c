@@ -14,16 +14,17 @@
 
 LOG_MODULE_REGISTER(FOTA, CONFIG_FOTA_LOG_LEVEL);
 
-/*static void do_reboot()
+static void do_reboot()
 {
+	LOG_INF("Rebooting after update");
 	int ret = boot_request_upgrade(BOOT_UPGRADE_TEST);
 	if (ret)
 	{
-		LOG_ERR("boot_request_upgrade: %d", ret);
+		LOG_ERR("Error attempting reboot: %d", ret);
 	}
 
 	sys_reboot(0);
-}*/
+}
 
 static int init_image()
 {
@@ -36,10 +37,10 @@ static int init_image()
 		int ret = boot_write_img_confirmed();
 		if (ret)
 		{
-			LOG_ERR("confirm image: %d", ret);
+			LOG_ERR("Error confirming image: %d", ret);
 			return ret;
 		}
-		LOG_INF("Firmware update succeeded");
+		LOG_INF("New image confirmed");
 	}
 	return 0;
 }
@@ -57,11 +58,12 @@ static uint8_t response_buffer[MAX_BUFFER_LEN];
 		return err;                    \
 	}
 
-#define FOTA_COAP_SERVER "172.16.15.14"
-#define FOTA_COAP_PORT 6683
+#define FOTA_COAP_SERVER "172.16.0.101"
+#define FOTA_COAP_PORT 9999
 #define FOTA_COAP_REPORT_PATH "u"
 
-int fota_encode_simple_report(uint8_t *buffer, size_t *len) {
+int fota_encode_simple_report(uint8_t *buffer, size_t *len)
+{
 	size_t sz = encode_tlv_string(buffer, FIRMWARE_VER_ID, CLIENT_FIRMWARE_VER);
 	sz += encode_tlv_string(buffer + sz, CLIENT_MANUFACTURER_ID, CLIENT_MANUFACTURER);
 	sz += encode_tlv_string(buffer + sz, SERIAL_NUMBER_ID, CLIENT_SERIAL_NUMBER);
@@ -177,9 +179,12 @@ int fota_init()
 	{
 		LOG_INF("Update is scheduled for this device");
 		ret = fota_download_image(&resp);
-		if (ret) {
+		if (ret)
+		{
 			LOG_ERR("Unable to download image: %d", ret);
+			return ret;
 		}
+		do_reboot();
 	}
 	return ret;
 }
@@ -228,12 +233,13 @@ int fota_decode_simple_response(simple_fota_response_t *resp, const uint8_t *buf
 	}
 	return 0;
 }
+// The blocks should be as big as possible; every roundtrip is painfully slow
+// so bigger packets = less roundtrips.
+#define BLOCK_SIZE COAP_BLOCK_256
+#define BLOCK_BYTES 256
 
-
-#define BLOCK_SIZE COAP_BLOCK_128
-#define BLOCK_BYTES 128
-
-int fota_download_image(simple_fota_response_t *resp) {
+int fota_download_image(simple_fota_response_t *resp)
+{
 	struct coap_block_context block_ctx;
 	memset(&block_ctx, 0, sizeof(block_ctx));
 	int err;
@@ -253,83 +259,99 @@ int fota_download_image(simple_fota_response_t *resp) {
 	remote_addr.sin_port = htons(resp->port);
 	net_addr_pton(AF_INET, resp->host, &remote_addr.sin_addr);
 	err = connect(sock, (struct sockaddr *)&remote_addr, sizeof(remote_addr));
-	if (err) {
+	if (err)
+	{
 		LOG_ERR("Unable to connect to %s:%d", log_strdup(resp->host), resp->port);
 		return err;
 	}
 
-	int max_limit = 4096/BLOCK_BYTES;
+	int max_limit = 5100 / BLOCK_BYTES;
 	int current_count = 0;
 	bool last_block = false;
-	while (!last_block) {
+	const uint8_t token_length = 8;
+	uint8_t token[token_length];
+	uint16_t total_size = 0;
+	memcpy(token, coap_next_token(), token_length);
+	while (!last_block)
+	{
 		current_count++;
-		if (current_count > max_limit) {
+		if (current_count > max_limit)
+		{
 			LOG_ERR("This is going nowhere. I'm terminating");
 			close(sock);
 			return -1;
 		}
-		LOG_INF("1 => Block transfer block %d (total: %d) ", block_ctx.current/BLOCK_BYTES, block_ctx.total_size);
 		struct coap_packet request;
 		memset(request_buffer, 0, MAX_BUFFER_LEN);
 		if (coap_packet_init(&request, request_buffer, MAX_BUFFER_LEN, 1,
-								COAP_TYPE_CON, 8, coap_next_token(),
-								COAP_METHOD_GET, coap_next_id()))
+							 COAP_TYPE_CON, token_length, token,
+							 COAP_METHOD_GET, coap_next_id()))
 		{
 			LOG_ERR("Could not init request packet");
 			close(sock);
 			return -1;
 		}
 
-		LOG_INF("2 => Block transfer block %d (total: %d) ", block_ctx.current/BLOCK_BYTES, block_ctx.total_size);
 		// Assuming a single path entry here. It might be more.
-		if(coap_packet_append_option(&request, COAP_OPTION_URI_PATH,
-											resp->path, strlen(resp->path)) < 0)
+		if (coap_packet_append_option(&request, COAP_OPTION_URI_PATH,
+									  resp->path, strlen(resp->path)) < 0)
 		{
 			LOG_ERR("Could not init path option");
 			close(sock);
 			return -2;
 		}
-		if (coap_append_block2_option(&request, &block_ctx) < 0) {
+		if (coap_append_block2_option(&request, &block_ctx) < 0)
+		{
 			LOG_ERR("Could not append block option");
 			close(sock);
 			return -3;
 		}
-		LOG_INF("3 => Block transfer block %d (total: %d) ", block_ctx.current/BLOCK_BYTES, block_ctx.total_size);
 		err = send(sock, request.data, request.offset, 0);
-		if (err != request.offset) {
+		if (err != request.offset)
+		{
 			close(sock);
 			LOG_ERR("Error sending %d bytes on socket", request.offset);
 		}
 
+		// TODO: Enable timeout for response. Make it reasonably high, then
+		// retry. Three retries = give up.
 		memset(response_buffer, 0, MAX_BUFFER_LEN);
 		int r = recv(sock, response_buffer, MAX_BUFFER_LEN, 0);
-		if (r < 0) {
+		if (r < 0)
+		{
 			LOG_ERR("Error receiving data: %d", r);
 			close(sock);
 			return r;
 		}
 
-		LOG_INF("Got %d bytes from server", r);
 		struct coap_packet reply;
 
-		if (coap_packet_parse(&reply, response_buffer, r, NULL, 0) < 0) {
+		if (coap_packet_parse(&reply, response_buffer, r, NULL, 0) < 0)
+		{
 			LOG_WRN("Invalid data received");
 			close(sock);
-			return -1;
+			return -4;
 		}
-		LOG_INF("Pre ==> Block transfer block %d (total: %d) ", block_ctx.current/BLOCK_BYTES, block_ctx.total_size);
 
-		if (coap_update_from_block(&reply, &block_ctx) < 0) {
+		if (coap_update_from_block(&reply, &block_ctx) < 0)
+		{
 			LOG_WRN("Error updating from block");
 			close(sock);
-			return -1;
+			return -5;
 		}
-		LOG_INF("Post => Block transfer block %d (total: %d) ", block_ctx.current/BLOCK_BYTES, block_ctx.total_size);
-
 		last_block = !coap_next_block(&reply, &block_ctx);
-		LOG_INF("Post 2> Block transfer block %d (total: %d) ", block_ctx.current/BLOCK_BYTES, block_ctx.total_size);
-//		uint16_t payload_len = 0;
-//		coap_packet_get_payload(&reply, &payload_len);
+		uint16_t payload_len = 0;
+		const uint8_t *payload = coap_packet_get_payload(&reply, &payload_len);
+		total_size += payload_len;
+		LOG_INF("Retreived block %d (%d of %d bytes) ", block_ctx.current / BLOCK_BYTES, total_size, block_ctx.total_size);
+
+		bool first = total_size == payload_len;
+		bool last = total_size == block_ctx.total_size;
+		if (write_firmware_block(payload, payload_len, first, last, block_ctx.total_size) < 0)
+		{
+			LOG_ERR("Error writing firmware block");
+			return -6;
+		}
 	}
 	close(sock);
 	return 0;

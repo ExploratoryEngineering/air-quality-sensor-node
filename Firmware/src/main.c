@@ -75,8 +75,13 @@ void main(void)
 	wait_for_sockets();
 	LOG_DBG("Ready to run");
 
-	// fota_init();
+	/*	fota_init();
 
+	LOG_DBG("Sleeping");
+	while (true)
+	{
+		k_sleep(1000);
+	}*/
 	while (true)
 	{
 		LOG_DBG("Sampling sensors");

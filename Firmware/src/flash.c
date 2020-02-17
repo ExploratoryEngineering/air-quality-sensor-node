@@ -15,11 +15,8 @@ static struct flash_img_context dfu_ctx;
 
 // This function is more or less an identical copy to the Foundries.io flash write
 // code.
-int write_firmware_block(uint8_t *data, u16_t data_len, bool last_block, size_t total_size)
+int write_firmware_block(const uint8_t *data, const uint16_t data_len, bool first_block, bool last_block, size_t total_size)
 {
-    static u8_t percent_downloaded;
-    static u32_t bytes_downloaded;
-    u8_t downloaded;
     int ret = 0;
 
     if (total_size > FLASH_BANK_SIZE)
@@ -35,64 +32,18 @@ int write_firmware_block(uint8_t *data, u16_t data_len, bool last_block, size_t 
     }
 
     /* Erase bank 1 before starting the write process */
-    if (bytes_downloaded == 0)
+    if (first_block)
     {
         flash_img_init(&dfu_ctx);
         LOG_DBG("Download firmware started, erasing second bank");
         ret = boot_erase_img_bank(FLASH_BANK1_ID);
         if (ret != 0)
         {
-            LOG_ERR("Failed to erase flash bank 1");
-            goto cleanup;
+            LOG_ERR("Failed to erase flash bank 1: %d", ret);
+            return ret;
         }
         LOG_DBG("Finished erasing bank 1");
     }
 
-    bytes_downloaded += data_len;
-
-    /* display a % downloaded, if it's different */
-    if (total_size)
-    {
-        downloaded = bytes_downloaded * 100 / total_size;
-    }
-    else
-    {
-        /* Total size is empty when there is only one block */
-        downloaded = 100;
-    }
-
-    if (downloaded > percent_downloaded)
-    {
-        percent_downloaded = downloaded;
-        if (percent_downloaded % 10 == 0)
-        {
-            LOG_DBG("Flash %d%%", percent_downloaded);
-        }
-    }
-
-    ret = flash_img_buffered_write(&dfu_ctx, data, data_len, last_block);
-    if (ret < 0)
-    {
-        LOG_ERR("Failed to write flash block: %d", ret);
-        goto cleanup;
-    }
-
-    if (!last_block)
-    {
-        /* Keep going */
-        return ret;
-    }
-
-    if (total_size && (bytes_downloaded != total_size))
-    {
-        LOG_ERR("Early last block, downloaded %d bytes but expected %d",
-                bytes_downloaded, total_size);
-        ret = -EIO;
-    }
-
-cleanup:
-    bytes_downloaded = 0;
-    percent_downloaded = 0;
-
-    return ret;
+    return flash_img_buffered_write(&dfu_ctx, (uint8_t *)data, data_len, last_block);
 }
