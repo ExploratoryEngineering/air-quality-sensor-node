@@ -35,7 +35,7 @@ LOG_MODULE_REGISTER(MAIN);
 
 #define FOTA_COUNTER (FOTA_CHECK_INTERVAL_SEC / SEND_INTERVAL_SEC)
 
-#define MAX_SEND_BUFFER 128
+#define MAX_SEND_BUFFER 256
 static uint8_t buffer[MAX_SEND_BUFFER];
 
 int send_samples(uint8_t *buffer, size_t len)
@@ -101,6 +101,8 @@ void main(void)
 		cc2_get_sample(&last_message.cc2_sample);
 
 		gps_get_sample(&last_message.gps_fix);
+
+		last_message.uptime = k_uptime_get() / 1000;
 
 		int len = mb_encode(&last_message, buffer, MAX_SEND_BUFFER);
 		LOG_DBG("Sample complete, encoded buffer = %d bytes", len);

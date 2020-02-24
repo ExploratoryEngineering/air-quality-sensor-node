@@ -94,6 +94,8 @@ Flash it to the device with `make flash`.
 | 2 | uint16 | OPC PM bin 23
 | 2 | uint16 | OPC PM bin 24
 | 1 | uint8 | OPC sample valid
+| 8 | int64 | Uptime
+
 
 Total: 123 bytes
 

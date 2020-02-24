@@ -1,5 +1,6 @@
 #pragma once
 
+#include <zephyr.h>
 #include "opc_n3.h"
 #include "gps_cache.h"
 #include "chipcap2.h"
@@ -11,6 +12,7 @@ typedef struct
     CC2_SAMPLE cc2_sample;
     OPC_SAMPLE opc_sample;
     AFE3_SAMPLE afe3_sample;
+    s64_t uptime;
 
 } SENSOR_NODE_MESSAGE;
 

@@ -5,6 +5,18 @@
 #include "gps_cache.h"
 #include <math.h>
 
+static void mb_append_s64_t(uint8_t *buf, size_t *index, s64_t value)
+{
+    buf[(*index)++] = (uint8_t)((value & 0xff00000000000000) >> 56);
+    buf[(*index)++] = (uint8_t)((value & 0x00ff000000000000) >> 48);
+    buf[(*index)++] = (uint8_t)((value & 0x0000ff0000000000) >> 40);
+    buf[(*index)++] = (uint8_t)((value & 0x000000ff00000000) >> 32);
+    buf[(*index)++] = (uint8_t)((value & 0x00000000ff000000) >> 24);
+    buf[(*index)++] = (uint8_t)((value & 0x0000000000ff0000) >> 16);
+    buf[(*index)++] = (uint8_t)((value & 0x000000000000ff00) >> 8);
+    buf[(*index)++] = (uint8_t)(value & 0x00000000000000ff);
+}
+
 static void mb_append_uint32(uint8_t *buf, size_t *index, uint32_t value)
 {
     buf[(*index)++] = (uint8_t)((value & 0xff000000) >> 24);
@@ -93,6 +105,8 @@ size_t mb_encode(SENSOR_NODE_MESSAGE *msg, char *buf, size_t max)
     }
     mb_append_uint8(buf, &index, msg->opc_sample.valid);
 
+    mb_append_s64_t(buf, &index, msg->uptime);
+
     return index;
 }
 
@@ -145,6 +159,8 @@ void mb_dump_message(SENSOR_NODE_MESSAGE *msg)
     printf("OP5: %u  ", msg->afe3_sample.op5);
     printf("OP6: %u  ", msg->afe3_sample.op6);
     printf("PT: %u\n", msg->afe3_sample.pt);
+
+    printf("\nUptime (seconds) : %lld\n ", msg->uptime);
 
     printf("----------------------------------------------------------------\n");
 }
