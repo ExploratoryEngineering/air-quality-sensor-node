@@ -97,7 +97,7 @@ Flash it to the device with `make flash`.
 | 8 | int64 | Uptime
 
 
-Total: 123 bytes
+Total: 131 bytes
 
 ## Enabling FOTA
 
