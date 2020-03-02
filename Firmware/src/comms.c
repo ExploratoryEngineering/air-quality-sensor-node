@@ -186,6 +186,22 @@ void modem_restart()
     atnrb_decode();
 }
 
+void modem_restart_without_triggering_network_signalling_storm_but_hopefully_picking_up_the_correct_cell___maybe()
+{
+    modem_write("AT+NRB\r");
+    modem_write("AT+CFUN=0\r");
+    atnrb_decode();
+    modem_write("AT+NRB\r");
+    modem_write("AT+CFUN=1\r");
+    atnrb_decode();
+
+    LOG_DBG("Waiting for modem to connect...");
+    while (!modem_is_ready())
+    {
+        k_sleep(K_MSEC(2000));
+    }
+}
+
 void modem_init(void)
 {
     LOG_INF("Init modem");

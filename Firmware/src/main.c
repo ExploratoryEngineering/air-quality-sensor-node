@@ -26,6 +26,7 @@
 #include "chipcap2.h"
 #include "n2_offload.h"
 #include "fota.h"
+#include "comms.h"
 
 #define LOG_LEVEL CONFIG_MAIN_LOG_LEVEL
 LOG_MODULE_REGISTER(MAIN);
@@ -40,6 +41,9 @@ static uint8_t buffer[MAX_SEND_BUFFER];
 
 int send_samples(uint8_t *buffer, size_t len)
 {
+
+	modem_restart_without_triggering_network_signalling_storm_but_hopefully_picking_up_the_correct_cell___maybe();
+
 	int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (sock < 0)
 	{

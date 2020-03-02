@@ -37,3 +37,9 @@ bool modem_is_ready();
  * Restart modem
  */
 void modem_restart();
+
+/**
+ * Restart modem (in a more network friendly way than modem_restart())
+ *  NOTE: This function has to be tested while moving between cells - and maybe also renamed at some point.
+ */
+void modem_restart_without_triggering_network_signalling_storm_but_hopefully_picking_up_the_correct_cell___maybe();
