@@ -7,6 +7,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"io"
 	"log"
 
@@ -42,7 +43,14 @@ func main() {
 			log.Fatal("Error receiving data: ", err)
 		}
 
-		log.Printf("received payload: %x", data.Payload)
+		s := "{"
+
+		for _, b := range data.Payload {
+			s += fmt.Sprintf("0x%02x, ", b)
+		}
+		s += "}"
+
+		log.Printf("received payload len=%d: %s", len(data.Payload), s)
 	}
 
 }
