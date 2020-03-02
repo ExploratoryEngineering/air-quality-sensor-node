@@ -12,7 +12,7 @@ import (
 	"io"
 	"log"
 
-	"github.com/ExploratoryEngineering/air-quality-sensor-node/aqserver/pkg/aqcodec"
+	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/codec"
 	"github.com/telenordigital/nbiot-go"
 )
 
@@ -54,7 +54,7 @@ func main() {
 		log.Printf("received payload len=%d: %s", len(data.Payload), s)
 
 		// Print JSON entry for better readability
-		dp, err := aqcodec.DecodeAQMessage(data.Payload)
+		dp, err := codec.DecodeAQMessage(data.Payload)
 
 		json, _ := json.MarshalIndent(dp, "", "\t")
 		log.Printf("JSON:\n%s\n", json)

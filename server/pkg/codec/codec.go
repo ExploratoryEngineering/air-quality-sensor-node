@@ -1,4 +1,4 @@
-package aqcodec
+package codec
 
 import (
 	"bytes"
@@ -56,6 +56,10 @@ type DataPoint struct {
 	//Uptime            int64   `json:"Uptime"`           // Uptime
 }
 
+// DecodeAQMessage decodes the binary message from the AQ unit and
+// populates a DataPoint struct with the values.  Note that this is
+// very fragile when changes are made since there is no versioning of
+// the protocol.
 func DecodeAQMessage(data []byte) (DataPoint, error) {
 	dp := DataPoint{}
 	return dp, binary.Read(bytes.NewReader(data), binary.BigEndian, &dp)

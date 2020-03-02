@@ -1,4 +1,4 @@
-package aqcodec
+package codec
 
 import (
 	"encoding/json"
