@@ -1,4 +1,4 @@
-package codec
+package aqcodec
 
 import (
 	"encoding/json"
@@ -58,9 +58,9 @@ var testdata = []byte{
 }
 
 func TestDecode(t *testing.T) {
-	dp, err := decode(testdata)
+	dp, err := DecodeAQMessage(testdata)
 	assert.Nil(t, err)
-	s, err := json.MarshalIndent(dp, "", "\t")
+	s, err := json.MarshalIndent(dp, "", "  ")
 	assert.Nil(t, err)
 	fmt.Printf("%s", s)
 }

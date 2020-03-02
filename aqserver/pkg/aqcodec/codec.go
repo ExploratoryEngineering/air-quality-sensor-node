@@ -1,4 +1,4 @@
-package codec
+package aqcodec
 
 import (
 	"bytes"
@@ -56,7 +56,7 @@ type DataPoint struct {
 	//Uptime            int64   `json:"Uptime"`           // Uptime
 }
 
-func decode(data []byte) (DataPoint, error) {
+func DecodeAQMessage(data []byte) (DataPoint, error) {
 	dp := DataPoint{}
 	return dp, binary.Read(bytes.NewReader(data), binary.BigEndian, &dp)
 }

@@ -6,11 +6,13 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
 	"log"
 
+	"github.com/ExploratoryEngineering/air-quality-sensor-node/aqserver/pkg/aqcodec"
 	"github.com/telenordigital/nbiot-go"
 )
 
@@ -43,14 +45,19 @@ func main() {
 			log.Fatal("Error receiving data: ", err)
 		}
 
+		// Make a hex array which we can use in tests
 		s := "{"
-
 		for _, b := range data.Payload {
 			s += fmt.Sprintf("0x%02x, ", b)
 		}
 		s += "}"
-
 		log.Printf("received payload len=%d: %s", len(data.Payload), s)
+
+		// Print JSON entry for better readability
+		dp, err := aqcodec.DecodeAQMessage(data.Payload)
+
+		json, _ := json.MarshalIndent(dp, "", "\t")
+		log.Printf("JSON:\n%s\n", json)
 	}
 
 }
