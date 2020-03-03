@@ -75,6 +75,7 @@ void main(void)
 
 	LOG_INF("This is the AQ node with version %s (%s)", AQ_VERSION, AQ_NAME);
 
+	cc2_init();
 	gps_init();
 	opc_init();
 
@@ -110,6 +111,9 @@ void main(void)
 
 		int len = mb_encode(&last_message, buffer, MAX_SEND_BUFFER);
 		LOG_DBG("Sample complete, encoded buffer = %d bytes", len);
+	#if 1
+		mb_hex_dump_message(buffer, len);
+	#endif
 
 		int ret = send_samples(buffer, len);
 		if (ret < len)
@@ -133,8 +137,10 @@ void main(void)
 				k_sleep(1000);
 			}
 		}
-#if 0
+#if 1
 			mb_dump_message(&last_message);
 #endif
 	}
+
+	
 }

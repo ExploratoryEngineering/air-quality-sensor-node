@@ -42,16 +42,9 @@ static CC2_SAMPLE current;
 
 void cc2_sample_data()
 {
-    int err = cc2_init();
-    if (err)
-    {
-        LOG_ERR("Unable to set Chipcap2 sensor in normal operations mode. i2c_write failed with error: %d", err);
-        return;
-    }
-
     struct device *i2c_device = get_I2C_device();
     uint8_t rxBuffer[] = {0, 0, 0, 0};
-    err = i2c_read(i2c_device, rxBuffer, 4, CHIPCAP2_ADDRESS);
+    int err = i2c_read(i2c_device, rxBuffer, 4, CHIPCAP2_ADDRESS);
     if (0 != err)
     {
         LOG_ERR("Unable to get Chipcap2 sensor reading. i2c_read failed with error: %d", err);

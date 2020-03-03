@@ -96,6 +96,7 @@ size_t mb_encode(SENSOR_NODE_MESSAGE *msg, char *buf, size_t max)
     mb_append_uint16(buf, &index, msg->opc_sample.period);
     mb_append_uint16(buf, &index, msg->opc_sample.flowrate);
     mb_append_uint16(buf, &index, msg->opc_sample.temperature);
+    mb_append_uint16(buf, &index, msg->opc_sample.humidity);
     mb_append_uint16(buf, &index, msg->opc_sample.fan_rev_count);
     mb_append_uint16(buf, &index, msg->opc_sample.laser_status);
 
@@ -121,6 +122,8 @@ void mb_dump_message(SENSOR_NODE_MESSAGE *msg)
 {
     printf("Chipcap 2 / board status:\n");
     print_float("   Main board temperature: %d.%d (C)  ", msg->cc2_sample.Temp_C);
+    print_float("   Main board temperature: %d (C)  ", (int)msg->cc2_sample.Temp_C);
+    
     print_float("humidity: %d.%d (%%)\n", msg->cc2_sample.RH);
 
     printf("GPS - status:\n");
@@ -163,4 +166,17 @@ void mb_dump_message(SENSOR_NODE_MESSAGE *msg)
     printf("\nUptime (seconds) : %lld\n ", msg->uptime);
 
     printf("----------------------------------------------------------------\n");
+}
+
+
+void mb_hex_dump_message(char *buf, size_t len)
+{
+    printf("{");
+    for (int i=0; i<len; i++)
+    {
+        printf("0x%02X", buf[i]);
+        if (i != len-1)
+            printf(", ");
+    }
+    printf("}");
 }
