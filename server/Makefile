@@ -4,13 +4,12 @@ CGO_ENABLED ?= 1
 CGO_CFLAGS ?=
 CGO_LDFLAGS ?=
 BUILD_TAGS ?=
-APP_NAME ?= aqserver
+APP_NAME ?= server
 VERSION ?=
 BIN_EXT ?=
 
 GO := GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED=$(CGO_ENABLED) CGO_CFLAGS=$(CGO_CFLAGS) CGO_LDFLAGS=$(CGO_LDFLAGS) GO111MODULE=auto go
 PACKAGES = $(shell $(GO) list ./... | grep -v '/vendor/')
-PROTOBUFS = $(shell find . -name '*.proto' -print0 | xargs -0 -n1 dirname | sort | uniq | grep -v /vendor/)
 TARGET_PACKAGES = $(shell find . -name 'main.go' -print0 | xargs -0 -n1 dirname | sort | uniq | grep -v /vendor/)
 
 ifeq ($(GOOS),windows)
@@ -34,9 +33,9 @@ help:
 	@echo "   VERSION     = $(VERSION)"
 
 
-.PHONY: protoc
-protoc:
-	@for proto_dir in $(PROTOBUFS); do echo $$proto_dir; protoc --proto_path=. --proto_path=$$proto_dir --go_out=plugins=grpc:$(GOPATH)/src $$proto_dir/*.proto || exit 1; done
+.PHONY: gen
+gen:
+	go generate ./...
 
 .PHONY: format
 format:
@@ -47,7 +46,7 @@ test:
 	@$(GO) test -v -tags="$(BUILD_TAGS)" $(PACKAGES)
 
 .PHONY: build
-build:
+build: gen
 	@for target_pkg in $(TARGET_PACKAGES); do $(GO) build -tags="$(BUILD_TAGS)" $(LDFLAGS) -o ./bin/`basename $$target_pkg`$(BIN_EXT) $$target_pkg || exit 1; done
 
 .PHONY: install

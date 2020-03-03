@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"unsafe"
 
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/codec"
 	"github.com/telenordigital/nbiot-go"
@@ -34,6 +35,8 @@ func main() {
 		log.Fatal("Error creating stream: ", err)
 	}
 	defer stream.Close()
+
+	log.Printf("Total size of DataPoint struct is %d", unsafe.Sizeof(codec.DataPoint{}))
 
 	log.Printf("Listening for messages from device '%s' in collection '%s'", *deviceID, *collectionID)
 	for {
