@@ -1,0 +1,63 @@
+//
+// Protocol buffer definitions for 4 gen TKAQ units.
+//
+syntax = "proto3";
+package aqpb;
+
+// We need this in order to specify that the opc_bin variable is to be
+// allocated as a fixed size array in the nanobp version.
+import "nanopb.proto";
+
+// Sample -- represents one packet of data from the air quality unit.
+// When extending this keep in mind that dealing with protobuffers on
+// constrained platforms dealing with nested structures can be a bit
+// of a pain, so we try to keep this message as simple as possible.
+//
+message Sample {
+    // ---------- Board fields ----------
+    int64 sysid                = 1; // Hardware id
+    int64 firmware_version     = 2; // Versioning info
+    int64 uptime               = 3; // Uptime of the system - number of milliseconds since reboot.
+    double board_temp          = 4; // Board temperature in celsius
+    double board_rel_humidity  = 5; // Board relative humidity in percent
+
+    // ---------- GPS fields ----------
+    // If the GPS cannot get a fix these fields will all be zeroed.
+    double gps_timestamp       = 6; // Timestamp from the GPS
+    double lat                 = 7; // Latitude in radians
+    double long                = 8; // Longitude in radians
+    double alt                 = 9; // Altitude in meters
+
+    // ---------- AFE3 fields ----------
+    // In order to obtain the measurement in mV the sensor readinggs
+    // below have to be multiplied by 0.000000596046.  On the
+    // calibration datasheet for each sensor there will be an offset
+    // value for each sensor (given in mV).
+    //
+    uint32 sensor_1_work       = 10; // OP1 ADC reading - NO2 working electrode
+    uint32 sensor_1_aux        = 11; // OP2 ADC reading - NO2 auxillary electrode
+    uint32 sensor_2_work       = 12; // OP3 ADC reading - O3+NO2 working electrode
+    uint32 sensor_2_aux        = 13; // OP4 ADC reading - O3+NO2 auxillary electrode
+    uint32 sensor_3_work       = 14; // OP5 ADC reading - NO working electrode
+    uint32 sensor_3_aux        = 15; // OP6 ADC reading - NO aux electrode
+    uint32 afe3_temp           = 16; // Pt1000 ADC reading - AFE-3 ambient temperature
+
+    // ---------- OPC-N3 fields ----------
+    // Strictly speaking we should have another field that specifies
+    // what the pm_a, pm_b, and pm_c values are set to.  These values
+    // are not very useful if we don't know what they are.
+    
+    uint32 opc_pm_a             = 17; // OPC PM A (default PM1)
+    uint32 opc_pm_b             = 18; // OPC PM B (default PM2.5)
+    uint32 opc_pm_c             = 19; // OPC PM C (default PM10)
+
+    uint32 opc_sample_period    = 20; // OPC sample period, in ms
+    uint32 opc_sample_flow_rate = 21; // OPC sample flow rate, in <UNIT???>
+    uint32 opc_temp             = 22; // OPC temperature, in <UNIT???>
+    uint32 opc_fan_rpm          = 23; // OPC fan rpm, in <UNIT???>
+    uint32 opc_laser_status     = 24; // OPC laser status, <DOC???>
+    uint32 opc_sample_valid     = 25; // OPC Sample valid
+    
+    // OPC PM bin 1 to 24
+    repeated uint32 opc_bin     = 26 [(nanopb).max_count=24, (nanopb).fixed_count=true];
+}
