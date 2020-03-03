@@ -1,5 +1,5 @@
 bin
 data
 dist
-cmd/aqfetch/aqfetch
+cmd/listen/listen
 .telenor-nbiot
