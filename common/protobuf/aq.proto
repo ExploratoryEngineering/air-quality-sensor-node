@@ -2,11 +2,10 @@
 // Protocol buffer definitions for 4 gen TKAQ units.
 //
 syntax = "proto3";
+
 package aqpb;
 
-// We need this in order to specify that the opc_bin variable is to be
-// allocated as a fixed size array in the nanobp version.
-import "nanopb.proto";
+option go_package = ".;aqpb";
 
 // Sample -- represents one packet of data from the air quality unit.
 // When extending this keep in mind that dealing with protobuffers on
@@ -18,15 +17,15 @@ message Sample {
     int64 sysid                = 1; // Hardware id
     int64 firmware_version     = 2; // Versioning info
     int64 uptime               = 3; // Uptime of the system - number of milliseconds since reboot.
-    double board_temp          = 4; // Board temperature in celsius
-    double board_rel_humidity  = 5; // Board relative humidity in percent
+    float board_temp          = 4; // Board temperature in celsius
+    float board_rel_humidity  = 5; // Board relative humidity in percent
 
     // ---------- GPS fields ----------
     // If the GPS cannot get a fix these fields will all be zeroed.
-    double gps_timestamp       = 6; // Timestamp from the GPS
-    double lat                 = 7; // Latitude in radians
-    double long                = 8; // Longitude in radians
-    double alt                 = 9; // Altitude in meters
+    float gps_timestamp       = 6; // Timestamp from the GPS
+    float lat                 = 7; // Latitude in radians
+    float long                = 8; // Longitude in radians
+    float alt                 = 9; // Altitude in meters
 
     // ---------- AFE3 fields ----------
     // In order to obtain the measurement in mV the sensor readinggs
@@ -58,6 +57,29 @@ message Sample {
     uint32 opc_laser_status     = 24; // OPC laser status, <DOC???>
     uint32 opc_sample_valid     = 25; // OPC Sample valid
     
-    // OPC PM bin 1 to 24
-    repeated uint32 opc_bin     = 26 [(nanopb).max_count=24, (nanopb).fixed_count=true];
+    // OPC PM bin 0 to 23
+    uint32 opc_bin_0  = 100; // OPC PM bin 0
+    uint32 opc_bin_1  = 101; // OPC PM bin 1
+    uint32 opc_bin_2  = 102; // OPC PM bin 2
+    uint32 opc_bin_3  = 103; // OPC PM bin 3
+    uint32 opc_bin_4  = 104; // OPC PM bin 4
+    uint32 opc_bin_5  = 105; // OPC PM bin 5
+    uint32 opc_bin_6  = 106; // OPC PM bin 6
+    uint32 opc_bin_7  = 107; // OPC PM bin 7
+    uint32 opc_bin_8  = 108; // OPC PM bin 8
+    uint32 opc_bin_9  = 109; // OPC PM bin 9
+    uint32 opc_bin_10 = 110; // OPC PM bin 10
+    uint32 opc_bin_11 = 111; // OPC PM bin 11
+    uint32 opc_bin_12 = 112; // OPC PM bin 12
+    uint32 opc_bin_13 = 113; // OPC PM bin 13
+    uint32 opc_bin_14 = 114; // OPC PM bin 14
+    uint32 opc_bin_15 = 115; // OPC PM bin 15
+    uint32 opc_bin_16 = 116; // OPC PM bin 16
+    uint32 opc_bin_17 = 117; // OPC PM bin 17
+    uint32 opc_bin_18 = 118; // OPC PM bin 18
+    uint32 opc_bin_19 = 119; // OPC PM bin 19
+    uint32 opc_bin_20 = 120; // OPC PM bin 20
+    uint32 opc_bin_21 = 121; // OPC PM bin 21
+    uint32 opc_bin_22 = 122; // OPC PM bin 22
+    uint32 opc_bin_23 = 123; // OPC PM bin 23
 }
