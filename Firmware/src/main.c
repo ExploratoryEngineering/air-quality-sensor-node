@@ -62,6 +62,7 @@ int send_samples(uint8_t *buffer, size_t len)
 	if (err < 0)
 	{
 		LOG_ERR("Unable to send data: %d", err);
+		close(sock);
 		return err;
 	}
 	close(sock);

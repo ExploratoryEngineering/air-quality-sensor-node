@@ -214,6 +214,7 @@ static int fota_report_version(simple_fota_response_t *resp)
 
 	if (!wait_for_response(sock))
 	{
+		close(sock);
 		return -1;
 	}
 	received = recvfrom(sock, response_buffer, sizeof(response_buffer), 0, NULL, NULL);
@@ -269,6 +270,7 @@ static bool fota_download_image(simple_fota_response_t *resp)
 	if (connect(sock, (struct sockaddr *)&remote_addr, sizeof(remote_addr)) < 0)
 	{
 		LOG_ERR("Unable to connect to %s:%d", log_strdup(resp->host), resp->port);
+		close(sock);
 		return false;
 	}
 
@@ -353,6 +355,7 @@ static bool fota_download_image(simple_fota_response_t *resp)
 		if (write_firmware_block(payload, payload_len, first, last, block_ctx.total_size) < 0)
 		{
 			LOG_ERR("Error writing firmware block");
+			close(sock);
 			return false;
 		}
 	}
