@@ -8,13 +8,13 @@ package main
 import (
 	"encoding/json"
 	"flag"
-	"fmt"
 	"io"
 	"log"
-	"unsafe"
 
-	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/codec"
+	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/aqpb"
+	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/model"
 	"github.com/telenordigital/nbiot-go"
+	"google.golang.org/protobuf/proto"
 )
 
 var (
@@ -36,8 +36,6 @@ func main() {
 	}
 	defer stream.Close()
 
-	log.Printf("Total size of DataPoint struct is %d", unsafe.Sizeof(codec.DataPoint{}))
-
 	log.Printf("Listening for messages from device '%s' in collection '%s'", *deviceID, *collectionID)
 	for {
 		data, err := stream.Recv()
@@ -48,16 +46,18 @@ func main() {
 			log.Fatal("Error receiving data: ", err)
 		}
 
-		// Make a hex array which we can use in tests
-		s := "{"
-		for _, b := range data.Payload {
-			s += fmt.Sprintf("0x%02x, ", b)
+		sample := aqpb.Sample{}
+		err = proto.Unmarshal(data.Payload, &sample)
+		if err != nil {
+			log.Printf("Unable to unmarshal protobuf payload: %v", err)
+			continue
 		}
-		s += "}"
-		log.Printf("received payload len=%d: %s", len(data.Payload), s)
 
-		// Print JSON entry for better readability
-		dp, err := codec.DecodeAQMessage(data.Payload)
+		dp := model.DataPointFromProtobuf(&sample)
+		if dp == nil {
+			log.Printf("Unable to create DataPoint from protobuf")
+			continue
+		}
 
 		json, _ := json.MarshalIndent(dp, "", "\t")
 		log.Printf("JSON:\n%s\n", json)

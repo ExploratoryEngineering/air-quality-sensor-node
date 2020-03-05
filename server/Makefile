@@ -35,7 +35,7 @@ help:
 
 .PHONY: gen
 gen:
-	go generate ./...
+	@go generate ./...
 
 .PHONY: format
 format:
