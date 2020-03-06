@@ -4,6 +4,13 @@
 #include "messagebuffer.h"
 #include "gps_cache.h"
 #include <math.h>
+#include "aq.pb.h"
+#include <pb_encode.h>
+#include <pb_decode.h>
+#include <logging/log.h>
+
+#define LOG_LEVEL CONFIG_MESSAGEBUFFER_LOG_LEVEL
+LOG_MODULE_REGISTER(MESSAGEBUFFER);
 
 static void mb_append_s64_t(uint8_t *buf, size_t *index, s64_t value)
 {
@@ -36,79 +43,81 @@ static void mb_append_uint8(uint8_t *buf, size_t *index, uint8_t value)
     buf[(*index)++] = value;
 }
 
-size_t mb_encode(SENSOR_NODE_MESSAGE *msg, char *buf, size_t max)
+size_t mb_encode(SENSOR_NODE_MESSAGE *msg, char *buffer, size_t max)
 {
-    size_t index = 0;
-    // GPS
-    // Index    Description
-    // 0 - 8    GPS timestamp
-    // 9 - 16   GPS longitude
-    // 17 - 24  GPS latitude
-    // 25 - 32  GPS altitude
-    mb_append_uint32(buf, &index, msg->gps_fix.timestamp);
-    mb_append_uint32(buf, &index, msg->gps_fix.longitude);
-    mb_append_uint32(buf, &index, msg->gps_fix.latitude);
-    mb_append_uint32(buf, &index, msg->gps_fix.altitude);
+    size_t message_length = 0;
+    bool status;
 
-    // Board stats
-    // Index    Description
-    // 33 - 40  Board temperature
-    // 41 - 48  Board humidity
-    mb_append_uint32(buf, &index, msg->cc2_sample.Temp_C);
-    mb_append_uint32(buf, &index, msg->cc2_sample.RH);
+    memset(buffer, 0, max);
 
-    // AFE ADC
-    // Index    Description
-    // 49 - 56  OP1 ADC reading - Nitrogen Dioxide working electrode
-    // 57 - 64  OP2 ADC reading - Nitrogen Dioxide auxillary electrode
-    // 65 - 72  OP3 ADC reading - Ozone + Nitrogen Dioxide working electrode
-    // 73 - 80  OP4 ADC reading - Ozone + Nitrogen Dioxide auxillary electrode
-    // 81 - 88  OP5 ADC reading - Nitric Oxide Working electrode
-    // 89 - 96  OP6 ADC reading - Nitric Oxide auxillary electrode
-    // 97 - 104  Pt1000 ADC reading - AFE-3 ambient temperature
-    mb_append_uint32(buf, &index, msg->afe3_sample.op1);
-    mb_append_uint32(buf, &index, msg->afe3_sample.op2);
-    mb_append_uint32(buf, &index, msg->afe3_sample.op3);
-    mb_append_uint32(buf, &index, msg->afe3_sample.op4);
-    mb_append_uint32(buf, &index, msg->afe3_sample.op5);
-    mb_append_uint32(buf, &index, msg->afe3_sample.op6);
-    mb_append_uint32(buf, &index, msg->afe3_sample.pt);
+    aqpb_Sample message = aqpb_Sample_init_zero;
+    pb_ostream_t stream = pb_ostream_from_buffer(buffer, max);
 
-    // OPC-N3
-    // Index    Description
-    // 105 - 112  OPC PM A (default PM1)
-    // 113 - 120  OPC PM B (default PM2.5)
-    // 121 - 128  OPC PM C (default PM10)
-    // 129 - 132  OPC sample period
-    // 133 - 136  OPC sample flowrate
-    // 137 - 140  OPC temperature
-    // 141 - 144  OPC humidity
-    // 145 - 148  OPC fan rev count
-    // 149 - 152  OPC laser status
-    // 153 - 156  Histogram count - bin 1
-    // 157 - 160  Histogram count - bin 2
-    // ...
-    // 241 - 244  Histogram count - bin 24
-    // 245 - 246  Valid / invalid data (bool)
-    mb_append_uint32(buf, &index, msg->opc_sample.pm_a);
-    mb_append_uint32(buf, &index, msg->opc_sample.pm_b);
-    mb_append_uint32(buf, &index, msg->opc_sample.pm_c);
-    mb_append_uint16(buf, &index, msg->opc_sample.period);
-    mb_append_uint16(buf, &index, msg->opc_sample.flowrate);
-    mb_append_uint16(buf, &index, msg->opc_sample.temperature);
-    mb_append_uint16(buf, &index, msg->opc_sample.humidity);
-    mb_append_uint16(buf, &index, msg->opc_sample.fan_rev_count);
-    mb_append_uint16(buf, &index, msg->opc_sample.laser_status);
+    // uint64_t firmware_version; // TODO
+    message.uptime = msg->uptime;
+    message.board_temp = msg->cc2_sample.Temp_C;
+    message.board_rel_humidity = msg->cc2_sample.RH;
+    // message.status == // TODO
 
-    for (int i = 0; i < OPC_BINS; i++)
+    message.gps_timestamp = msg->gps_fix.timestamp;
+    message.lat = msg->gps_fix.latitude;
+    message.lon = msg->gps_fix.longitude;
+    message.alt = msg->gps_fix.altitude;
+
+    message.sensor_1_work = msg->afe3_sample.op1;
+    message.sensor_1_aux = msg->afe3_sample.op2;
+    message.sensor_2_work = msg->afe3_sample.op3;
+    message.sensor_2_aux = msg->afe3_sample.op4;
+    message.sensor_3_work = msg->afe3_sample.op5;
+    message.sensor_3_aux = msg->afe3_sample.op6;
+    message.afe3_temp = msg->afe3_sample.pt;
+
+    message.opc_pm_a = msg->opc_sample.pm_a;
+    message.opc_pm_b = msg->opc_sample.pm_b;
+    message.opc_pm_c = msg->opc_sample.pm_c;
+    message.opc_sample_period = msg->opc_sample.period;
+    message.opc_sample_flow_rate = msg->opc_sample.flowrate;
+    message.opc_hum = msg->opc_sample.humidity;
+    message.opc_temp = msg->opc_sample.temperature;
+    message.opc_fan_revcount = msg->opc_sample.fan_rev_count;
+    message.opc_laser_status = msg->opc_sample.laser_status;
+    message.opc_sample_valid = msg->opc_sample.valid;
+
+    message.opc_bin_0 = msg->opc_sample.bin[0];
+    message.opc_bin_1 = msg->opc_sample.bin[1];
+    message.opc_bin_2 = msg->opc_sample.bin[2];
+    message.opc_bin_3 = msg->opc_sample.bin[3];
+    message.opc_bin_4 = msg->opc_sample.bin[4];
+    message.opc_bin_5 = msg->opc_sample.bin[5];
+    message.opc_bin_6 = msg->opc_sample.bin[6];
+    message.opc_bin_7 = msg->opc_sample.bin[7];
+    message.opc_bin_8 = msg->opc_sample.bin[8];
+    message.opc_bin_9 = msg->opc_sample.bin[9];
+    message.opc_bin_10 = msg->opc_sample.bin[10];
+    message.opc_bin_11 = msg->opc_sample.bin[11];
+    message.opc_bin_12 = msg->opc_sample.bin[12];
+    message.opc_bin_13 = msg->opc_sample.bin[13];
+    message.opc_bin_14 = msg->opc_sample.bin[14];
+    message.opc_bin_15 = msg->opc_sample.bin[15];
+    message.opc_bin_16 = msg->opc_sample.bin[16];
+    message.opc_bin_17 = msg->opc_sample.bin[17];
+    message.opc_bin_18 = msg->opc_sample.bin[18];
+    message.opc_bin_19 = msg->opc_sample.bin[19];
+    message.opc_bin_20 = msg->opc_sample.bin[20];
+    message.opc_bin_21 = msg->opc_sample.bin[21];
+    message.opc_bin_22 = msg->opc_sample.bin[22];
+    message.opc_bin_23 = msg->opc_sample.bin[23];
+
+    status = pb_encode(&stream, aqpb_Sample_fields, &message);
+    message_length = stream.bytes_written;
+        
+    if (!status)
     {
-        mb_append_uint16(buf, &index, msg->opc_sample.bin[i]);
+        LOG_ERR("Encoding failed: %s\n", log_strdup(PB_GET_ERROR(&stream)));
+        return 1;
     }
-    mb_append_uint8(buf, &index, msg->opc_sample.valid);
 
-    mb_append_s64_t(buf, &index, msg->uptime);
-
-    return index;
+    return message_length;
 }
 
 void print_float(char *msg, float v)
