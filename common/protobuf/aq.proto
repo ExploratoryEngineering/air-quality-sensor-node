@@ -14,18 +14,19 @@ option go_package = ".;aqpb";
 //
 message Sample {
     // ---------- Board fields ----------
-    int64 sysid                = 1; // Hardware id
-    int64 firmware_version     = 2; // Versioning info
-    int64 uptime               = 3; // Uptime of the system - number of milliseconds since reboot.
-    float board_temp          = 4; // Board temperature in celsius
-    float board_rel_humidity  = 5; // Board relative humidity in percent
+    uint64 sysid                = 1; // Hardware id
+    uint64 firmware_version     = 2; // Versioning info
+    int64 uptime                = 3; // Uptime of the system - number of milliseconds since reboot.
+    float board_temp            = 4; // Board temperature in celsius
+    float board_rel_humidity    = 5; // Board relative humidity in percent
+    uint64 status               = 6; // Generic status bit field (for future use)
 
     // ---------- GPS fields ----------
     // If the GPS cannot get a fix these fields will all be zeroed.
-    float gps_timestamp       = 6; // Timestamp from the GPS
-    float lat                 = 7; // Latitude in radians
-    float long                = 8; // Longitude in radians
-    float alt                 = 9; // Altitude in meters
+    float gps_timestamp       =  7; // Timestamp from the GPS
+    float lat                 =  8; // Latitude in radians
+    float lon                 =  9; // Longitude in radians
+    float alt                 = 10; // Altitude in meters
 
     // ---------- AFE3 fields ----------
     // In order to obtain the measurement in mV the sensor readinggs
@@ -33,53 +34,53 @@ message Sample {
     // calibration datasheet for each sensor there will be an offset
     // value for each sensor (given in mV).
     //
-    uint32 sensor_1_work       = 10; // OP1 ADC reading - NO2 working electrode
-    uint32 sensor_1_aux        = 11; // OP2 ADC reading - NO2 auxillary electrode
-    uint32 sensor_2_work       = 12; // OP3 ADC reading - O3+NO2 working electrode
-    uint32 sensor_2_aux        = 13; // OP4 ADC reading - O3+NO2 auxillary electrode
-    uint32 sensor_3_work       = 14; // OP5 ADC reading - NO working electrode
-    uint32 sensor_3_aux        = 15; // OP6 ADC reading - NO aux electrode
-    uint32 afe3_temp           = 16; // Pt1000 ADC reading - AFE-3 ambient temperature
+    uint32 sensor_1_work       = 20; // OP1 ADC reading - NO2 working electrode
+    uint32 sensor_1_aux        = 21; // OP2 ADC reading - NO2 auxillary electrode
+    uint32 sensor_2_work       = 22; // OP3 ADC reading - O3+NO2 working electrode
+    uint32 sensor_2_aux        = 23; // OP4 ADC reading - O3+NO2 auxillary electrode
+    uint32 sensor_3_work       = 24; // OP5 ADC reading - NO working electrode
+    uint32 sensor_3_aux        = 25; // OP6 ADC reading - NO aux electrode
+    uint32 afe3_temp           = 26; // Pt1000 ADC reading - AFE-3 ambient temperature
 
     // ---------- OPC-N3 fields ----------
     // Strictly speaking we should have another field that specifies
     // what the pm_a, pm_b, and pm_c values are set to.  These values
     // are not very useful if we don't know what they are.
     
-    uint32 opc_pm_a             = 17; // OPC PM A (default PM1)
-    uint32 opc_pm_b             = 18; // OPC PM B (default PM2.5)
-    uint32 opc_pm_c             = 19; // OPC PM C (default PM10)
+    uint32 opc_pm_a             = 30; // OPC PM A (default PM1)
+    uint32 opc_pm_b             = 31; // OPC PM B (default PM2.5)
+    uint32 opc_pm_c             = 32; // OPC PM C (default PM10)
 
-    uint32 opc_sample_period    = 20; // OPC sample period, in ms
-    uint32 opc_sample_flow_rate = 21; // OPC sample flow rate, in <UNIT???>
-    uint32 opc_temp             = 22; // OPC temperature, in <UNIT???>
-    uint32 opc_fan_rpm          = 23; // OPC fan rpm, in <UNIT???>
-    uint32 opc_laser_status     = 24; // OPC laser status, <DOC???>
-    uint32 opc_sample_valid     = 25; // OPC Sample valid
+    uint32 opc_sample_period    = 33; // OPC sample period, in ms
+    uint32 opc_sample_flow_rate = 34; // OPC sample flow rate, in <UNIT???>
+    uint32 opc_temp             = 35; // OPC temperature, in <UNIT???>
+    uint32 opc_fan_rpm          = 36; // OPC fan rpm, in <UNIT???>
+    uint32 opc_laser_status     = 37; // OPC laser status, <DOC???>
+    uint32 opc_sample_valid     = 38; // OPC Sample valid
     
     // OPC PM bin 0 to 23
-    uint32 opc_bin_0  = 100; // OPC PM bin 0
-    uint32 opc_bin_1  = 101; // OPC PM bin 1
-    uint32 opc_bin_2  = 102; // OPC PM bin 2
-    uint32 opc_bin_3  = 103; // OPC PM bin 3
-    uint32 opc_bin_4  = 104; // OPC PM bin 4
-    uint32 opc_bin_5  = 105; // OPC PM bin 5
-    uint32 opc_bin_6  = 106; // OPC PM bin 6
-    uint32 opc_bin_7  = 107; // OPC PM bin 7
-    uint32 opc_bin_8  = 108; // OPC PM bin 8
-    uint32 opc_bin_9  = 109; // OPC PM bin 9
-    uint32 opc_bin_10 = 110; // OPC PM bin 10
-    uint32 opc_bin_11 = 111; // OPC PM bin 11
-    uint32 opc_bin_12 = 112; // OPC PM bin 12
-    uint32 opc_bin_13 = 113; // OPC PM bin 13
-    uint32 opc_bin_14 = 114; // OPC PM bin 14
-    uint32 opc_bin_15 = 115; // OPC PM bin 15
-    uint32 opc_bin_16 = 116; // OPC PM bin 16
-    uint32 opc_bin_17 = 117; // OPC PM bin 17
-    uint32 opc_bin_18 = 118; // OPC PM bin 18
-    uint32 opc_bin_19 = 119; // OPC PM bin 19
-    uint32 opc_bin_20 = 120; // OPC PM bin 20
-    uint32 opc_bin_21 = 121; // OPC PM bin 21
-    uint32 opc_bin_22 = 122; // OPC PM bin 22
-    uint32 opc_bin_23 = 123; // OPC PM bin 23
+    uint32 opc_bin_0  = 39; // OPC PM bin 0
+    uint32 opc_bin_1  = 40; // OPC PM bin 1
+    uint32 opc_bin_2  = 41; // OPC PM bin 2
+    uint32 opc_bin_3  = 42; // OPC PM bin 3
+    uint32 opc_bin_4  = 43; // OPC PM bin 4
+    uint32 opc_bin_5  = 44; // OPC PM bin 5
+    uint32 opc_bin_6  = 45; // OPC PM bin 6
+    uint32 opc_bin_7  = 46; // OPC PM bin 7
+    uint32 opc_bin_8  = 47; // OPC PM bin 8
+    uint32 opc_bin_9  = 48; // OPC PM bin 9
+    uint32 opc_bin_10 = 49; // OPC PM bin 10
+    uint32 opc_bin_11 = 50; // OPC PM bin 11
+    uint32 opc_bin_12 = 51; // OPC PM bin 12
+    uint32 opc_bin_13 = 52; // OPC PM bin 13
+    uint32 opc_bin_14 = 53; // OPC PM bin 14
+    uint32 opc_bin_15 = 54; // OPC PM bin 15
+    uint32 opc_bin_16 = 55; // OPC PM bin 16
+    uint32 opc_bin_17 = 56; // OPC PM bin 17
+    uint32 opc_bin_18 = 57; // OPC PM bin 18
+    uint32 opc_bin_19 = 58; // OPC PM bin 19
+    uint32 opc_bin_20 = 59; // OPC PM bin 20
+    uint32 opc_bin_21 = 60; // OPC PM bin 21
+    uint32 opc_bin_22 = 61; // OPC PM bin 22
+    uint32 opc_bin_23 = 62; // OPC PM bin 23
 }
