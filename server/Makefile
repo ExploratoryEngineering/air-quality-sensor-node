@@ -5,7 +5,7 @@ CGO_CFLAGS ?=
 CGO_LDFLAGS ?=
 BUILD_TAGS ?=
 APP_NAME ?= server
-VERSION ?=
+VERSION ?= 0.1.0
 BIN_EXT ?=
 
 GO := GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED=$(CGO_ENABLED) CGO_CFLAGS=$(CGO_CFLAGS) CGO_LDFLAGS=$(CGO_LDFLAGS) GO111MODULE=auto go
@@ -35,7 +35,7 @@ help:
 
 .PHONY: gen
 gen:
-	go generate ./...
+	@go generate ./...
 
 .PHONY: format
 format:
