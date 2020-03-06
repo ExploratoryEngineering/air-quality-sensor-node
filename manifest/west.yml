@@ -1,0 +1,31 @@
+west:
+  url: https://github.com/zephyrproject-rtos/west
+  revision: v0.6.0
+
+manifest:
+  defaults:
+    remote: zephyrproject-rtos
+
+  remotes:
+    - name: nanopb
+      url-base: https://github.com/nanopb
+    - name: zephyrproject-rtos
+      url-base: https://github.com/zephyrproject-rtos
+    - name: mcuboot
+      url-base: https://github.com/JuulLabs-OSS
+
+  projects:
+    - name: nanopb
+      path: Firmware/nanopb
+      revision: nanopb-0.4.1
+      remote: nanopb
+    - name: zephyr
+      path: deps/zephyr
+      remote: zephyrproject-rtos
+      revision: v2.1.0
+      west-commands: scripts/west-commands.yml
+      import: true
+    - name: mcuboot
+      remote: mcuboot
+      path: Firmware/mcuboot
+      revision: v1.4.0
