@@ -19,7 +19,7 @@ import (
 
 var (
 	collectionID = flag.String("collection", "17dh0cf43jg007", "Collection ID")
-	deviceID     = flag.String("device", "17dh0cf43jg6n4", "Device ID")
+	deviceID     = flag.String("device", "17dh0cf43jg6lj", "Device ID")
 )
 
 func main() {
@@ -45,6 +45,8 @@ func main() {
 		if err != nil {
 			log.Fatal("Error receiving data: ", err)
 		}
+
+		log.Printf("Data payload (%d): %x", len(data.Payload), data.Payload)
 
 		sample := aqpb.Sample{}
 		err = proto.Unmarshal(data.Payload, &sample)

@@ -4,8 +4,9 @@
 
 You need to install the `protoc` protocol compiler for Google protobuffers.
 
-### OSX using Homebrew
+### On OSX
 
+    go get -u github.com/golang/protobuf/protoc-gen-go
     brew install protobuf
 
 
