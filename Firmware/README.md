@@ -7,13 +7,19 @@ The board is configured for sampling an Alfasense AFE-3 board populated with NO2
 Building:
 
 ```sh
-source <your zephyr path>/zephyr/zephyr-env.sh
-export ZEPHYR_BASE=<your zephyr path>/zephyr
+west update
+source ../deps/zephyr/zephyr-env.sh
 west build --pristine -b nrf52_pca10040 Firmware
 west flash
 ```
+NOTE!  west v0.7 is required for this to work.
 
 ## Required tools
+
+To compile protobuf files you need to install protobuf compiler and python bindingds for protobuf.
+
+For MacOS this can be installed with `brew install protobuf` and `pip install protobuf`.
+For Linux this can be installed with `apt-get install protobuf-compiler python-protobuf`.
 
 You'll need `make` to build the image. Releases are managed via the `reto` release tool (available at github.com/ExploratoryEngineering/reto)
 
