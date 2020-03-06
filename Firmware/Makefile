@@ -19,9 +19,7 @@ fwkey:
 	imgtool keygen -k $(KEYFILE) -t rsa-2048
 
 build_mcuboot:
-	git clone https://github.com/JuulLabs-OSS/mcuboot && \
-	cd mcuboot/boot/zephyr && \
-	git checkout v1.4.0 && \
+	west update
 	sed -i -e 's+root-rsa-2048.pem+../aq_fota.pem+g' prj.conf
 
 install_mcuboot:
