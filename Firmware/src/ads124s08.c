@@ -35,7 +35,7 @@
 #include <device.h>
 #include <stdio.h>
 #include "spi_config.h"
-#include "ADS124S08.h"
+#include "ads124s08.h"
 #include <drivers/gpio.h>
 #include "gpio.h"
 #include "opc_n3.h"

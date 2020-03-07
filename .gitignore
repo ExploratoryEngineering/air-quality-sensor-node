@@ -1,0 +1,6 @@
+# Things added by west-managed repos
+deps/
+modules/
+tools/
+Firmware/mcuboot/
+Firmware/nanopb/

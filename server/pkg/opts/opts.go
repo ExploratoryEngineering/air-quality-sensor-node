@@ -7,13 +7,14 @@ import (
 	"github.com/jessevdk/go-flags"
 )
 
-// Options struct
+// Opts contains command line options
 type Opts struct {
 	// Webserver options
 	WebServer string `short:"w" long:"webserver" description:"Listen address for webserver" default:":8888" value-name:"<[host]:port>"`
 
 	// UDP listener
 	UDPListenAddress string `short:"u" long:"udp-listener" description:"Listen address for UDP listener" default:":9191" value-name:"<[host]:port>"`
+	UDPBufferSize    int    `short:"b" long:"udp-buffer-size" description:"Size of UDP read buffer" default:"1024" value-name:"<num bytes>"`
 
 	// Database options
 	DBFilename string `short:"d" long:"db" description:"Data storage file" default:"ds.db" value-name:"<file>"`
@@ -21,7 +22,7 @@ type Opts struct {
 
 var parsedOpts Opts
 
-// ParseOpts
+// Parse parses the command line options
 func Parse() *Opts {
 	parser := flags.NewParser(&parsedOpts, flags.Default)
 
@@ -35,7 +36,7 @@ func Parse() *Opts {
 	return &parsedOpts
 }
 
-// Opts returns the command line options for the server command
-func POarsedOpts() *Opts {
+// ParsedOpts returns a reference to the parsedOpts structure
+func ParsedOpts() *Opts {
 	return &parsedOpts
 }
