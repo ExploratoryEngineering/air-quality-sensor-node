@@ -13,12 +13,8 @@ import (
 
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/aqpb"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/model"
-<<<<<<< HEAD
-=======
 	"github.com/golang/protobuf/proto"
->>>>>>> 39dfd5ce20b5914f350809975d68b62c89ae7e17
 	"github.com/telenordigital/nbiot-go"
-	"google.golang.org/protobuf/proto"
 )
 
 var (
@@ -50,11 +46,8 @@ func main() {
 			log.Fatal("Error receiving data: ", err)
 		}
 
-<<<<<<< HEAD
-=======
 		log.Printf("Data payload (%d): %x", len(data.Payload), data.Payload)
 
->>>>>>> 39dfd5ce20b5914f350809975d68b62c89ae7e17
 		sample := aqpb.Sample{}
 		err = proto.Unmarshal(data.Payload, &sample)
 		if err != nil {

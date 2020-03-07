@@ -11,24 +11,15 @@ import (
 //
 type DataPoint struct {
 	// Board fields
-<<<<<<< HEAD
-	SysID            int64   `json:"sysID"`            // System id, CPU id or similar
-	FirmwareVersion  int64   `json:"firmwareVersion"`  // Firmware version
-=======
 	SysID            uint64  `json:"sysID"`            // System id, CPU id or similar
 	FirmwareVersion  uint64  `json:"firmwareVersion"`  // Firmware version
->>>>>>> 39dfd5ce20b5914f350809975d68b62c89ae7e17
 	Uptime           int64   `json:"uptime"`           // Number of milliseconds since boot
 	BoardTemp        float32 `json:"boardTemp"`        // Board Temperature, celsius
 	BoardRelHumidity float32 `json:"boardRelHumidity"` // Board relative Humidity, percent
 
 	// GPS fields
 	GPSTimeStamp float32 `json:"gpsTimestamp"` // GPS Timestamp, seconds since epoch
-<<<<<<< HEAD
-	Long         float32 `json:"long"`         // Longitude in radians
-=======
 	Lon          float32 `json:"long"`         // Longitude in radians
->>>>>>> 39dfd5ce20b5914f350809975d68b62c89ae7e17
 	Lat          float32 `json:"lat"`          // Latitude in radians
 	Alt          float32 `json:"alt"`          // Altitude in meters
 
@@ -48,12 +39,8 @@ type DataPoint struct {
 	OPCSamplePeriod   uint16     `json:"OPCSamplePeriod"` // OPC sample period, in ms
 	OPCSampleFlowRate uint16     `json:"OPCFlowRate"`     // OPC sample flowrate, in ???
 	OPCTemp           uint16     `json:"OPCTemp"`         // OPC temperature, in C (???)
-<<<<<<< HEAD
-	OPCFanRPM         uint16     `json:"OPCFanRevCount"`  // OPC fan rev count
-=======
 	OPCHum            uint16     `json:"OPCHum"`          // OPC humidity in percent
 	OPCFanRevcount    uint16     `json:"OPCFanRevCount"`  // OPC fan rev count
->>>>>>> 39dfd5ce20b5914f350809975d68b62c89ae7e17
 	OPCLaserStatus    uint16     `json:"OPCLaserStatus"`  // OPC laser status
 	OPCBins           [24]uint16 `json:"OPCBins"`         // OPC PM bins 0-23
 	OPCSampleValid    uint8      `json:"sampleValid"`     // OPC Sample valid
@@ -73,11 +60,7 @@ func DataPointFromProtobuf(s *aqpb.Sample) *DataPoint {
 		// GPS fields
 		GPSTimeStamp: s.GpsTimestamp,
 		Lat:          s.Lat,
-<<<<<<< HEAD
-		Long:         s.Long,
-=======
 		Lon:          s.Lon,
->>>>>>> 39dfd5ce20b5914f350809975d68b62c89ae7e17
 		Alt:          s.Alt,
 
 		// AFE3 fields
@@ -96,12 +79,8 @@ func DataPointFromProtobuf(s *aqpb.Sample) *DataPoint {
 		OPCSamplePeriod:   uint16(s.OpcSamplePeriod),
 		OPCSampleFlowRate: uint16(s.OpcSampleFlowRate),
 		OPCTemp:           uint16(s.OpcTemp),
-<<<<<<< HEAD
-		OPCFanRPM:         uint16(s.OpcFanRpm),
-=======
 		OPCHum:            uint16(s.OpcHum),
 		OPCFanRevcount:    uint16(s.OpcFanRevcount),
->>>>>>> 39dfd5ce20b5914f350809975d68b62c89ae7e17
 		OPCLaserStatus:    uint16(s.OpcLaserStatus),
 		OPCSampleValid:    uint8(s.OpcSampleValid),
 
