@@ -20,6 +20,27 @@ CREATE TABLE IF NOT EXISTS cal (
 );
 
 CREATE TABLE IF NOT EXISTS samples (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  received      DATETIME NOT NULL,
+  deviceid      TEXT NOT NULL,
+  sysid         INTEGER NOT NULL,
+  firmware      INTEGER NOT NULL,
+  uptime        INTEGER NOT NULL,
+  boardtemp     REAL NOT NULL,
+  boardhumidity REAL NOT NULL,
+  status        INTEGER NOT NULL,
+
+  gpstimestamp  REAL NOT NULL,
+  lon           REAL NOT NULL,
+  lat           REAL NOT NULL,
+  alt           REAL NOT NULL,
+
+  sensor1work   INTEGER NOT NULL,
+  sensor1aux    INTEGER NOT NULL,
+  sensor2work   INTEGER NOT NULL,
+  sensor2aux    INTEGER NOT NULL,
+  sensor3work   INTEGER NOT NULL,
+  sensor3aux    INTEGER NOT NULL,
 
 );
 

@@ -57,10 +57,11 @@ func (h *HordeListener) Start() error {
 		for {
 			data, err := stream.Recv()
 			if err == io.EOF {
+				h.doneChan <- err
 				break
 			}
 			if err != nil {
-				log.Fatal("Error receiving data: ", err)
+				h.doneChan <- err
 			}
 
 			pb, err := model.ProtobufFromData(data.Payload)
