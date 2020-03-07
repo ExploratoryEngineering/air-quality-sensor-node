@@ -13,13 +13,13 @@ import (
 
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/aqpb"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/model"
-	"github.com/golang/protobuf/proto"
 	"github.com/telenordigital/nbiot-go"
+	"google.golang.org/protobuf/proto"
 )
 
 var (
 	collectionID = flag.String("collection", "17dh0cf43jg007", "Collection ID")
-	deviceID     = flag.String("device", "17dh0cf43jg6lj", "Device ID")
+	deviceID     = flag.String("device", "17dh0cf43jg6n4", "Device ID")
 )
 
 func main() {
@@ -45,8 +45,6 @@ func main() {
 		if err != nil {
 			log.Fatal("Error receiving data: ", err)
 		}
-
-		log.Printf("Data payload (%d): %x", len(data.Payload), data.Payload)
 
 		sample := aqpb.Sample{}
 		err = proto.Unmarshal(data.Payload, &sample)
