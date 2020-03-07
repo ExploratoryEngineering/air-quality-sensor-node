@@ -36,7 +36,7 @@ LOG_MODULE_REGISTER(MAIN);
 
 #define FOTA_COUNTER (FOTA_CHECK_INTERVAL_SEC / SEND_INTERVAL_SEC)
 
-#define MAX_SEND_BUFFER 256
+#define MAX_SEND_BUFFER 450
 static uint8_t buffer[MAX_SEND_BUFFER];
 
 int send_samples(uint8_t *buffer, size_t len)
