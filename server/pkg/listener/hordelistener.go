@@ -70,21 +70,20 @@ func (h *HordeListener) Start() error {
 				continue
 			}
 
-			dp := model.DataPointFromProtobuf(pb)
-			if dp == nil {
-				log.Printf("Unable to create DataPoint from protobuf")
+			m := model.MessageFromProtobuf(pb)
+			if m == nil {
+				log.Printf("Unable to create Message from protobuf")
 				continue
 			}
+
+			m.DeviceID = data.Device.ID
+			m.ReceivedTime = time.Unix(data.Received/1000, 0)
+			m.PacketSize = len(data.Payload)
 
 			// TODO(borud): This is a good place to check if a device
 			//    is already known and inject it into the database.
 
-			h.pipeline.Publish(&model.Message{
-				DeviceID:     data.Device.ID,
-				ReceivedTime: time.Unix(data.Received/1000, 0),
-				PacketSize:   len(data.Payload),
-				DataPoint:    dp,
-			})
+			h.pipeline.Publish(m)
 		}
 	}()
 

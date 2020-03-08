@@ -34,10 +34,10 @@ CREATE TABLE IF NOT EXISTS messages (
   packetsize    INTEGER NOT NULL,
 
   sysid         INTEGER NOT NULL,
-  firmware      INTEGER NOT NULL,
+  firmware_ver  INTEGER NOT NULL,
   uptime        INTEGER NOT NULL,
   boardtemp     REAL NOT NULL,
-  boardhumidity REAL NOT NULL,
+  boardhum      REAL NOT NULL,
   status        INTEGER NOT NULL,
 
   gpstimestamp  REAL NOT NULL,

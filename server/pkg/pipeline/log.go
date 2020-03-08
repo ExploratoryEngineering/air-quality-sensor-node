@@ -23,7 +23,7 @@ func NewLog(opts *opts.Opts) *Log {
 
 // Publish ...
 func (p *Log) Publish(m *model.Message) error {
-	log.Printf("Message: device='%s' sysid=%d packetSize=%d", m.DeviceID, m.DataPoint.SysID, m.PacketSize)
+	log.Printf("Message: device='%s' sysid=%d packetSize=%d", m.DeviceID, m.SysID, m.PacketSize)
 
 	json, err := json.MarshalIndent(m, "", "    ")
 	if err != nil {

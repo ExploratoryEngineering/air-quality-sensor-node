@@ -2,6 +2,7 @@ package store
 
 import (
 	"fmt"
+	"math/rand"
 	"testing"
 	"time"
 
@@ -41,6 +42,18 @@ func TestSqlitestore(t *testing.T) {
 		calTests(t, db)
 		db.Close()
 	}
+
+	// Message tests
+	{
+		var db Store
+
+		db, err := sqlitestore.New(":memory:")
+		assert.Nil(t, err, "Error instantiating new sqlitestore")
+		assert.NotNil(t, db)
+		messageTests(t, db)
+		db.Close()
+	}
+
 }
 
 // deviceTests performs CRUD tests on Device
@@ -170,6 +183,74 @@ func calTests(t *testing.T, db Store) {
 			devcals, err := db.ListCalsForDevice(dev.ID)
 			assert.Nil(t, err)
 			assert.Equal(t, 1, len(devcals))
+		}
+	}
+
+}
+
+// messageTests performs CRUD tests on Messages
+func messageTests(t *testing.T, db Store) {
+
+	numDevices := 3
+	numMessagesPerDevice := (60 * 24)
+	t0 := time.Now()
+
+	var messageIDs []int64
+
+	// Populate some devices and messages
+	for i := 0; i < numDevices; i++ {
+		deviceID := fmt.Sprintf("msg-device-%d", i)
+		err := db.PutDevice(&model.Device{ID: deviceID})
+		assert.Nil(t, err)
+
+		for j := 0; j < numMessagesPerDevice; j++ {
+			id, err := db.PutMessage(&model.Message{
+				DeviceID:     deviceID,
+				ReceivedTime: t0.Add(time.Duration(j) * time.Minute),
+			})
+			assert.Nil(t, err)
+			assert.True(t, id > 0)
+
+			messageIDs = append(messageIDs, id)
+		}
+	}
+
+	totalMessages := numMessagesPerDevice * numDevices
+	assert.Equal(t, totalMessages, len(messageIDs))
+
+	// Fetch some random messages
+	for i := 0; i < 20; i++ {
+		id := rand.Int63n(int64(totalMessages))
+
+		m, err := db.GetMessage(id)
+		assert.Nil(t, err)
+		assert.NotNil(t, m)
+	}
+
+	// ListMessages
+	{
+		msgs, err := db.ListMessages(0, 10)
+		assert.Nil(t, err)
+		assert.NotNil(t, msgs)
+		assert.Equal(t, 10, len(msgs))
+	}
+
+	// ListMessagesByDate
+	{
+		duration := time.Minute * 10
+		msgs, err := db.ListMessagesByDate(t0, t0.Add(duration))
+		assert.Nil(t, err)
+		assert.Equal(t, numDevices*10, len(msgs))
+	}
+
+	// ListDeviceMessagesByDate
+	{
+		for i := 0; i < numDevices; i++ {
+			deviceID := fmt.Sprintf("msg-device-%d", i)
+			duration := time.Minute * 10
+			msgs, err := db.ListDeviceMessagesByDate(deviceID, t0, t0.Add(duration))
+			assert.Nil(t, err)
+			assert.Equal(t, 10, len(msgs))
 		}
 	}
 

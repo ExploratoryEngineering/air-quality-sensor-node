@@ -2,4 +2,5 @@ bin
 data
 dist
 cmd/listen/listen
+cmd/server/server
 .telenor-nbiot

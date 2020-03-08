@@ -1,6 +1,8 @@
 package store
 
 import (
+	"time"
+
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/model"
 )
 
@@ -55,9 +57,21 @@ type Store interface {
 	// ############################################################
 	//                     Message
 	// ############################################################
-	PutMessage(m *model.Message) error
+
+	// PutMessage adds a new message to database
+	PutMessage(m *model.Message) (int64, error)
+
+	// GetMessage gets a message by id
 	GetMessage(id int64) (*model.Message, error)
+
+	// ListMessages pages through messages
 	ListMessages(offset int, limit int) ([]model.Message, error)
+
+	// ListMessagesByDate lists messages by date [from:to>
+	ListMessagesByDate(from time.Time, to time.Time) ([]model.Message, error)
+
+	// ListDeviceMessagesByDate lists messages by device and date [from:to>
+	ListDeviceMessagesByDate(deviceID string, from time.Time, to time.Time) ([]model.Message, error)
 
 	// Close the database
 	Close() error

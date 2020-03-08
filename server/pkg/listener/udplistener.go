@@ -57,13 +57,12 @@ func (u *UDPListener) Start() error {
 				continue
 			}
 
-			dp := model.DataPointFromProtobuf(pb)
+			m := model.MessageFromProtobuf(pb)
 
-			u.pipeline.Publish(&model.Message{
-				ReceivedTime: time.Now(),
-				PacketSize:   n,
-				DataPoint:    dp,
-			})
+			m.ReceivedTime = time.Now()
+			m.PacketSize = n
+
+			u.pipeline.Publish(m)
 
 		}
 	}()

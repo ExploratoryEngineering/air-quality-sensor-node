@@ -5,10 +5,10 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// DataPointFromProtobuf takes a Sample protobuffer and returns a
-// DataPoint
-func DataPointFromProtobuf(s *aqpb.Sample) *DataPoint {
-	return &DataPoint{
+// MessageFromProtobuf takes a Sample protobuffer and returns a
+// Message
+func MessageFromProtobuf(s *aqpb.Sample) *Message {
+	return &Message{
 		// Board fields
 		SysID:            s.Sysid,
 		FirmwareVersion:  s.FirmwareVersion,
@@ -43,14 +43,30 @@ func DataPointFromProtobuf(s *aqpb.Sample) *DataPoint {
 		OPCFanRevcount:    uint16(s.OpcFanRevcount),
 		OPCLaserStatus:    uint16(s.OpcLaserStatus),
 		OPCSampleValid:    uint8(s.OpcSampleValid),
-
-		OPCBins: [24]uint16{
-			uint16(s.OpcBin_0), uint16(s.OpcBin_1), uint16(s.OpcBin_2), uint16(s.OpcBin_3), uint16(s.OpcBin_4),
-			uint16(s.OpcBin_5), uint16(s.OpcBin_6), uint16(s.OpcBin_7), uint16(s.OpcBin_8), uint16(s.OpcBin_9),
-			uint16(s.OpcBin_10), uint16(s.OpcBin_11), uint16(s.OpcBin_12), uint16(s.OpcBin_13), uint16(s.OpcBin_14),
-			uint16(s.OpcBin_15), uint16(s.OpcBin_16), uint16(s.OpcBin_17), uint16(s.OpcBin_18), uint16(s.OpcBin_19),
-			uint16(s.OpcBin_20), uint16(s.OpcBin_21), uint16(s.OpcBin_22), uint16(s.OpcBin_23),
-		},
+		OPCBin0:           uint16(s.OpcBin_0),
+		OPCBin1:           uint16(s.OpcBin_1),
+		OPCBin2:           uint16(s.OpcBin_2),
+		OPCBin3:           uint16(s.OpcBin_3),
+		OPCBin4:           uint16(s.OpcBin_4),
+		OPCBin5:           uint16(s.OpcBin_5),
+		OPCBin6:           uint16(s.OpcBin_6),
+		OPCBin7:           uint16(s.OpcBin_7),
+		OPCBin8:           uint16(s.OpcBin_8),
+		OPCBin9:           uint16(s.OpcBin_9),
+		OPCBin10:          uint16(s.OpcBin_10),
+		OPCBin11:          uint16(s.OpcBin_11),
+		OPCBin12:          uint16(s.OpcBin_12),
+		OPCBin13:          uint16(s.OpcBin_13),
+		OPCBin14:          uint16(s.OpcBin_14),
+		OPCBin15:          uint16(s.OpcBin_15),
+		OPCBin16:          uint16(s.OpcBin_16),
+		OPCBin17:          uint16(s.OpcBin_17),
+		OPCBin18:          uint16(s.OpcBin_18),
+		OPCBin19:          uint16(s.OpcBin_19),
+		OPCBin20:          uint16(s.OpcBin_20),
+		OPCBin21:          uint16(s.OpcBin_21),
+		OPCBin22:          uint16(s.OpcBin_22),
+		OPCBin23:          uint16(s.OpcBin_23),
 	}
 }
 

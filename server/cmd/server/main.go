@@ -27,7 +27,7 @@ func main() {
 		hordeListener := listener.NewHordeListener(opts, pipelineRoot)
 		err := hordeListener.Start()
 		if err != nil {
-			log.Fatal("Unable to start Horde listener: %v", err)
+			log.Fatalf("Unable to start Horde listener: %v", err)
 		}
 		listeners = append(listeners, hordeListener)
 
@@ -40,7 +40,7 @@ func main() {
 		udpListener := listener.NewUDPListener(opts, pipelineRoot)
 		err := udpListener.Start()
 		if err != nil {
-			log.Fatal("Unable to start UDP listener: %v", err)
+			log.Fatalf("Unable to start UDP listener: %v", err)
 		}
 		listeners = append(listeners, udpListener)
 	}

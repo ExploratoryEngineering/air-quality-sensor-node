@@ -53,13 +53,13 @@ func main() {
 			continue
 		}
 
-		dp := model.DataPointFromProtobuf(&sample)
-		if dp == nil {
-			log.Printf("Unable to create DataPoint from protobuf")
+		m := model.MessageFromProtobuf(&sample)
+		if m == nil {
+			log.Printf("Unable to create Message from protobuf")
 			continue
 		}
 
-		json, _ := json.MarshalIndent(dp, "", "\t")
+		json, _ := json.MarshalIndent(m, "", "\t")
 		log.Printf("JSON:\n%s\n", json)
 	}
 
