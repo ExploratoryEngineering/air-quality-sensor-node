@@ -50,9 +50,25 @@ type DataPoint struct {
 // Message represents a message that has been received from the
 // network.  Typically messages that come from Horde.
 type Message struct {
-	DeviceID     string
-	CollectionID string
-	ReceivedTime time.Time
-	PacketSize   int
+	DeviceID     string    `db:"device_id" json:"deviceID"`
+	ReceivedTime time.Time `db:"received" json:"receivedTime"`
+	PacketSize   int       `db:"packetsize" json:"packetSize"`
 	DataPoint    *DataPoint
+}
+
+// Device contains the device information
+type Device struct {
+	ID           string `db:"id" json:"id"`
+	Name         string `db:"name" json:"name"`
+	CollectionID string `db:"collection_id" json:"collectionID"`
+}
+
+// Cal contains the calibration data for a device.
+type Cal struct {
+	ID       int64     `db:"id" json:"id"`
+	DeviceID string    `db:"device_id" json:"deviceID"`
+	From     time.Time `db:"from" json:"from"`
+	To       time.Time `db:"to" json:"to"`
+
+	// TODO(borud): fill in fields for calibration data
 }
