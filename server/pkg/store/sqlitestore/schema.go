@@ -21,8 +21,8 @@ CREATE TABLE IF NOT EXISTS devices (
 CREATE TABLE IF NOT EXISTS cal (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   device_id   TEXT NOT NULL,
-  validFrom   DATETIME NOT NULL,
-  validTo     DATETIME NOT NULL,
+  valid_from   DATETIME NOT NULL,
+  valid_to     DATETIME NOT NULL,
 
   FOREIGN KEY(device_id) REFERENCES devices(id)
 );

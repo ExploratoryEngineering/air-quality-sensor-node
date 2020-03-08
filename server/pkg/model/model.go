@@ -65,10 +65,10 @@ type Device struct {
 
 // Cal contains the calibration data for a device.
 type Cal struct {
-	ID       int64     `db:"id" json:"id"`
-	DeviceID string    `db:"device_id" json:"deviceID"`
-	From     time.Time `db:"from" json:"from"`
-	To       time.Time `db:"to" json:"to"`
+	ID        int64     `db:"id" json:"id"`
+	DeviceID  string    `db:"device_id" json:"deviceID"`
+	ValidFrom time.Time `db:"valid_from" json:"from"`
+	ValidTo   time.Time `db:"valid_to" json:"to"`
 
 	// TODO(borud): fill in fields for calibration data
 }
