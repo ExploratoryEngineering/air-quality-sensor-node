@@ -94,7 +94,7 @@ func TestSimple(t *testing.T) {
 	assert.Equal(t, testPB.Sensor_2Work, dp.Sensor2Work)
 	assert.Equal(t, testPB.Sensor_2Aux, dp.Sensor2Aux)
 	assert.Equal(t, testPB.Sensor_3Work, dp.Sensor3Work)
-	assert.Equal(t, testPB.Sensor_3Aux, dp.Sensor32Aux)
+	assert.Equal(t, testPB.Sensor_3Aux, dp.Sensor3Aux)
 
 	assert.Equal(t, testPB.Afe3Temp, dp.AFE3Temp)
 

@@ -9,12 +9,14 @@ import (
 // This way we decouple the protobuffer datatype from the internal
 // representation.
 //
+// TODO(borud): firmware version structure needs to be defined
+//
 type Message struct {
 	// Housekeeping
-	ID           int64     `db:"id" json:"id"`
-	DeviceID     string    `db:"device_id" json:"deviceID"`
-	ReceivedTime time.Time `db:"received" json:"receivedTime"`
-	PacketSize   int       `db:"packetsize" json:"packetSize"`
+	ID           int64     `db:"id" json:"id"`                 // Message ID (assigned by persistence layer)
+	DeviceID     string    `db:"device_id" json:"deviceID"`    // Horde device ID
+	ReceivedTime time.Time `db:"received" json:"receivedTime"` // Received time when Horde received he message
+	PacketSize   int       `db:"packetsize" json:"packetSize"` // Original packet size as received by Horde
 
 	// Board fields
 	SysID            uint64  `db:"sysid" json:"sysID"`                  // System id, CPU id or similar
@@ -36,7 +38,7 @@ type Message struct {
 	Sensor2Work uint32 `db:"sensor2work" json:"Sensor2Work"` // OP3 ADC reading - O3+NO2 working electrode
 	Sensor2Aux  uint32 `db:"sensor2aux" json:"Sensor2Aux"`   // OP4 ADC reading - O3+NO2 auxillary electrode
 	Sensor3Work uint32 `db:"sensor3work" json:"Sensor3Work"` // OP5 ADC reading - NO working electrode
-	Sensor32Aux uint32 `db:"sensor3aux" json:"Sensor3Aux"`   // OP6 ADC reading - NO aux electrode
+	Sensor3Aux  uint32 `db:"sensor3aux" json:"Sensor3Aux"`   // OP6 ADC reading - NO aux electrode
 	AFE3Temp    uint32 `db:"afe3temp" json:"AFE3Temp"`       // Pt1000 ADC reading - AFE-3 ambient temperature
 
 	// OPC-N3
@@ -44,8 +46,8 @@ type Message struct {
 	OPCPMB            uint32 `db:"opcpmb" json:"OPCpmB"`                   // OPC PM B (default PM2.5)
 	OPCPMC            uint32 `db:"opcpmc" json:"OPCpmC"`                   // OPC PM C (default PM10)
 	OPCSamplePeriod   uint16 `db:"opcsampleperiod" json:"OPCSamplePeriod"` // OPC sample period, in ms
-	OPCSampleFlowRate uint16 `db:"opcsampleflowrate" json:"OPCFlowRate"`   // OPC sample flowrate, in ???
-	OPCTemp           uint16 `db:"opctemp" json:"OPCTemp"`                 // OPC temperature, in C (???)
+	OPCSampleFlowRate uint16 `db:"opcsampleflowrate" json:"OPCFlowRate"`   // OPC sample flowrate, in mL/min
+	OPCTemp           uint16 `db:"opctemp" json:"OPCTemp"`                 // OPC temperature, in C
 	OPCHum            uint16 `db:"opchum" json:"OPCHum"`                   // OPC humidity in percent
 	OPCFanRevcount    uint16 `db:"opcfanrevcount" json:"OPCFanRevCount"`   // OPC fan rev count
 	OPCLaserStatus    uint16 `db:"opclaserstatus" json:"OPCLaserStatus"`   // OPC laser status
@@ -92,5 +94,27 @@ type Cal struct {
 	ValidFrom time.Time `db:"valid_from" json:"from"`
 	ValidTo   time.Time `db:"valid_to" json:"to"`
 
-	// TODO(borud): fill in fields for calibration data
+	SensorBoardSerial  string    // Serial number identifying the board
+	SensorBoardCalDate time.Time // When was the sensor calibrated
+
+	Sensor1WorkingElectrodeElectronicOffset int32   // Unit: mV
+	Sensor1WorkingElectrodeSensorZero       int32   // Unit: mV
+	Sensor1AuxElectrodeElectronicOffset     int32   // Unit: mV
+	Sensor1AuxElectrodeSensorZero           int32   // Unit: mV
+	Sensor1PCBGain                          float64 // Unit: mV / nA
+	Sensor1WorkingElectrodeSensitivity      float64 // Unit: mV / ppb
+
+	Sensor2WorkingElectrodeElectronicOffset int32   // Unit: mV
+	Sensor2WorkingElectrodeSensorZero       int32   // Unit: mV
+	Sensor2AuxElectrodeElectronicOffset     int32   // Unit: mV
+	Sensor2AuxElectrodeSensorZero           int32   // Unit: mV
+	Sensor2PCBGain                          float64 // Unit: mV / nA
+	Sensor2WorkingElectrodeSensitivity      float64 // Unit: mV / ppb
+
+	Sensor3WorkingElectrodeElectronicOffset int32   // Unit: mV
+	Sensor3WorkingElectrodeSensorZero       int32   // Unit: mV
+	Sensor3AuxElectrodeElectronicOffset     int32   // Unit: mV
+	Sensor3AuxElectrodeSensorZero           int32   // Unit: mV
+	Sensor3PCBGain                          float64 // Unit: mV / nA
+	Sensor3WorkingElectrodeSensitivity      float64 // Unit: mV / ppb
 }
