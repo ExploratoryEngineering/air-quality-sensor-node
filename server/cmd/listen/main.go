@@ -13,8 +13,8 @@ import (
 
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/aqpb"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/model"
+	"github.com/golang/protobuf/proto"
 	"github.com/telenordigital/nbiot-go"
-	"google.golang.org/protobuf/proto"
 )
 
 var (

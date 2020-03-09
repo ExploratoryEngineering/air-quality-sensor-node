@@ -2,7 +2,7 @@ package model
 
 import (
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/aqpb"
-	"google.golang.org/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 )
 
 // MessageFromProtobuf takes a Sample protobuffer and returns a

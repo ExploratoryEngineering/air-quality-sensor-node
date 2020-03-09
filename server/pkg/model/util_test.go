@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/aqpb"
+	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"
-	"google.golang.org/protobuf/proto"
 )
 
 var testPB = &aqpb.Sample{
