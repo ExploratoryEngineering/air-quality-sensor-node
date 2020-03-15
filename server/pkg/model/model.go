@@ -41,6 +41,12 @@ type Message struct {
 	Sensor3Aux  uint32 `db:"sensor3aux" json:"Sensor3Aux"`   // OP6 ADC reading - NO aux electrode
 	AFE3Temp    uint32 `db:"afe3temp" json:"AFE3Temp"`       // Pt1000 ADC reading - AFE-3 ambient temperature
 
+	// AFE3 Calculated values
+	Sensor1Value  float64 `db:"sensor1value" json:"sensor1Value"`   // NO2 sensor value in ppb
+	Sensor2Value  float64 `db:"sensor2value" json:"sensor2Value"`   // O3+NO2 sensor value in ppb
+	Sensor3Value  float64 `db:"sensor3value" json:"sensor3Value"`   // NO sensor value in ppb
+	AFE3TempValue float32 `db:"afe3tempvalue" json:"afe3TempValue"` // Temperature in C.
+
 	// OPC-N3
 	OPCPMA            uint32 `db:"opcpma" json:"OPCpmA"`                   // OPC PM A (default PM1)
 	OPCPMB            uint32 `db:"opcpmb" json:"OPCpmB"`                   // OPC PM B (default PM2.5)
@@ -96,6 +102,8 @@ type Cal struct {
 
 	SensorBoardSerial  string    // Serial number identifying the board
 	SensorBoardCalDate time.Time // When was the sensor calibrated
+
+	Vt20Offset float64 // Temperature offset for probe at 20C
 
 	Sensor1WorkingElectrodeElectronicOffset int32   // Unit: mV
 	Sensor1WorkingElectrodeSensorZero       int32   // Unit: mV
