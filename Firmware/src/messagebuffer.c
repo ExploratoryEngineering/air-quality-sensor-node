@@ -8,6 +8,8 @@
 #include <pb_encode.h>
 #include <pb_decode.h>
 #include <logging/log.h>
+#include "util.h"
+#include "fota.h"
 
 #define LOG_LEVEL CONFIG_MESSAGEBUFFER_LOG_LEVEL
 LOG_MODULE_REGISTER(MESSAGEBUFFER);
@@ -43,6 +45,38 @@ static void mb_append_uint8(uint8_t *buf, size_t *index, uint8_t value)
     buf[(*index)++] = value;
 }
 
+extern char imei[24];
+
+#define FW_VERSION_BUF_LEN 32
+char firmware_version[FW_VERSION_BUF_LEN];
+
+uint64_t encode_firmware_version()
+{
+    if ((strlen(CLIENT_FIRMWARE_VER) < 5) || (strlen(CLIENT_FIRMWARE_VER) > FW_VERSION_BUF_LEN-1))
+        return 0;
+    memset(firmware_version, 0, FW_VERSION_BUF_LEN);
+    strcpy(firmware_version, CLIENT_FIRMWARE_VER);
+    
+    // reto format is major.minor.patch
+    int version[3] = {0,0,0};
+  
+    char * pMajor_end = strstr(firmware_version, ".");
+    if (NULL == pMajor_end)
+        return 0;
+    *pMajor_end = 0;
+    version[0] = atoi(firmware_version);
+    pMajor_end++;
+    char * pMinor_end = strstr(pMajor_end, ".");
+    if (NULL == pMinor_end)
+        return 0;
+    *pMinor_end = 0;
+    version[1] = atoi(pMajor_end);
+    pMinor_end++;
+    version[2] = atoi(pMinor_end);
+
+    return ((uint64_t)version[0] << 32) | ((uint64_t)version[1] << 16) | ((uint64_t)version[2]);
+}
+
 size_t mb_encode(SENSOR_NODE_MESSAGE *msg, char *buffer, size_t max)
 {
     size_t message_length = 0;
@@ -53,7 +87,12 @@ size_t mb_encode(SENSOR_NODE_MESSAGE *msg, char *buffer, size_t max)
     aqpb_Sample message = aqpb_Sample_init_zero;
     pb_ostream_t stream = pb_ostream_from_buffer(buffer, max);
 
-    // uint64_t firmware_version; // TODO
+    message.firmware_version = encode_firmware_version();
+    message.sysid = atoll(imei);
+
+    printf("SYSID (string): %s\n", imei);
+    printf("SYSID: (int64): %llx\n", message.sysid);
+
     message.uptime = msg->uptime;
     message.board_temp = msg->cc2_sample.Temp_C;
     message.board_rel_humidity = msg->cc2_sample.RH;
