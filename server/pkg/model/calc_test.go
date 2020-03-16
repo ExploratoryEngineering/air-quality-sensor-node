@@ -70,7 +70,7 @@ func TestAFE3LUTs(t *testing.T) {
 	assert.Equal(t, afe3Luts["O3-B4"].LUT, []float64{0.77, 0.77, 0.77, 0.77, 1.56, 1.56, 1.56, 2.85})
 }
 
-func TestSplineFuncFromName(t *testing.T) {
+func TestInterpolation(t *testing.T) {
 	// Should be good enough
 	const tolerance = 0.000000001
 
