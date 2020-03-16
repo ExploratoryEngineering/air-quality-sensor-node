@@ -42,10 +42,10 @@ type Message struct {
 	AFE3Temp    uint32 `db:"afe3temp" json:"AFE3Temp"`       // Pt1000 ADC reading - AFE-3 ambient temperature
 
 	// AFE3 Calculated values
-	Sensor1Value  float64 `db:"sensor1value" json:"sensor1Value"`   // NO2 sensor value in ppb
-	Sensor2Value  float64 `db:"sensor2value" json:"sensor2Value"`   // O3+NO2 sensor value in ppb
-	Sensor3Value  float64 `db:"sensor3value" json:"sensor3Value"`   // NO sensor value in ppb
-	AFE3TempValue float32 `db:"afe3tempvalue" json:"afe3TempValue"` // Temperature in C.
+	NO2PPB        float64 `db:"no2_ppb" json:"NO2PPB"`              // NO2 sensor value in ppb
+	O3PPB         float64 `db:"o3_ppb" json:"O3PPB"`                // O3+NO2 sensor value - NO2 sensor value -> O3 in ppb
+	NOPPB         float64 `db:"no_ppb" json:"NOPPB"`                // NO sensor value in ppb
+	AFE3TempValue float64 `db:"afe3tempvalue" json:"afe3TempValue"` // Temperature in C.
 
 	// OPC-N3
 	OPCPMA            uint32 `db:"opcpma" json:"OPCpmA"`                   // OPC PM A (default PM1)

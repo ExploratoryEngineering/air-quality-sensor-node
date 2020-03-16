@@ -6,11 +6,6 @@ import (
 	"github.com/sgreben/piecewiselinear"
 )
 
-const (
-	voltageAt20DegreesCentigrade = 0.297
-	genericVt20Offset            = 0.32
-)
-
 type sensorLut struct {
 	LUT []float64
 }
@@ -34,52 +29,53 @@ var (
 		"O3-A4":  sensorLut{LUT: []float64{0.75, 0.75, 0.75, 0.75, 1.28, 1.28, 1.28, 1.28 /*, no value */}},
 		"O3-B4":  sensorLut{LUT: []float64{0.77, 0.77, 0.77, 0.77, 1.56, 1.56, 1.56, 2.85 /*, no value */}},
 	}
+
+	// Create correction functions for the sensors we use
+	correctSensor1 = correctionFuncFromName("NO-A4")
+	correctSensor2 = correctionFuncFromName("NO2-A4")
+	correctSensor3 = correctionFuncFromName("O3-A4")
 )
 
 // CalculateSensorValues calculates sensor values using measured data
-// and calibration data
+// and calibration data specific to the the device.
 func CalculateSensorValues(m *Message, cal *Cal) {
 
 	// Calculate the temperature.
 	// TODO(borud): have @tlan and @hansj double-check this
-	afe3Temp := ((float64(m.AFE3Temp) * afe3ScalingFactor) - cal.Vt20Offset + 0.02) * 1000.0
+	m.AFE3TempValue = ((float64(m.AFE3Temp) * afe3ScalingFactor) - cal.Vt20Offset + 0.02) * 1000.0
 
 	// TODO(borud): There is a lookup table in Alphasense Application
 	// Note "AAN 803"
 	//
-	var sensor1TempCorrectionFactor = 1.35
-	var sensor2TempCorrectionFactor = 1.28
-	var sensor3TempCorrectionFactor = 2.02
-
-	var S1 float64
-	var S2 float64
-	var S3 float64
+	var sensor1TempCorrectionFactor = correctSensor1(m.AFE3TempValue)
+	var sensor2TempCorrectionFactor = correctSensor1(m.AFE3TempValue)
+	var sensor3TempCorrectionFactor = correctSensor1(m.AFE3TempValue)
 
 	// Sensor 1 - NO2 sensor
 	{
 		wmV := voltage(m.Sensor1Work, cal.Sensor1WorkingElectrodeElectronicOffset, cal.Sensor1WorkingElectrodeSensorZero)
 		amV := voltage(m.Sensor1Aux, cal.Sensor1AuxElectrodeElectronicOffset, cal.Sensor1AuxElectrodeSensorZero) * sensor1TempCorrectionFactor
-		S1 = (wmV - amV) / cal.Sensor1WorkingElectrodeSensitivity
+		m.NO2PPB = (wmV - amV) / cal.Sensor1WorkingElectrodeSensitivity
 	}
 
-	// Sensor 2 - O3 + NO2 sensor
+	// Sensor 2 - O3 + NO2 sensor, calculate O3 by subtracting NO2 sensor value
 	{
 		wmV := voltage(m.Sensor2Work, cal.Sensor2WorkingElectrodeElectronicOffset, cal.Sensor2WorkingElectrodeSensorZero)
 		amV := voltage(m.Sensor2Aux, cal.Sensor2AuxElectrodeElectronicOffset, cal.Sensor2AuxElectrodeSensorZero) * sensor2TempCorrectionFactor
-		S2 = (wmV - amV) / cal.Sensor2WorkingElectrodeSensitivity
+		m.O3PPB = ((wmV - amV) / cal.Sensor2WorkingElectrodeSensitivity) - m.NO2PPB
 	}
 
 	// Sensor 3 - NO sensor
 	{
 		wmV := voltage(m.Sensor3Work, cal.Sensor3WorkingElectrodeElectronicOffset, cal.Sensor3WorkingElectrodeSensorZero)
 		amV := voltage(m.Sensor3Aux, cal.Sensor3AuxElectrodeElectronicOffset, cal.Sensor3AuxElectrodeSensorZero) * sensor3TempCorrectionFactor
-		S3 = (wmV - amV) / cal.Sensor1WorkingElectrodeSensitivity
+		m.NOPPB = (wmV - amV) / cal.Sensor1WorkingElectrodeSensitivity
 	}
 
-	log.Printf("AFE3Temp  (C): %f", afe3Temp)
-	log.Printf("NO2     (ppb): %f", S1)
-	log.Printf("NO2+O3  (ppb): %f", S2)
-	log.Printf("NO      (ppb): %f", S3)
+	log.Printf("temp (C)  : %04.2f", m.AFE3TempValue)
+	log.Printf("NO2  (ppb): %04.2f", m.NO2PPB)
+	log.Printf("O3   (ppb): %04.2f", m.O3PPB)
+	log.Printf("NO   (ppb): %04.2f", m.NOPPB)
 }
 
 func voltage(w uint32, offset int32, zero int32) float64 {
@@ -89,7 +85,7 @@ func voltage(w uint32, offset int32, zero int32) float64 {
 func correctionFuncFromName(name string) func(float64) float64 {
 	lut, ok := afe3Luts[name]
 	if !ok {
-		return nil
+		panic("Sensor name not found: " + name)
 	}
 
 	f := piecewiselinear.Function{Y: lut.LUT}
