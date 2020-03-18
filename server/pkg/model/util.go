@@ -30,7 +30,7 @@ func MessageFromProtobuf(s *aqpb.Sample) *Message {
 		Sensor2Aux:  s.Sensor_2Aux,
 		Sensor3Work: s.Sensor_3Work,
 		Sensor3Aux:  s.Sensor_3Aux,
-		AFE3Temp:    s.Afe3Temp,
+		AFE3TempRaw: s.Afe3TempRaw,
 
 		// OPC-N3 fields
 		OPCPMA:            s.OpcPmA,

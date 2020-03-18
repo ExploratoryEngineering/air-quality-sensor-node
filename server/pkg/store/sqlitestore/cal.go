@@ -9,7 +9,60 @@ func (s *SqliteStore) PutCal(c *model.Cal) (int64, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	r, err := s.db.NamedExec("INSERT INTO cal (device_id,valid_from,valid_to) VALUES(:device_id, :valid_from, :valid_to)", c)
+	r, err := s.db.NamedExec(`
+INSERT INTO cal
+(
+  device_id,
+  valid_from,
+  valid_to,
+  sensor_board_serial,
+  sensor_board_cal_date,
+  vt20_offset,
+  sensor1_we_e,
+  sensor1_we_0,
+  sensor1_ae_e,
+  sensor1_ae_0,
+  sensor1_pcb_gain, 
+  sensor1_we_sensitivity, 
+  sensor2_we_e,
+  sensor2_we_0,
+  sensor2_ae_e,          
+  sensor2_ae_0,         
+  sensor2_pcb_gain,
+  sensor2_we_sensitivity,
+  sensor3_we_e,
+  sensor3_we_0,
+  sensor3_ae_e,
+  sensor3_ae_0,
+  sensor3_pcb_gain,
+  sensor3_we_sensitivity
+)
+VALUES(
+  :device_id,
+  :valid_from,
+  :valid_to,
+  :sensor_board_serial,
+  :sensor_board_cal_date,
+  :vt20_offset,
+  :sensor1_we_e,
+  :sensor1_we_0,
+  :sensor1_ae_e,
+  :sensor1_ae_0,
+  :sensor1_pcb_gain, 
+  :sensor1_we_sensitivity, 
+  :sensor2_we_e,
+  :sensor2_we_0,
+  :sensor2_ae_e,          
+  :sensor2_ae_0,         
+  :sensor2_pcb_gain,
+  :sensor2_we_sensitivity,
+  :sensor3_we_e,
+  :sensor3_we_0,
+  :sensor3_ae_e,
+  :sensor3_ae_0,
+  :sensor3_pcb_gain,
+  :sensor3_we_sensitivity)
+`, c)
 	if err != nil {
 		return -1, err
 	}

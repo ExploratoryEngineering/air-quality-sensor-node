@@ -40,7 +40,7 @@ message Sample {
     uint32 sensor_2_aux        = 23; // OP4 ADC reading - O3+NO2 auxillary electrode
     uint32 sensor_3_work       = 24; // OP5 ADC reading - NO working electrode
     uint32 sensor_3_aux        = 25; // OP6 ADC reading - NO aux electrode
-    uint32 afe3_temp           = 26; // Pt1000 ADC reading - AFE-3 ambient temperature
+    uint32 afe3_temp_raw       = 26; // Pt1000 ADC reading - AFE-3 ambient temperature
 
     // ---------- OPC-N3 fields ----------
     // Strictly speaking we should have another field that specifies

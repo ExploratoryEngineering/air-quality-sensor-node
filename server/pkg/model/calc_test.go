@@ -18,26 +18,26 @@ var calTest = &Cal{
 	// default VT20Offset if we lack measured offset value.
 	Vt20Offset: 0.3195,
 
-	Sensor1WorkingElectrodeElectronicOffset: 312,
-	Sensor1WorkingElectrodeSensorZero:       -5,
-	Sensor1AuxElectrodeElectronicOffset:     316,
-	Sensor1AuxElectrodeSensorZero:           -5,
-	Sensor1PCBGain:                          -0.73,
-	Sensor1WorkingElectrodeSensitivity:      0.203,
+	Sensor1WEe:           312,
+	Sensor1WE0:           -5,
+	Sensor1AEe:           316,
+	Sensor1AE0:           -5,
+	Sensor1PCBGain:       -0.73,
+	Sensor1WESensitivity: 0.203,
 
-	Sensor2WorkingElectrodeElectronicOffset: 411,
-	Sensor2WorkingElectrodeSensorZero:       -4,
-	Sensor2AuxElectrodeElectronicOffset:     411,
-	Sensor2AuxElectrodeSensorZero:           -3,
-	Sensor2PCBGain:                          -0.73,
-	Sensor2WorkingElectrodeSensitivity:      0.363,
+	Sensor2WEe:           411,
+	Sensor2WE0:           -4,
+	Sensor2AEe:           411,
+	Sensor2AE0:           -3,
+	Sensor2PCBGain:       -0.73,
+	Sensor2WESensitivity: 0.363,
 
-	Sensor3WorkingElectrodeElectronicOffset: 271,
-	Sensor3WorkingElectrodeSensorZero:       19,
-	Sensor3AuxElectrodeElectronicOffset:     256,
-	Sensor3AuxElectrodeSensorZero:           23,
-	Sensor3PCBGain:                          0.8,
-	Sensor3WorkingElectrodeSensitivity:      0.408,
+	Sensor3WEe:           271,
+	Sensor3WE0:           19,
+	Sensor3AEe:           256,
+	Sensor3AE0:           23,
+	Sensor3PCBGain:       0.8,
+	Sensor3WESensitivity: 0.408,
 }
 var messageTest = &Message{
 	Sensor1Work: 519656,
@@ -49,7 +49,7 @@ var messageTest = &Message{
 	Sensor3Work: 443429,
 	Sensor3Aux:  431900,
 
-	AFE3Temp: 540375,
+	AFE3TempRaw: 540375,
 }
 
 func TestCalculateSensorValues(t *testing.T) {

@@ -15,13 +15,13 @@ func (s *SqliteStore) PutMessage(m *model.Message) (int64, error) {
 	r, err := s.db.NamedExec(`
   INSERT INTO messages
     (device_id,
-     received,
+     received_time,
      packetsize,
      sysid,
      firmware_ver,
      uptime,
      boardtemp,
-     boardhum,
+     board_rel_hum,
      status,
      gpstimestamp,
      lon,
@@ -33,7 +33,11 @@ func (s *SqliteStore) PutMessage(m *model.Message) (int64, error) {
      sensor2aux,
      sensor3work,
      sensor3aux,
-     afe3temp,
+     afe3_temp_raw,
+     no2_ppb,
+     o3_ppb,
+     no_ppb,
+     afe3_temp_value,
      opcpma,
      opcpmb,
      opcpmc,
@@ -69,13 +73,13 @@ func (s *SqliteStore) PutMessage(m *model.Message) (int64, error) {
      opcbin_23,
      opcsamplevalid)
     VALUES (:device_id,
-            :received,
+            :received_time,
             :packetsize,
             :sysid,
             :firmware_ver,
             :uptime,
             :boardtemp,
-            :boardhum,
+            :board_rel_hum,
             :status,
             :gpstimestamp,
             :lon,
@@ -87,7 +91,11 @@ func (s *SqliteStore) PutMessage(m *model.Message) (int64, error) {
             :sensor2aux,
             :sensor3work,
             :sensor3aux,
-            :afe3temp,
+            :afe3_temp_raw,
+            :no2_ppb,
+            :o3_ppb,
+            :no_ppb,
+            :afe3_temp_value,
             :opcpma,
             :opcpmb,
             :opcpmc,
@@ -147,7 +155,7 @@ func (s *SqliteStore) ListMessages(offset int, limit int) ([]model.Message, erro
 	defer s.mu.Unlock()
 
 	var msgs []model.Message
-	err := s.db.Select(&msgs, "SELECT * FROM messages ORDER BY received DESC LIMIT ? OFFSET ?", limit, offset)
+	err := s.db.Select(&msgs, "SELECT * FROM messages ORDER BY received_time DESC LIMIT ? OFFSET ?", limit, offset)
 	return msgs, err
 }
 
@@ -157,7 +165,7 @@ func (s *SqliteStore) ListMessagesByDate(from time.Time, to time.Time) ([]model.
 	defer s.mu.Unlock()
 
 	var msgs []model.Message
-	err := s.db.Select(&msgs, "SELECT * FROM messages WHERE received >= ? AND received < ? ORDER BY received", from, to)
+	err := s.db.Select(&msgs, "SELECT * FROM messages WHERE received_time >= ? AND received_time < ? ORDER BY received_time", from, to)
 	return msgs, err
 }
 
@@ -167,6 +175,6 @@ func (s *SqliteStore) ListDeviceMessagesByDate(deviceID string, from time.Time, 
 	defer s.mu.Unlock()
 
 	var msgs []model.Message
-	err := s.db.Select(&msgs, "SELECT * FROM messages WHERE device_id = ? AND received >= ? AND received < ? ORDER BY received", deviceID, from, to)
+	err := s.db.Select(&msgs, "SELECT * FROM messages WHERE device_id = ? AND received_time >= ? AND received_time < ? ORDER BY received_time", deviceID, from, to)
 	return msgs, err
 }

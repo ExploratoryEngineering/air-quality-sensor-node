@@ -11,12 +11,14 @@ type sensorLut struct {
 }
 
 var (
-	afe3ScalingFactor = float64(0.0000005960464478) // named "lsb" in datasheet
+	afe3ScalingFactor = float64(0.0000005960464478) // named "lsb" in datasheet.
 
 	// Temperatures used in the LUT
 	afe3LutTemperatures = []float64{-30.0, -20.0, -10.0, 0.0, 10.0, 20.0, 30.0, 40.0, 50.0}
 
-	// Lookup tables according to Appendex 1 of Alphasense Application Note AAN 803
+	// Lookup tables according to Appendix 1 of Alphasense Application
+	// Note AAN 803.  Included the whole table although we only need 3
+	// entries in case we will use any of these sensors in the future.
 	afe3Luts = map[string]sensorLut{
 		"CO-A4":  sensorLut{LUT: []float64{1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -0.76, -0.76 - 0.76}},
 		"CO2-B4": sensorLut{LUT: []float64{-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -3.8 - 3.8 - 3.8}},
@@ -42,34 +44,31 @@ func CalculateSensorValues(m *Message, cal *Cal) {
 
 	// Calculate the temperature.
 	// TODO(borud): have @tlan and @hansj double-check this
-	m.AFE3TempValue = ((float64(m.AFE3Temp) * afe3ScalingFactor) - cal.Vt20Offset + 0.02) * 1000.0
+	m.AFE3TempValue = ((float64(m.AFE3TempRaw) * afe3ScalingFactor) - cal.Vt20Offset + 0.02) * 1000.0
 
-	// TODO(borud): There is a lookup table in Alphasense Application
-	// Note "AAN 803"
-	//
 	var sensor1TempCorrectionFactor = correctSensor1(m.AFE3TempValue)
 	var sensor2TempCorrectionFactor = correctSensor1(m.AFE3TempValue)
 	var sensor3TempCorrectionFactor = correctSensor1(m.AFE3TempValue)
 
 	// Sensor 1 - NO2 sensor
 	{
-		wmV := voltage(m.Sensor1Work, cal.Sensor1WorkingElectrodeElectronicOffset, cal.Sensor1WorkingElectrodeSensorZero)
-		amV := voltage(m.Sensor1Aux, cal.Sensor1AuxElectrodeElectronicOffset, cal.Sensor1AuxElectrodeSensorZero) * sensor1TempCorrectionFactor
-		m.NO2PPB = (wmV - amV) / cal.Sensor1WorkingElectrodeSensitivity
+		wmV := voltage(m.Sensor1Work, cal.Sensor1WEe, cal.Sensor1WE0)
+		amV := voltage(m.Sensor1Aux, cal.Sensor1AEe, cal.Sensor1AE0) * sensor1TempCorrectionFactor
+		m.NO2PPB = (wmV - amV) / cal.Sensor1WESensitivity
 	}
 
 	// Sensor 2 - O3 + NO2 sensor, calculate O3 by subtracting NO2 sensor value
 	{
-		wmV := voltage(m.Sensor2Work, cal.Sensor2WorkingElectrodeElectronicOffset, cal.Sensor2WorkingElectrodeSensorZero)
-		amV := voltage(m.Sensor2Aux, cal.Sensor2AuxElectrodeElectronicOffset, cal.Sensor2AuxElectrodeSensorZero) * sensor2TempCorrectionFactor
-		m.O3PPB = ((wmV - amV) / cal.Sensor2WorkingElectrodeSensitivity) - m.NO2PPB
+		wmV := voltage(m.Sensor2Work, cal.Sensor2WEe, cal.Sensor2WE0)
+		amV := voltage(m.Sensor2Aux, cal.Sensor2AEe, cal.Sensor2AE0) * sensor2TempCorrectionFactor
+		m.O3PPB = ((wmV - amV) / cal.Sensor2WESensitivity) - m.NO2PPB
 	}
 
 	// Sensor 3 - NO sensor
 	{
-		wmV := voltage(m.Sensor3Work, cal.Sensor3WorkingElectrodeElectronicOffset, cal.Sensor3WorkingElectrodeSensorZero)
-		amV := voltage(m.Sensor3Aux, cal.Sensor3AuxElectrodeElectronicOffset, cal.Sensor3AuxElectrodeSensorZero) * sensor3TempCorrectionFactor
-		m.NOPPB = (wmV - amV) / cal.Sensor1WorkingElectrodeSensitivity
+		wmV := voltage(m.Sensor3Work, cal.Sensor3WEe, cal.Sensor3WE0)
+		amV := voltage(m.Sensor3Aux, cal.Sensor3AEe, cal.Sensor3AE0) * sensor3TempCorrectionFactor
+		m.NOPPB = (wmV - amV) / cal.Sensor3WESensitivity
 	}
 
 	log.Printf("temp (C)  : %04.2f", m.AFE3TempValue)

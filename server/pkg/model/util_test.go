@@ -25,7 +25,7 @@ var testPB = &aqpb.Sample{
 	Sensor_2Aux:       14,
 	Sensor_3Work:      15,
 	Sensor_3Aux:       16,
-	Afe3Temp:          17,
+	Afe3TempRaw:       17,
 	OpcPmA:            18,
 	OpcPmB:            19,
 	OpcPmC:            20,
@@ -96,7 +96,7 @@ func TestSimple(t *testing.T) {
 	assert.Equal(t, testPB.Sensor_3Work, dp.Sensor3Work)
 	assert.Equal(t, testPB.Sensor_3Aux, dp.Sensor3Aux)
 
-	assert.Equal(t, testPB.Afe3Temp, dp.AFE3Temp)
+	assert.Equal(t, testPB.Afe3TempRaw, dp.AFE3TempRaw)
 
 	assert.Equal(t, testPB.OpcPmA, dp.OPCPMA)
 	assert.Equal(t, testPB.OpcPmB, dp.OPCPMB)
