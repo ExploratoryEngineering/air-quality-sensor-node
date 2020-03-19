@@ -282,5 +282,4 @@ func messageTests(t *testing.T, db Store) {
 			assert.Equal(t, 10, len(msgs))
 		}
 	}
-
 }
