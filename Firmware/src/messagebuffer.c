@@ -90,9 +90,6 @@ size_t mb_encode(SENSOR_NODE_MESSAGE *msg, char *buffer, size_t max)
     message.firmware_version = encode_firmware_version();
     message.sysid = atoll(imei);
 
-    printf("SYSID (string): %s\n", imei);
-    printf("SYSID: (int64): %llx\n", message.sysid);
-
     message.uptime = msg->uptime;
     message.board_temp = msg->cc2_sample.Temp_C;
     message.board_rel_humidity = msg->cc2_sample.RH;
