@@ -333,14 +333,14 @@ static bool fota_download_image(simple_fota_response_t *resp)
 
 		if (coap_packet_parse(&reply, response_buffer, received, NULL, 0) < 0)
 		{
-			LOG_WRN("Invalid data received");
+			LOG_ERR("Invalid data received");
 			close(sock);
 			return false;
 		}
 
 		if (coap_update_from_block(&reply, &block_ctx) < 0)
 		{
-			LOG_WRN("Error updating from block");
+			LOG_ERR("Error updating from block");
 			close(sock);
 			return false;
 		}
@@ -394,7 +394,7 @@ bool fota_run()
 	{
 		LOG_INF("Update is scheduled for this device");
 		ret = fota_download_image(&resp);
-		if (ret)
+		if (!ret)
 		{
 			LOG_ERR("Unable to download image: %d", ret);
 			return false;

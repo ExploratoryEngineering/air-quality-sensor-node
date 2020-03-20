@@ -60,6 +60,12 @@ int atnrb_decode();
 int atcimi_decode(char *imsi);
 
 /**
+ * @brief decode AT+GCSN=1 response from modem
+ * @note buffer should have enough room for IMEI (22 chars)
+ */
+int atcgsn_decode(char *imei);
+
+/**
  * @brief decode AT+CPSMS response from modem.
  */
 int atcpsms_decode();

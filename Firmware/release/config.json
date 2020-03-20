@@ -10,7 +10,7 @@
     {
       "id": "bin",
       "name": "build/zephyr/zephyr.signed.bin",
-      "target": "nrf25"
+      "target": "nrf52"
     }
   ],
   "templates": []

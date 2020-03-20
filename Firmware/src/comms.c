@@ -202,6 +202,13 @@ void modem_restart_without_triggering_network_signalling_storm_but_hopefully_pic
     }
 }
 
+#define IMEI_IMSI_BUF_SIZE 24
+char imsi[IMEI_IMSI_BUF_SIZE];
+char imei[IMEI_IMSI_BUF_SIZE];
+char imei_unparsed[IMEI_IMSI_BUF_SIZE];
+
+
+
 void modem_init(void)
 {
     LOG_INF("Init modem");
@@ -235,8 +242,8 @@ void modem_init(void)
         k_sleep(K_MSEC(2000));
     }
 
+    memset(imsi, 0, IMEI_IMSI_BUF_SIZE);
     modem_write("AT+CIMI\r");
-    char imsi[24];
     if (atcimi_decode((char *)&imsi) != AT_OK)
     {
         LOG_ERR("Unable to retrieve IMSI from modem");
@@ -245,4 +252,20 @@ void modem_init(void)
     {
         LOG_INF("IMSI for modem is %s", log_strdup(imsi));
     }
-}
+
+    // Using same decoder as IMSI
+    memset(imei, 0, IMEI_IMSI_BUF_SIZE);
+    memset(imei_unparsed, 0, IMEI_IMSI_BUF_SIZE);
+    
+    modem_write("AT+CGSN=1\r");
+    if (atcgsn_decode((char *)&imei_unparsed) != AT_OK) 
+    {
+        LOG_ERR("Unable to retrieve IMEI from modem");
+    }
+    else
+    {
+        strcpy(imei, &imei_unparsed[6]);
+        LOG_INF("IMEI for modem is %s", log_strdup(imei));
+    }
+ }
+

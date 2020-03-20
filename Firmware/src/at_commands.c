@@ -124,6 +124,7 @@ int decode_input(int32_t timeout, void *ctx, char_callback_t char_cb, eol_callba
     return AT_TIMEOUT;
 }
 
+
 // Generic at decoding - wait for OK, ERROR or timeout
 #define at_decode() decode_input(CMD_TIMEOUT, NULL, NULL, NULL)
 
@@ -391,6 +392,14 @@ struct cimi_ctx
     bool done;
 };
 
+// Decode AT+CGSN responses.
+struct cgsn_ctx
+{
+    char *imei;
+    uint8_t index;
+    bool done;
+};
+
 void cimi_char(void *ctx, struct buf *rb, char b, bool is_urc, bool is_space)
 {
     struct cimi_ctx *c = (struct cimi_ctx *)ctx;
@@ -412,6 +421,28 @@ int cimi_eol(void *ctx, struct buf *rb, bool is_urc)
     return 0;
 }
 
+void cgsn_char(void *ctx, struct buf *rb, char b, bool is_urc, bool is_space)
+{
+    struct cgsn_ctx *c = (struct cgsn_ctx *)ctx;
+    if (!c->done && !is_space)
+    {
+        struct cgsn_ctx *c = (struct cgsn_ctx *)ctx;
+        c->imei[c->index++] = b;
+    }
+}
+
+int cgsn_eol(void *ctx, struct buf *rb, bool is_urc)
+{
+    struct cgsn_ctx *c = (struct cgsn_ctx *)ctx;
+    if (!c->done && c->index > 0)
+    {
+        c->imei[c->index] = 0;
+        c->done = true;
+    }
+    return 0;
+}
+
+
 int atcimi_decode(char *imsi)
 {
     LOG_DBG("cimi");
@@ -421,6 +452,17 @@ int atcimi_decode(char *imsi)
         .done = false,
     };
     return decode_input(CMD_TIMEOUT, &ctx, cimi_char, cimi_eol);
+}
+
+int atcgsn_decode(char *imei)
+{
+    LOG_DBG("cgsn");
+    struct cgsn_ctx ctx = {
+        .imei = imei,
+        .index = 0,
+        .done = false,
+    };
+    return decode_input(CMD_TIMEOUT, &ctx, cgsn_char, cgsn_eol);
 }
 
 int at_generic_decode()
