@@ -96,6 +96,7 @@ CREATE TABLE IF NOT EXISTS messages (
 CREATE TABLE IF NOT EXISTS cal (
   id                    INTEGER PRIMARY KEY AUTOINCREMENT,
   device_id             TEXT NOT NULL,
+  collection_id         TEXT NOT NULL,
   valid_from            DATETIME NOT NULL,
   valid_to              DATETIME,
 
@@ -127,7 +128,7 @@ CREATE TABLE IF NOT EXISTS cal (
 
   FOREIGN KEY(device_id) REFERENCES devices(id),
 
-  UNIQUE(device_id,afe_serial,valid_from)
+  UNIQUE(device_id,collection_id, afe_serial,valid_from)
 );
 
 `

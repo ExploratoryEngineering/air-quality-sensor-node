@@ -36,7 +36,7 @@ func (a *ListCommand) Execute(args []string) error {
 	}
 
 	for _, cal := range cals {
-		fmt.Printf("%d, %s, %s, %s, %s\n", cal.ID, cal.DeviceID, cal.ValidFrom.Format(layout), cal.ValidTo.Format(layout), cal.AFESerial)
+		fmt.Printf("%d, %s, %s, %s, %s, %s\n", cal.ID, cal.DeviceID, cal.CollectionID, cal.ValidFrom.Format(layout), cal.ValidTo.Format(layout), cal.AFESerial)
 	}
 	return nil
 }

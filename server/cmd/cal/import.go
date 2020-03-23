@@ -56,6 +56,7 @@ func (a *ImportCommand) Execute(args []string) error {
 	}
 
 	cal.DeviceID = a.DeviceID
+	cal.CollectionID = a.CollectionID
 
 	id, err := db.PutCal(cal)
 	if err != nil {

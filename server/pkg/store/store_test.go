@@ -19,6 +19,7 @@ var testDevice = model.Device{
 
 var testCal = model.Cal{
 	DeviceID:             "device1",
+	CollectionID:         "mycollection",
 	ValidFrom:            time.Now().Add(-24 * time.Hour),
 	AFESerial:            "some-serial-character-sequence",
 	AFECalDate:           time.Now().Add(-24 * time.Hour),
