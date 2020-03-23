@@ -3,4 +3,7 @@ data
 dist
 cmd/listen/listen
 cmd/server/server
+cmd/server/cal
 .telenor-nbiot
+aq.db
+
