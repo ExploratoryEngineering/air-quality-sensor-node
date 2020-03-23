@@ -35,6 +35,11 @@ func (a *ListCommand) Execute(args []string) error {
 		log.Fatalf("Unable to list calibration data: %v", err)
 	}
 
+	if len(cals) == 0 {
+		log.Printf("no entries to list")
+		return nil
+	}
+
 	for _, cal := range cals {
 		fmt.Printf("%d, %s, %s, %s, %s, %s\n", cal.ID, cal.DeviceID, cal.CollectionID, cal.ValidFrom.Format(layout), cal.ValidTo.Format(layout), cal.AFESerial)
 	}
