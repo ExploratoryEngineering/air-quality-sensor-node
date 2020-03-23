@@ -99,8 +99,8 @@ CREATE TABLE IF NOT EXISTS cal (
   valid_from            DATETIME NOT NULL,
   valid_to              DATETIME,
 
-  sensor_board_serial   TEXT NOT NULL,
-  sensor_board_cal_date DATETIME NOT NULL,
+  afe_serial            TEXT NOT NULL,
+  afe_cal_date          DATETIME NOT NULL,
 
   vt20_offset            REAL NOT NULL,
 
@@ -125,7 +125,9 @@ CREATE TABLE IF NOT EXISTS cal (
   sensor3_pcb_gain       REAL NOT NULL,
   sensor3_we_sensitivity REAL NOT NULL,
 
-  FOREIGN KEY(device_id) REFERENCES devices(id)
+  FOREIGN KEY(device_id) REFERENCES devices(id),
+
+  UNIQUE(device_id,afe_serial,valid_from)
 );
 
 `

@@ -101,9 +101,15 @@ type Cal struct {
 	ValidFrom time.Time `db:"valid_from" json:"from"`
 	ValidTo   time.Time `db:"valid_to" json:"to"`
 
-	SensorBoardSerial  string    `db:"sensor_board_serial" json:"sensorBoardSerial"`    // Serial number identifying the board
-	SensorBoardCalDate time.Time `db:"sensor_board_cal_date" json:"sensorBoardCalDate"` // When was the sensor calibrated
-	Vt20Offset         float64   `db:"vt20_offset" json:"vt20Offset"`                   // Temperature offset for probe at 20C
+	// New fields
+	CircuitType   string    `db:"circuit_type" json:"circuitType"`
+	AFESerial     string    `db:"afe_serial" json:"afeSerial"`
+	AFEType       string    `db:"afe_type" json:"afeType"`
+	Sensor1Serial string    `db:"sensor1_serial" json:"sensor1Serial"`
+	Sensor2Serial string    `db:"sensor2_serial" json:"sensor2Serial"`
+	Sensor3Serial string    `db:"sensor3_serial" json:"sensor3Serial"`
+	AFECalDate    time.Time `db:"afe_cal_date" json:"AFECalDate"` // When was the sensor calibrated
+	Vt20Offset    float64   `db:"vt20_offset" json:"vt20Offset"`  // Temperature offset for probe at 20C
 
 	Sensor1WEe           int32   `db:"sensor1_we_e" json:"sensor1WEe"`                     // Unit: mV
 	Sensor1WE0           int32   `db:"sensor1_we_0" json:"sensor1WE0"`                     // Unit: mV

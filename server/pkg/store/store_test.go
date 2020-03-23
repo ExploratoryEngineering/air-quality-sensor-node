@@ -20,8 +20,8 @@ var testDevice = model.Device{
 var testCal = model.Cal{
 	DeviceID:             "device1",
 	ValidFrom:            time.Now().Add(-24 * time.Hour),
-	SensorBoardSerial:    "some-serial-character-sequence",
-	SensorBoardCalDate:   time.Now().Add(-24 * time.Hour),
+	AFESerial:            "some-serial-character-sequence",
+	AFECalDate:           time.Now().Add(-24 * time.Hour),
 	Vt20Offset:           0.3195,
 	Sensor1WEe:           312,
 	Sensor1WE0:           -5,
