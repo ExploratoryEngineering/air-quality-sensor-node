@@ -21,7 +21,7 @@ type Opts struct {
 	UDPBufferSize    int    `short:"b" long:"udp-buffer-size" description:"Size of UDP read buffer" default:"1024" value-name:"<num bytes>"`
 
 	// Database options
-	DBFilename string `short:"d" long:"db" description:"Data storage file" default:"ds.db" value-name:"<file>"`
+	DBFilename string `short:"d" long:"db" description:"Data storage file" default:"aq.db" value-name:"<file>"`
 }
 
 var parsedOpts Opts

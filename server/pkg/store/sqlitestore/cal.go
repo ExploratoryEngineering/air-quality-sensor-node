@@ -63,9 +63,11 @@ VALUES(
   :sensor3_pcb_gain,
   :sensor3_we_sensitivity)
 `, c)
+
 	if err != nil {
 		return -1, err
 	}
+
 	return r.LastInsertId()
 }
 

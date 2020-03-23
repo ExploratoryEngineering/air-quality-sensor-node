@@ -8,8 +8,13 @@ import (
 
 // Options defines the global command line parameters
 type Options struct {
-	Verbose bool `short:"v" long:"verbose" description:"Verbose output"`
+	DBFilename string `short:"d" long:"db" description:"Data storage file" default:"aq.db" value-name:"<file>"`
+	Verbose    bool   `short:"v" long:"verbose" description:"Verbose output"`
 }
+
+const (
+	defaultCollection = "17dh0cf43jg007"
+)
 
 var options Options
 var parser = flags.NewParser(&options, flags.Default)

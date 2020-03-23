@@ -1,10 +1,14 @@
 package store
 
 import (
+	"errors"
 	"time"
 
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/model"
 )
+
+// ErrCalExists indicates that calibration entry already exists
+var ErrCalExists = errors.New("Calibration entry already exists")
 
 // Store defines the persistence interface.
 type Store interface {
