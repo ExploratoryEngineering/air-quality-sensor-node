@@ -45,9 +45,6 @@ type Store interface {
 	// GetCal gets a calibration entry by id
 	GetCal(id int64) (*model.Cal, error)
 
-	// UpdateCal updates calibration entry
-	UpdateCal(c *model.Cal) error
-
 	// DeleteCal deletes calibration entry.
 	DeleteCal(id int64) error
 

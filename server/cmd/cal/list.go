@@ -19,7 +19,7 @@ type ListCommand struct {
 var listCommand ListCommand
 
 func init() {
-	parser.AddCommand("ls",
+	parser.AddCommand("list",
 		"List calibration data",
 		"List calibration data",
 		&listCommand)
@@ -40,8 +40,12 @@ func (a *ListCommand) Execute(args []string) error {
 		return nil
 	}
 
+	fmt.Print("\n---------------------------------------------------------------------------\n")
+	fmt.Print("    ID  DeviceID        CollectionID    AFE Serial  ValidFrom\n")
+	fmt.Print("---------------------------------------------------------------------------\n")
 	for _, cal := range cals {
-		fmt.Printf("%d, %s, %s, %s, %s, %s\n", cal.ID, cal.DeviceID, cal.CollectionID, cal.ValidFrom.Format(layout), cal.ValidTo.Format(layout), cal.AFESerial)
+		fmt.Printf(" %4d  %14s  %14s  %10s  %20s\n", cal.ID, cal.DeviceID, cal.CollectionID, cal.AFESerial, cal.ValidFrom.Format(layout))
 	}
+	fmt.Print("---------------------------------------------------------------------------\n\n")
 	return nil
 }

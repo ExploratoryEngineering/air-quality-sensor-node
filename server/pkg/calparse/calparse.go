@@ -119,6 +119,7 @@ func ReadCalDataFromCSV(filename string) (*model.Cal, error) {
 	caldate, err := time.Parse("02-01-2006", lookup(dd, "AFECalDate"))
 
 	return &model.Cal{
+		CircuitType:   lookup(dd, "CircuitType"),
 		AFESerial:     lookup(dd, "AFESerial"),
 		AFEType:       lookup(dd, "AFEType"),
 		Sensor1Serial: lookup(dd, "Sensor1Serial"),

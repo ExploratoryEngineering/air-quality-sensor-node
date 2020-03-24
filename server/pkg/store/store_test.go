@@ -159,21 +159,6 @@ func calTests(t *testing.T, db Store) {
 		// assert.Equal(t, testCal, *c)
 	}
 
-	// Update
-	{
-		uc := testCal
-		uc.ValidTo = time.Now()
-
-		err := db.UpdateCal(&uc)
-		assert.Nil(t, err)
-
-		c, err := db.GetCal(testCal.ID)
-		assert.Nil(t, err)
-		assert.NotNil(t, c)
-		assert.Equal(t, testCal.DeviceID, c.DeviceID)
-		assert.NotEqual(t, testCal.ValidTo, c.ValidTo)
-	}
-
 	// Delete
 	{
 		err := db.DeleteCal(testCal.ID)
@@ -193,7 +178,6 @@ func calTests(t *testing.T, db Store) {
 			id, err := db.PutCal(&model.Cal{
 				DeviceID:  fmt.Sprintf("cal-device-%d", i),
 				ValidFrom: time.Now().Add(-24 * time.Hour),
-				ValidTo:   time.Now().Add(24 * time.Hour),
 			})
 			assert.Nil(t, err)
 			assert.True(t, id > 0)

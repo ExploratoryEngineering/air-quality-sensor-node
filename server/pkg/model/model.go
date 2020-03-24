@@ -100,7 +100,6 @@ type Cal struct {
 	DeviceID     string    `db:"device_id" json:"deviceID"`
 	CollectionID string    `db:"collection_id" json:"collectionID"`
 	ValidFrom    time.Time `db:"valid_from" json:"from"`
-	ValidTo      time.Time `db:"valid_to" json:"to"`
 
 	// New fields
 	CircuitType   string    `db:"circuit_type" json:"circuitType"`

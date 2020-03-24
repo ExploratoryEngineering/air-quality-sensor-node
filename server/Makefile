@@ -72,3 +72,4 @@ clean:
 	@rm -rf ./bin
 	@rm -rf ./data
 	@rm -rf ./dist
+	@rm -rf ./aq.db

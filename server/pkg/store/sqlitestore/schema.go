@@ -98,9 +98,15 @@ CREATE TABLE IF NOT EXISTS cal (
   device_id             TEXT NOT NULL,
   collection_id         TEXT NOT NULL,
   valid_from            DATETIME NOT NULL,
-  valid_to              DATETIME,
 
   afe_serial            TEXT NOT NULL,
+
+  circuit_type          TEXT NOT NULL,
+  afe_type              TEXT NOT NULL,
+  sensor1_serial        TEXT NOT NULL,
+  sensor2_serial        TEXT NOT NULL,
+  sensor3_serial        TEXT NOT NULL,
+
   afe_cal_date          DATETIME NOT NULL,
 
   vt20_offset            REAL NOT NULL,
@@ -128,7 +134,7 @@ CREATE TABLE IF NOT EXISTS cal (
 
   FOREIGN KEY(device_id) REFERENCES devices(id),
 
-  UNIQUE(device_id,collection_id, afe_serial,valid_from)
+  UNIQUE(device_id, collection_id, afe_serial, valid_from)
 );
 
 `

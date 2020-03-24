@@ -15,8 +15,12 @@ INSERT INTO cal
   device_id,
   collection_id,
   valid_from,
-  valid_to,
   afe_serial,
+  circuit_type,
+  afe_type,
+  sensor1_serial,
+  sensor2_serial,
+  sensor3_serial,
   afe_cal_date,
   vt20_offset,
   sensor1_we_e,
@@ -42,8 +46,12 @@ VALUES(
   :device_id,
   :collection_id,
   :valid_from,
-  :valid_to,
   :afe_serial,
+  :circuit_type,
+  :afe_type,
+  :sensor1_serial,
+  :sensor2_serial,
+  :sensor3_serial,
   :afe_cal_date,
   :vt20_offset,
   :sensor1_we_e,
@@ -86,15 +94,6 @@ func (s *SqliteStore) GetCal(id int64) (*model.Cal, error) {
 	return &c, nil
 }
 
-// UpdateCal ...
-func (s *SqliteStore) UpdateCal(c *model.Cal) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	_, err := s.db.NamedExec("UPDATE cal SET valid_from = :valid_from, valid_to = :valid_to WHERE id = :id", c)
-	return err
-}
-
 // DeleteCal ...
 func (s *SqliteStore) DeleteCal(id int64) error {
 	s.mu.Lock()
@@ -115,11 +114,11 @@ func (s *SqliteStore) ListCals(offset int, limit int) ([]model.Cal, error) {
 }
 
 // ListCalsForDevice ...
-func (s *SqliteStore) ListCalsForDevice(deviceID string) ([]model.Cal, error) {
+func (s *SqliteStore) ListCalsForDevice(id int64) ([]model.Cal, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	var cals []model.Cal
-	err := s.db.Select(&cals, "SELECT * FROM cal WHERE device_id = ? ORDER BY valid_from DESC", deviceID)
+	err := s.db.Select(&cals, "SELECT * FROM cal WHERE id = ? ORDER BY valid_from DESC", id)
 	return cals, err
 }
