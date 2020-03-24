@@ -114,11 +114,11 @@ func (s *SqliteStore) ListCals(offset int, limit int) ([]model.Cal, error) {
 }
 
 // ListCalsForDevice ...
-func (s *SqliteStore) ListCalsForDevice(id int64) ([]model.Cal, error) {
+func (s *SqliteStore) ListCalsForDevice(deviceID string) ([]model.Cal, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	var cals []model.Cal
-	err := s.db.Select(&cals, "SELECT * FROM cal WHERE id = ? ORDER BY valid_from DESC", id)
+	err := s.db.Select(&cals, "SELECT * FROM cal WHERE device_id = ? ORDER BY valid_from DESC", deviceID)
 	return cals, err
 }
