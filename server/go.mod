@@ -15,6 +15,7 @@ require (
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/kataras/tablewriter v0.0.0-20180708051242-e063d29b7c23 // indirect
 	github.com/landoop/tableprinter v0.0.0-20200104100433-ae9249991eb1
+	github.com/magiconair/properties v1.8.1
 	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/mattn/go-sqlite3 v1.9.0
 	github.com/sgreben/piecewiselinear v0.0.0-20200103140426-2cdc2ca8c19b
