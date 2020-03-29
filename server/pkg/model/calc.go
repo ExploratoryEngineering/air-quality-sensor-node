@@ -1,8 +1,6 @@
 package model
 
 import (
-	"log"
-
 	"github.com/sgreben/piecewiselinear"
 )
 
@@ -70,11 +68,6 @@ func CalculateSensorValues(m *Message, cal *Cal) {
 		amV := voltage(m.Sensor3Aux, cal.Sensor3AEe, cal.Sensor3AE0) * sensor3TempCorrectionFactor
 		m.NOPPB = (wmV - amV) / cal.Sensor3WESensitivity
 	}
-
-	log.Printf("temp (C)  : %04.2f", m.AFE3TempValue)
-	log.Printf("NO2  (ppb): %04.2f", m.NO2PPB)
-	log.Printf("O3   (ppb): %04.2f", m.O3PPB)
-	log.Printf("NO   (ppb): %04.2f", m.NOPPB)
 }
 
 func voltage(w uint32, offset int32, zero int32) float64 {

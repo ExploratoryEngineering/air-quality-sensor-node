@@ -1,14 +1,13 @@
 package pipeline
 
 import (
-	"encoding/json"
 	"log"
 
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/model"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/opts"
 )
 
-// Log is a pipeline processor that persists incoming messages
+// Log is a pipeline processor that logs incoming messages
 type Log struct {
 	next Pipeline
 	opts *opts.Opts
@@ -23,14 +22,7 @@ func NewLog(opts *opts.Opts) *Log {
 
 // Publish ...
 func (p *Log) Publish(m *model.Message) error {
-	log.Printf("Message: device='%s' sysid=%d packetSize=%d", m.DeviceID, m.SysID, m.PacketSize)
-
-	json, err := json.MarshalIndent(m, "", "    ")
-	if err != nil {
-		log.Printf("Error marshalling to JSON message: %v", err)
-	} else {
-		log.Printf("JSON:\n%s\n", json)
-	}
+	log.Printf("Message: device='%s' messageID=%d packetSize=%d", m.DeviceID, m.ID, m.PacketSize)
 
 	if p.next != nil {
 		return p.next.Publish(m)

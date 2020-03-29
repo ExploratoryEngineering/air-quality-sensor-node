@@ -6,6 +6,7 @@ import (
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/listener"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/opts"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline"
+	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/store/sqlitestore"
 )
 
 var listeners []listener.Listener
@@ -13,13 +14,21 @@ var listeners []listener.Listener
 func main() {
 	opts := opts.Parse()
 
+	// Set up persistence
+	db, err := sqlitestore.New(opts.DBFilename)
+	if err != nil {
+		log.Fatalf("Unable to open or create database file '%s': %v", opts.DBFilename, err)
+	}
+
 	// Set up pipeline
 	pipelineRoot := pipeline.NewRoot(opts)
+	pipelineCalc := pipeline.NewCalculate(opts, db)
+	pipelinePersist := pipeline.NewPersist(opts, db)
 	pipelineLog := pipeline.NewLog(opts)
-	pipelinePersist := pipeline.NewPersist(opts)
 
-	pipelineRoot.AddNext(pipelineLog)
-	pipelineLog.AddNext(pipelinePersist)
+	pipelineRoot.AddNext(pipelineCalc)
+	pipelineCalc.AddNext(pipelinePersist)
+	pipelinePersist.AddNext(pipelineLog)
 
 	// Start Horde listener unless disabled
 	if !opts.HordeListenerDisable {
