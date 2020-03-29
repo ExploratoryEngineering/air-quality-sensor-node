@@ -43,7 +43,7 @@ format:
 
 .PHONY: test
 test:
-	@$(GO) test -v -tags="$(BUILD_TAGS)" $(PACKAGES)
+	@$(GO) test -tags="$(BUILD_TAGS)" $(PACKAGES)
 
 .PHONY: build
 build: gen
@@ -72,3 +72,4 @@ clean:
 	@rm -rf ./bin
 	@rm -rf ./data
 	@rm -rf ./dist
+	@rm -rf ./aq.db

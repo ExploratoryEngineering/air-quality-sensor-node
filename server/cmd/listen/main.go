@@ -19,7 +19,7 @@ import (
 
 var (
 	collectionID = flag.String("collection", "17dh0cf43jg007", "Collection ID")
-	deviceID     = flag.String("device", "17dh0cf43jg6lj", "Device ID")
+	deviceID     = flag.String("device", "17dh0cf43jg6n4", "Device ID")
 )
 
 func main() {
@@ -46,8 +46,6 @@ func main() {
 			log.Fatal("Error receiving data: ", err)
 		}
 
-		log.Printf("Data payload (%d): %x", len(data.Payload), data.Payload)
-
 		sample := aqpb.Sample{}
 		err = proto.Unmarshal(data.Payload, &sample)
 		if err != nil {
@@ -55,13 +53,13 @@ func main() {
 			continue
 		}
 
-		dp := model.DataPointFromProtobuf(&sample)
-		if dp == nil {
-			log.Printf("Unable to create DataPoint from protobuf")
+		m := model.MessageFromProtobuf(&sample)
+		if m == nil {
+			log.Printf("Unable to create Message from protobuf")
 			continue
 		}
 
-		json, _ := json.MarshalIndent(dp, "", "\t")
+		json, _ := json.MarshalIndent(m, "", "\t")
 		log.Printf("JSON:\n%s\n", json)
 	}
 

@@ -1,12 +1,15 @@
-package udplistener
+package listener
 
 import (
 	"context"
 	"fmt"
 	"log"
 	"net"
+	"time"
 
+	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/model"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/opts"
+	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline"
 )
 
 // UDPListener listens for UDP packets on a given listenAddress
@@ -14,18 +17,20 @@ type UDPListener struct {
 	listenAddress string
 	bufferSize    int
 	ctx           context.Context
+	pipeline      pipeline.Pipeline
 	doneChan      chan error
 	quit          chan bool
 }
 
-// New creates a new UDPListener instance
-func New(opts *opts.Opts) *UDPListener {
+// NewUDPListener creates a new UDPListener instance
+func NewUDPListener(opts *opts.Opts, pipeline pipeline.Pipeline) *UDPListener {
 	return &UDPListener{
 		listenAddress: opts.UDPListenAddress,
 		bufferSize:    opts.UDPBufferSize,
+		ctx:           context.Background(),
+		pipeline:      pipeline,
 		doneChan:      make(chan error),
 		quit:          make(chan bool),
-		ctx:           context.Background(),
 	}
 }
 
@@ -45,11 +50,29 @@ func (u *UDPListener) Start() error {
 				u.doneChan <- err
 				return
 			}
-			log.Printf("packet-received: bytes=%d from=%s\n", n, addr.String())
+
+			pb, err := model.ProtobufFromData(buffer[:n])
+			if err != nil {
+				log.Printf("Error decoding packet from %v into pb: %v", addr, err)
+				continue
+			}
+
+			m := model.MessageFromProtobuf(pb)
+
+			m.ReceivedTime = time.Now()
+			m.PacketSize = n
+
+			u.pipeline.Publish(m)
+
 		}
 	}()
 
 	return nil
+}
+
+// Shutdown initiates shutdown of the UDPListener
+func (u *UDPListener) Shutdown() {
+	log.Printf("UDPListener: Shutdown not implemented")
 }
 
 // WaitForShutdown waits for the UDP listener to shut down
