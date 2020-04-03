@@ -23,11 +23,13 @@ type HordeListener struct {
 	doneChan     chan error
 	quit         chan bool
 	client       *nbiot.Client
+	opts         *opts.Opts
 }
 
 // NewHordeListener creates a new HordeListener instance
 func NewHordeListener(opts *opts.Opts, pipeline pipeline.Pipeline) *HordeListener {
 	return &HordeListener{
+		opts:         opts,
 		pipeline:     pipeline,
 		collectionID: opts.HordeCollection,
 		doneChan:     make(chan error),
@@ -54,6 +56,7 @@ func (h *HordeListener) Start() error {
 
 	go func() {
 		defer stream.Close()
+		log.Printf("Starting Horde listening loop")
 		for {
 			data, err := stream.Recv()
 			if err == io.EOF {
@@ -83,10 +86,12 @@ func (h *HordeListener) Start() error {
 			// TODO(borud): This is a good place to check if a device
 			//    is already known and inject it into the database.
 
+			if h.opts.Verbose {
+				log.Printf("Accepted packet from Horde %v", m)
+			}
 			h.pipeline.Publish(m)
 		}
 	}()
-
 	return nil
 }
 

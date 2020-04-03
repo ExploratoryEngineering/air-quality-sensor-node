@@ -22,6 +22,9 @@ type Opts struct {
 
 	// Database options
 	DBFilename string `short:"d" long:"db" description:"Data storage file" default:"aq.db" value-name:"<file>"`
+
+	// Verbose
+	Verbose bool `short:"v" long:"verbose"`
 }
 
 var parsedOpts Opts

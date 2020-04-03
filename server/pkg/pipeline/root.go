@@ -1,3 +1,9 @@
+// The root pipeline element is responsible for ensuring that when a
+// message comes in, the device is known to us.  If the device is
+// unknown, it is populated into the database.
+//
+// TODO(borud): implement database updates
+
 package pipeline
 
 import (

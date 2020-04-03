@@ -21,7 +21,7 @@ func main() {
 	}
 
 	// Set up pipeline
-	pipelineRoot := pipeline.NewRoot(opts)
+	pipelineRoot := pipeline.NewRoot(opts, db)
 	pipelineCalc := pipeline.NewCalculate(opts, db)
 	pipelinePersist := pipeline.NewPersist(opts, db)
 	pipelineLog := pipeline.NewLog(opts)

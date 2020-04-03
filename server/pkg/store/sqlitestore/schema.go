@@ -47,10 +47,10 @@ CREATE TABLE IF NOT EXISTS messages (
   sensor3aux    INTEGER NOT NULL,
   afe3_temp_raw   INTEGER NOT NULL,
 
-  no2_ppb         REAL NOT NULL,
-  o3_ppb          REAL NOT NULL,
-  no_ppb          REAL NOT NULL,
-  afe3_temp_value REAL NOT NULL,
+  no2_ppb         REAL,
+  o3_ppb          REAL,
+  no_ppb          REAL,
+  afe3_temp_value REAL,
 
   opcpma        INTEGER NOT NULL,
   opcpmb        INTEGER NOT NULL,
@@ -87,10 +87,7 @@ CREATE TABLE IF NOT EXISTS messages (
   opcbin_21         INTEGER NOT NULL,
   opcbin_22         INTEGER NOT NULL,
   opcbin_23         INTEGER NOT NULL,
-  opcsamplevalid    INTEGER NOT NULL,
-
-  FOREIGN KEY(device_id) REFERENCES devices(id)
-
+  opcsamplevalid    INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS cal (

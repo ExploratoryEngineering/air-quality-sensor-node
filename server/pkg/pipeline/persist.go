@@ -1,6 +1,8 @@
 package pipeline
 
 import (
+	"log"
+
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/model"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/opts"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/store"
@@ -25,11 +27,11 @@ func NewPersist(opts *opts.Opts, db store.Store) *Persist {
 func (p *Persist) Publish(m *model.Message) error {
 	id, err := p.db.PutMessage(m)
 	if err != nil {
-		return err
+		log.Printf("Error logging message: %v", err)
+	} else {
+		// Populate with storage ID
+		m.ID = id
 	}
-
-	// Populate with storage ID
-	m.ID = id
 
 	if p.next != nil {
 		return p.next.Publish(m)
