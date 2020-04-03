@@ -1,9 +1,3 @@
-// The root pipeline element is responsible for ensuring that when a
-// message comes in, the device is known to us.  If the device is
-// unknown, it is populated into the database.
-//
-// TODO(borud): implement database updates
-
 package pipeline
 
 import (
@@ -11,6 +5,7 @@ import (
 
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/model"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/opts"
+	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/store"
 )
 
 // ErrEmptyPipeline indicates that the Root pipeline has no next
@@ -21,12 +16,14 @@ var ErrEmptyPipeline = errors.New("Empty pipeline, has no next element")
 type Root struct {
 	next Pipeline
 	opts *opts.Opts
+	db   store.Store
 }
 
 // NewRoot creates a new Root instance
-func NewRoot(opts *opts.Opts) *Root {
+func NewRoot(opts *opts.Opts, db store.Store) *Root {
 	return &Root{
 		opts: opts,
+		db:   db,
 	}
 }
 

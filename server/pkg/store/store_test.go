@@ -11,12 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var testDevice = model.Device{
-	ID:           "device1",
-	Name:         "testdevice",
-	CollectionID: "collection1",
-}
-
 var testCal = model.Cal{
 	DeviceID:             "device1",
 	CollectionID:         "mycollection",
@@ -45,18 +39,6 @@ var testCal = model.Cal{
 }
 
 func TestSqlitestore(t *testing.T) {
-
-	// Device tests
-	{
-		var db Store
-
-		db, err := sqlitestore.New(":memory:")
-		assert.Nil(t, err, "Error instantiating new sqlitestore")
-		assert.NotNil(t, db)
-		deviceTests(t, db)
-		db.Close()
-	}
-
 	// Cal tests
 	{
 		var db Store
@@ -79,61 +61,6 @@ func TestSqlitestore(t *testing.T) {
 		db.Close()
 	}
 
-}
-
-// deviceTests performs CRUD tests on Device
-func deviceTests(t *testing.T, db Store) {
-
-	// Put
-	{
-		err := db.PutDevice(&testDevice)
-		assert.Nil(t, err)
-	}
-
-	// Get
-	{
-		d, err := db.GetDevice(testDevice.ID)
-		assert.Nil(t, err)
-		assert.NotNil(t, d)
-		assert.Equal(t, testDevice, *d)
-	}
-
-	// Update
-	{
-		ud := testDevice
-		ud.Name = "modified name"
-
-		err := db.UpdateDevice(&ud)
-		assert.Nil(t, err)
-
-		d, err := db.GetDevice(testDevice.ID)
-		assert.Nil(t, err)
-		assert.NotNil(t, d)
-		assert.Equal(t, testDevice.CollectionID, d.CollectionID)
-		assert.NotEqual(t, testDevice.Name, d.Name)
-	}
-
-	// Delete
-	{
-		err := db.DeleteDevice(testDevice.ID)
-		assert.Nil(t, err)
-
-		d, err := db.GetDevice(testDevice.ID)
-		assert.NotNil(t, err)
-		assert.Nil(t, d)
-	}
-
-	// List
-	{
-		for i := 0; i < 20; i++ {
-			err := db.PutDevice(&model.Device{ID: fmt.Sprintf("device-%d", i)})
-			assert.Nil(t, err)
-		}
-
-		devices, err := db.ListDevices(0, 100)
-		assert.Nil(t, err)
-		assert.Equal(t, 20, len(devices))
-	}
 }
 
 // calTests performs CRUD tests on Cal

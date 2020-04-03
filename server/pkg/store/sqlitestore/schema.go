@@ -12,15 +12,6 @@ const schema = `
 -- PRAGMA foreign_keys = ON;
 -- PRAGMA defer_foreign_keys = FALSE;
 
---
--- The id field is the Horde id.
---
-CREATE TABLE IF NOT EXISTS devices (
-  id            TEXT PRIMARY KEY NOT NULL,
-  name          TEXT NOT NULL,
-  collection_id TEXT NOT NULL
-);
-
 CREATE TABLE IF NOT EXISTS messages (
   id             INTEGER PRIMARY KEY AUTOINCREMENT,
   device_id      TEXT NOT NULL,
