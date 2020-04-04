@@ -98,30 +98,26 @@ func calTests(t *testing.T, db Store) {
 
 	// ListCals
 	{
+		var devices []string
 		for i := 0; i < 20; i++ {
-			err := db.PutDevice(&model.Device{ID: fmt.Sprintf("cal-device-%d", i)})
-			assert.Nil(t, err)
+			did := fmt.Sprintf("cal-device-%d", i)
 
 			id, err := db.PutCal(&model.Cal{
-				DeviceID:  fmt.Sprintf("cal-device-%d", i),
+				DeviceID:  did,
 				ValidFrom: time.Now().Add(-24 * time.Hour),
 			})
 			assert.Nil(t, err)
 			assert.True(t, id > 0)
+			devices = append(devices, did)
 		}
 
 		cals, err := db.ListCals(0, 100)
 		assert.Nil(t, err)
 		assert.Equal(t, 20, len(cals))
 
-		// ListCalsForDevice
-		devices, err := db.ListDevices(0, 100)
-		assert.Nil(t, err)
-		assert.Equal(t, 20, len(devices))
-
 		// Make sure that there is one cal for each device
 		for _, dev := range devices {
-			devcals, err := db.ListCalsForDevice(dev.ID)
+			devcals, err := db.ListCalsForDevice(dev)
 			assert.Nil(t, err)
 			assert.Equal(t, 1, len(devcals))
 		}
@@ -141,8 +137,6 @@ func messageTests(t *testing.T, db Store) {
 	// Populate some devices and messages
 	for i := 0; i < numDevices; i++ {
 		deviceID := fmt.Sprintf("msg-device-%d", i)
-		err := db.PutDevice(&model.Device{ID: deviceID})
-		assert.Nil(t, err)
 
 		for j := 0; j < numMessagesPerDevice; j++ {
 			id, err := db.PutMessage(&model.Message{

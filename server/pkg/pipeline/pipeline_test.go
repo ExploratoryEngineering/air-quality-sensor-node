@@ -59,11 +59,8 @@ func TestRoot(t *testing.T) {
 	assert.NotNil(t, db)
 
 	opts := &opts.Opts{
-		HordeListenerDisable: true,
-		HordeCollection:      "abc",
-		UDPListenAddress:     ":0",
-		WebServer:            ":0",
-		DBFilename:           ":memory:",
+		HordeCollection: "abc",
+		DBFilename:      ":memory:",
 	}
 
 	root := NewRoot(opts, db)
@@ -81,11 +78,8 @@ func TestPipeline(t *testing.T) {
 	assert.Nil(t, err)
 
 	opts := &opts.Opts{
-		HordeListenerDisable: true,
-		HordeCollection:      "abc",
-		UDPListenAddress:     ":0",
-		WebServer:            ":0",
-		DBFilename:           ":memory:",
+		HordeCollection: "abc",
+		DBFilename:      ":memory:",
 	}
 
 	root := NewRoot(opts, db)
