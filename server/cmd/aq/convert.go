@@ -1,5 +1,4 @@
-// The parse command is mostly there to check that we can parse the
-// CSV file(s) and visually check that a calibration file looks okay.
+// Convert Alphasense AFE calibration CSV files to JSON
 //
 package main
 
@@ -15,25 +14,26 @@ import (
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/calparse"
 )
 
-// ParseCommand defines the command line parameters for parse command
-type ParseCommand struct {
-	WriteJSON bool   `short:"w" long:"write-json" description:"Output JSON file"`
-	OutpudDir string `short:"o" long:"output-dir" description:"Output directory"`
+// ConvertCommand defines the command line parameters for convert command
+type ConvertCommand struct {
+	PrintJSON    bool   `short:"p" long:"print-json" description:"Output JSON to stdout"`
+	OutpudDir    string `short:"o" long:"output-dir" description:"Output directory"`
+	CollectionID string `short:"c" long:"collection-id" description:"ID of collection" default:"17dh0cf43jg007" value-name:"<id>"`
 }
 
-var parseCommand ParseCommand
+var convertCommand ConvertCommand
 
 func init() {
-	parser.AddCommand("parse",
-		"Parse calibration data",
-		"Parse calibration data and show the parsed output.  Mostly for visual inspection.",
-		&parseCommand)
+	parser.AddCommand("convert",
+		"Convert calibration data",
+		"Convert calibration data from CSV to JSON format",
+		&convertCommand)
 }
 
-// Execute runs the parse command
-func (a *ParseCommand) Execute(args []string) error {
+// Execute runs the convert command
+func (a *ConvertCommand) Execute(args []string) error {
 	if len(args) < 1 {
-		log.Fatalf("Please provide filename(s)")
+		log.Fatalf("Please provide filename(s) of CSV files")
 	}
 
 	for _, fileName := range args {
@@ -47,13 +47,18 @@ func (a *ParseCommand) Execute(args []string) error {
 		if err != nil {
 			log.Fatal(err)
 		}
+
+		cal.CollectionID = convertCommand.CollectionID
+
+		// This is an okay default
+		cal.ValidFrom = cal.AFECalDate
+
 		json, err := json.MarshalIndent(cal, "  ", "")
 		if err != nil {
 			panic("Failed to marshal json")
 		}
 
-		// If we are not writing to file we want the output on stdout
-		if !a.WriteJSON {
+		if a.PrintJSON {
 			fmt.Printf("%s", json)
 			continue
 		}

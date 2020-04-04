@@ -2,8 +2,7 @@ bin
 data
 dist
 cmd/listen/listen
-cmd/server/server
-cmd/cal/cal
+cmd/aq/aq
 .telenor-nbiot
 aq.db
 

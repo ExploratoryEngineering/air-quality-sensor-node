@@ -87,7 +87,7 @@ type Message struct {
 
 // Cal contains the calibration data for a device.
 type Cal struct {
-	ID           int64     `db:"id" json:"id"`
+	ID           int64     `db:"id" json:"-"`
 	DeviceID     string    `db:"device_id" json:"deviceID"`
 	CollectionID string    `db:"collection_id" json:"collectionID"`
 	ValidFrom    time.Time `db:"valid_from" json:"from"`

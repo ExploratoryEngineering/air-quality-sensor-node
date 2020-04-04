@@ -11,8 +11,8 @@ import (
 
 // ImportCommand defines the command line parameters for import command
 type ImportCommand struct {
-	CollectionID string `short:"c" long:"collection-id" description:"ID of collection" value-name:"<id>" required:"true"`
-	DeviceID     string `short:"i" long:"device-id" description:"ID of device" value-name:"<id>" required:"true"`
+	CollectionID string `short:"c" long:"collection-id" description:"ID of collection" default:"17dh0cf43jg007" value-name:"<id>"`
+	DeviceID     string `short:"i" long:"device-id" description:"ID of device" value-name:"<id>"`
 	ValidFrom    string `short:"f" long:"valid-from" description:"Start of validity period" value-name:"<date>"`
 }
 
@@ -55,8 +55,13 @@ func (a *ImportCommand) Execute(args []string) error {
 		}
 	}
 
-	cal.DeviceID = a.DeviceID
-	cal.CollectionID = a.CollectionID
+	if cal.DeviceID == "" {
+		cal.DeviceID = a.DeviceID
+	}
+
+	if cal.CollectionID == "" {
+		cal.CollectionID = a.CollectionID
+	}
 
 	id, err := db.PutCal(cal)
 	if err != nil {
