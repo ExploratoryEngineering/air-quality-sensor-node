@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/model"
-	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/opts"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline"
 )
 
@@ -23,10 +22,10 @@ type UDPListener struct {
 }
 
 // NewUDPListener creates a new UDPListener instance
-func NewUDPListener(opts *opts.Opts, pipeline pipeline.Pipeline) *UDPListener {
+func NewUDPListener(listenAddress string, bufferSize int, pipeline pipeline.Pipeline) *UDPListener {
 	return &UDPListener{
-		listenAddress: opts.UDPListenAddress,
-		bufferSize:    opts.UDPBufferSize,
+		listenAddress: listenAddress,
+		bufferSize:    bufferSize,
 		ctx:           context.Background(),
 		pipeline:      pipeline,
 		doneChan:      make(chan error),

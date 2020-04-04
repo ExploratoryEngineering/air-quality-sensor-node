@@ -12,28 +12,6 @@ var ErrCalExists = errors.New("Calibration entry already exists")
 
 // Store defines the persistence interface.
 type Store interface {
-
-	// ############################################################
-	//                     Device
-	// ############################################################
-
-	// PutDevice adds a new device to the database.  Note that the ID
-	// field is not assigned by the underlying database, but is
-	// assumed to have a value.
-	PutDevice(d *model.Device) error
-
-	// GetDevice gets device by ID.
-	GetDevice(id string) (*model.Device, error)
-
-	// UpdateDevice updates device in database
-	UpdateDevice(d *model.Device) error
-
-	// DeleteDevice deletes device from database.
-	DeleteDevice(id string) error
-
-	// ListDevices lists devices
-	ListDevices(offset int, limit int) ([]model.Device, error)
-
 	// ############################################################
 	//                     Calibration
 	// ############################################################
