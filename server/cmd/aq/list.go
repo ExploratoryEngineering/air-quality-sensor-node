@@ -41,10 +41,10 @@ func (a *ListCommand) Execute(args []string) error {
 	}
 
 	fmt.Print("\n---------------------------------------------------------------------------\n")
-	fmt.Print("    ID  DeviceID        CollectionID    AFE Serial  ValidFrom\n")
+	fmt.Print("   ID  CollectionID    DeviceID         AFE Serial  ValidFrom\n")
 	fmt.Print("---------------------------------------------------------------------------\n")
 	for _, cal := range cals {
-		fmt.Printf(" %4d  %14s  %14s  %10s  %20s\n", cal.ID, cal.DeviceID, cal.CollectionID, cal.AFESerial, cal.ValidFrom.Format(layout))
+		fmt.Printf(" %4d  %14s  %14s  %10s   %20s\n", cal.ID, cal.CollectionID, cal.DeviceID, cal.AFESerial, cal.ValidFrom.Format(layout))
 	}
 	fmt.Print("---------------------------------------------------------------------------\n\n")
 	return nil

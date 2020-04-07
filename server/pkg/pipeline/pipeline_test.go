@@ -53,6 +53,22 @@ var testCal = &model.Cal{
 	Sensor3WESensitivity: 0.408,
 }
 
+func TestRoot(t *testing.T) {
+	db, err := sqlitestore.New(":memory:")
+	assert.Nil(t, err)
+	assert.NotNil(t, db)
+
+	opts := &opts.Opts{
+		HordeCollection: "abc",
+		DBFilename:      ":memory:",
+	}
+
+	root := NewRoot(opts, db)
+	assert.NotNil(t, root)
+
+	root.Publish(testMessage)
+}
+
 func TestPipeline(t *testing.T) {
 	db, err := sqlitestore.New(":memory:")
 	assert.Nil(t, err)
@@ -62,14 +78,11 @@ func TestPipeline(t *testing.T) {
 	assert.Nil(t, err)
 
 	opts := &opts.Opts{
-		HordeListenerDisable: true,
-		HordeCollection:      "abc",
-		UDPListenAddress:     ":0",
-		WebServer:            ":0",
-		DBFilename:           ":memory:",
+		HordeCollection: "abc",
+		DBFilename:      ":memory:",
 	}
 
-	root := NewRoot(opts)
+	root := NewRoot(opts, db)
 	calculate := NewCalculate(opts, db)
 	logger := NewLog(opts)
 	persist := NewPersist(opts, db)
