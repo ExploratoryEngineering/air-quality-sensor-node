@@ -84,8 +84,10 @@ func (p *Calculate) cacheRefresh() {
 
 // findCacheEntry assumes that the calibration entries are sorted in
 // descending order by date in the cache.
-func (p *Calculate) findCacheEntry(deviceID string, date time.Time) *model.Cal {
+func (p *Calculate) findCacheEntry(deviceID string, t int64) *model.Cal {
 	deviceCalEntries := p.calibrationCache[deviceID]
+
+	date := time.Unix(0, t*int64(time.Millisecond))
 
 	var cal model.Cal
 	for i := 0; i < len(deviceCalEntries); i++ {

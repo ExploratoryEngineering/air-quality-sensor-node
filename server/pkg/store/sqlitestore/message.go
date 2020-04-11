@@ -1,15 +1,38 @@
 package sqlitestore
 
 import (
+	"math"
 	"time"
 
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/model"
 )
 
+// cleanFloat takes care of normalizing floats that are infinite or
+// not a number to 0.0.  This eliminates the need for doing
+// complicated NULL handling.
+func cleanFloat(f *float64) {
+	if math.IsNaN(*f) {
+		*f = 0.0
+		return
+	}
+
+	if math.IsInf(*f, 0) {
+		*f = 0.0
+		return
+	}
+}
+
 // PutMessage ...
 func (s *SqliteStore) PutMessage(m *model.Message) (int64, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	// TODO(borud): If these values are not cleaned up they will
+	// result in NULLs and NaNs in the database.
+	cleanFloat(&m.NO2PPB)
+	cleanFloat(&m.O3PPB)
+	cleanFloat(&m.NOPPB)
+	cleanFloat(&m.AFE3TempValue)
 
 	// Pretty it ain't :-)
 	r, err := s.db.NamedExec(`
@@ -34,10 +57,12 @@ func (s *SqliteStore) PutMessage(m *model.Message) (int64, error) {
      sensor3work,
      sensor3aux,
      afe3_temp_raw,
+
      no2_ppb,
      o3_ppb,
      no_ppb,
      afe3_temp_value,
+
      opcpma,
      opcpmb,
      opcpmc,

@@ -43,7 +43,7 @@ type Store interface {
 	// GetMessage gets a message by id
 	GetMessage(id int64) (*model.Message, error)
 
-	// ListMessages pages through messages
+	// ListMessages pages through messages.  Messages are sorted in descending order by ReceivedTime.
 	ListMessages(offset int, limit int) ([]model.Message, error)
 
 	// ListMessagesByDate lists messages by date [from:to>

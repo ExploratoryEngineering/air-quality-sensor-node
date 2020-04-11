@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"time"
 
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/model"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline"
@@ -57,10 +56,7 @@ func (u *UDPListener) Start() error {
 			}
 
 			m := model.MessageFromProtobuf(pb)
-
-			m.ReceivedTime = time.Now()
 			m.PacketSize = n
-
 			u.pipeline.Publish(m)
 
 		}

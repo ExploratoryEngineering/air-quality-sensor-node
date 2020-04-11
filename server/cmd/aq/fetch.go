@@ -19,7 +19,7 @@ var fetchCommand FetchCommand
 const pageSize = 100
 
 // For this application we say that time begins at this date.
-var beginningOfTime = time.Date(2020, 3, 25, 0, 0, 0, 0, time.UTC)
+var beginningOfTime = int64(1585094400000)
 
 func init() {
 	parser.AddCommand("fetch", "Fetch historical data", "Fetch historical sensor data from Horde server", &fetchCommand)
@@ -37,6 +37,19 @@ func (a *FetchCommand) Execute(args []string) error {
 		log.Fatalf("Unable to open or create database file '%s': %v", options.DBFilename, err)
 	}
 
+	data, err := db.ListMessages(0, 1)
+	if err != nil {
+		log.Fatalf("Unable to list messages: %v", err)
+	}
+
+	if len(data) == 1 {
+		// I'm assuming we have to add an entire second of data here
+		// in order to make up for the API not having millisecond
+		// resolution?
+		beginningOfTime = data[0].ReceivedTime + 1
+		log.Printf("Will fetch back to %s", msToTime(beginningOfTime))
+	}
+
 	// Set up pipeline
 	pipelineRoot := pipeline.NewRoot(&options, db)
 	pipelineCalc := pipeline.NewCalculate(&options, db)
@@ -46,17 +59,22 @@ func (a *FetchCommand) Execute(args []string) error {
 	pipelineCalc.AddNext(pipelinePersist)
 
 	var since = beginningOfTime
-	var until time.Time
+	var until = time.Now().UnixNano() / int64(time.Millisecond)
 	var count = 0
 	var countTotal = 0
+
+	// CollectionData coming from horde arrives in descending order
+	// from Received.  So we have to work our way backwards.  We do
+	// this by starting with until being equal to "now" and then set
+	// the next until value from the last entry we got.
 	for {
-		data, err := client.CollectionData(options.HordeCollection, since, until, pageSize)
+		data, err := client.CollectionData(options.HordeCollection, msToTime(since), msToTime(until), pageSize)
 		if err != nil {
 			log.Fatalf("Error while reading data: %v", err)
 		}
 
 		if len(data) == 0 {
-			return nil
+			break
 		}
 
 		for _, d := range data {
@@ -73,22 +91,23 @@ func (a *FetchCommand) Execute(args []string) error {
 			}
 
 			m.DeviceID = d.Device.ID
-			m.ReceivedTime = time.Unix(d.Received/1000, 0)
+			m.ReceivedTime = d.Received
 			m.PacketSize = len(d.Payload)
 
 			pipelineRoot.Publish(m)
-
 			count++
 			countTotal++
 		}
 
-		until = msToTime(data[len(data)-1].Received)
-
+		until = data[len(data)-1].Received - 1
 		if count >= 500 {
 			log.Printf("Imported %d records...", countTotal)
 			count = 0
 		}
 	}
+
+	log.Printf("Fetched a total of %d messages", countTotal)
+	return nil
 }
 
 // msToTime converts milliseconds since epoch to time.Time

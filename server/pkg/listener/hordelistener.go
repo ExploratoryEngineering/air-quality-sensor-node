@@ -4,7 +4,6 @@ import (
 	"errors"
 	"io"
 	"log"
-	"time"
 
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/model"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/opts"
@@ -80,7 +79,7 @@ func (h *HordeListener) Start() error {
 			}
 
 			m.DeviceID = data.Device.ID
-			m.ReceivedTime = time.Unix(data.Received/1000, 0)
+			m.ReceivedTime = data.Received
 			m.PacketSize = len(data.Payload)
 
 			// TODO(borud): This is a good place to check if a device
