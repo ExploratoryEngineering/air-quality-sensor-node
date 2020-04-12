@@ -21,10 +21,12 @@ type RunCommand struct {
 	UDPBufferSize    int    `short:"b" long:"udp-buffer-size" description:"Size of UDP read buffer" default:"1024" value-name:"<num bytes>"`
 }
 
-var runCommand RunCommand
-
 func init() {
-	parser.AddCommand("run", "Run server", "Run server", &runCommand)
+	parser.AddCommand(
+		"run",
+		"Run server",
+		"Run server",
+		&RunCommand{})
 }
 
 var listeners []listener.Listener
@@ -48,7 +50,7 @@ func (a *RunCommand) Execute(args []string) error {
 	pipelinePersist.AddNext(pipelineLog)
 
 	// Start Horde listener unless disabled
-	if !runCommand.HordeListenerDisable {
+	if !a.HordeListenerDisable {
 		log.Printf("Starting Horde listener.  Listening to collection='%s'", options.HordeCollection)
 		hordeListener := listener.NewHordeListener(&options, pipelineRoot)
 		err := hordeListener.Start()
@@ -60,10 +62,10 @@ func (a *RunCommand) Execute(args []string) error {
 	}
 
 	// Start UDP listener if configured
-	if runCommand.UDPListenAddress != "" {
+	if a.UDPListenAddress != "" {
 		// Start UDP Listener
-		log.Printf("Starting UDP listener on %s", runCommand.UDPListenAddress)
-		udpListener := listener.NewUDPListener(runCommand.UDPListenAddress, runCommand.UDPBufferSize, pipelineRoot)
+		log.Printf("Starting UDP listener on %s", a.UDPListenAddress)
+		udpListener := listener.NewUDPListener(a.UDPListenAddress, a.UDPBufferSize, pipelineRoot)
 		err := udpListener.Start()
 		if err != nil {
 			log.Fatalf("Unable to start UDP listener: %v", err)

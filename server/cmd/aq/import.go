@@ -20,13 +20,13 @@ const (
 	layout = "2006-01-02T15:04:05.000Z"
 )
 
-var importCommand ImportCommand
+// var importCommand ImportCommand
 
 func init() {
 	parser.AddCommand("import",
 		"Import a calibration data",
 		"The import command imports a the calibration data to the database",
-		&importCommand)
+		&ImportCommand{})
 }
 
 // Execute runs the import command

@@ -12,17 +12,18 @@ import (
 
 // FetchCommand ...
 type FetchCommand struct {
+	PageSize int `short:"p" long:"page-size" description:"Number of rows to fetch per page" default:"250"`
 }
-
-var fetchCommand FetchCommand
-
-const pageSize = 100
 
 // For this application we say that time begins at this date.
 var beginningOfTime = int64(1585094400000)
 
 func init() {
-	parser.AddCommand("fetch", "Fetch historical data", "Fetch historical sensor data from Horde server", &fetchCommand)
+	parser.AddCommand(
+		"fetch",
+		"Fetch historical data",
+		"Fetch historical sensor data from Horde server",
+		&FetchCommand{})
 }
 
 // Execute ...
@@ -68,7 +69,7 @@ func (a *FetchCommand) Execute(args []string) error {
 	// this by starting with until being equal to "now" and then set
 	// the next until value from the last entry we got.
 	for {
-		data, err := client.CollectionData(options.HordeCollection, msToTime(since), msToTime(until), pageSize)
+		data, err := client.CollectionData(options.HordeCollection, msToTime(since), msToTime(until), a.PageSize)
 		if err != nil {
 			log.Fatalf("Error while reading data: %v", err)
 		}

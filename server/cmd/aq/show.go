@@ -15,13 +15,11 @@ type ShowCommand struct {
 	AsJSON bool `short:"j" long:"json" description:"Format calibration entry as JSON"`
 }
 
-var showCommand ShowCommand
-
 func init() {
 	parser.AddCommand("show",
 		"Show calibration data for device",
 		"Show calibration data for device, optionally formatting it as JSON",
-		&showCommand)
+		&ShowCommand{})
 }
 
 // Execute runs the list command

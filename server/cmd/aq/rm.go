@@ -13,13 +13,11 @@ import (
 // RemoveCommand defines the command line parameters for list command
 type RemoveCommand struct{}
 
-var removeCommand RemoveCommand
-
 func init() {
 	parser.AddCommand("rm",
 		"Remove calibration data",
 		"Remove calibration data",
-		&removeCommand)
+		&RemoveCommand{})
 }
 
 // Execute runs the list command

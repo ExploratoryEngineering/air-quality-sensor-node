@@ -21,13 +21,11 @@ type ConvertCommand struct {
 	CollectionID string `short:"c" long:"collection-id" description:"ID of collection" default:"17dh0cf43jg007" value-name:"<id>"`
 }
 
-var convertCommand ConvertCommand
-
 func init() {
 	parser.AddCommand("convert",
 		"Convert calibration data",
 		"Convert calibration data from CSV to JSON format",
-		&convertCommand)
+		&ConvertCommand{})
 }
 
 // Execute runs the convert command
@@ -48,7 +46,7 @@ func (a *ConvertCommand) Execute(args []string) error {
 			log.Fatal(err)
 		}
 
-		cal.CollectionID = convertCommand.CollectionID
+		cal.CollectionID = a.CollectionID
 
 		// This is an okay default
 		cal.ValidFrom = cal.AFECalDate
