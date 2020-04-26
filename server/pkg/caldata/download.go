@@ -3,7 +3,6 @@ package caldata
 import (
 	"encoding/json"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 
@@ -42,8 +41,6 @@ func (c *Caldata) DownloadFromS3() ([]model.Cal, error) {
 			Host:   c.baseURL.Host,
 			Path:   url.PathEscape(name),
 		}
-
-		log.Printf("Downloading %s", u.String())
 
 		resp, err := http.Get(u.String())
 		if err != nil {

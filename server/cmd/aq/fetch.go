@@ -39,6 +39,12 @@ func (a *FetchCommand) Execute(args []string) error {
 	}
 	defer db.Close()
 
+	// Make sure we have latest calibration data before fetching
+	err = checkForNewCalibrationData(db)
+	if err != nil {
+		log.Printf("Unable to download calibration data: %v", err)
+	}
+
 	data, err := db.ListMessages(0, 1)
 	if err != nil {
 		log.Fatalf("Unable to list messages: %v", err)
