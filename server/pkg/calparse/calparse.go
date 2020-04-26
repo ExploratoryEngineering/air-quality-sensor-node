@@ -1,3 +1,7 @@
+// calparse is a package for parsing the CSV files from Alphasense.
+// The CSV files do not make a whole lot of sense since they seem to
+// be just a raw dump of some Excel spreadsheet, so assume that the
+// format will be very fragile and could break in the near future.
 package calparse
 
 import (
