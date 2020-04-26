@@ -5,4 +5,5 @@ cmd/listen/listen
 cmd/aq/aq
 .telenor-nbiot
 aq.db
+aq.db-journal
 
