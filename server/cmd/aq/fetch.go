@@ -37,6 +37,7 @@ func (a *FetchCommand) Execute(args []string) error {
 	if err != nil {
 		log.Fatalf("Unable to open or create database file '%s': %v", options.DBFilename, err)
 	}
+	defer db.Close()
 
 	data, err := db.ListMessages(0, 1)
 	if err != nil {

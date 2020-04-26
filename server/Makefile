@@ -1,5 +1,5 @@
-GOOS ?= darwin
-GOARCH ?= amd64
+GOOS ?= 
+GOARCH ?= 
 CGO_ENABLED ?= 1
 CGO_CFLAGS ?=
 CGO_LDFLAGS ?=
@@ -72,4 +72,4 @@ clean:
 	@rm -rf ./bin
 	@rm -rf ./data
 	@rm -rf ./dist
-	@rm -rf ./aq.db
+	@rm -rf ./aq.db*

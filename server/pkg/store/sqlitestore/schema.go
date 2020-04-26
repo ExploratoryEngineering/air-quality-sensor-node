@@ -2,7 +2,6 @@ package sqlitestore
 
 import (
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/jmoiron/sqlx"
@@ -128,8 +127,6 @@ CREATE TABLE IF NOT EXISTS cal (
 `
 
 func createSchema(db *sqlx.DB, fileName string) {
-	log.Printf("Creating database schema in %s", fileName)
-
 	for n, statement := range strings.Split(schema, ";") {
 		if _, err := db.Exec(statement); err != nil {
 			panic(fmt.Sprintf("Statement %d failed: \"%s\" : %s", n+1, statement, err))
