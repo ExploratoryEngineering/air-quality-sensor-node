@@ -15,7 +15,7 @@ type FetchCommand struct {
 	PageSize int `short:"p" long:"page-size" description:"Number of rows to fetch per page" default:"250"`
 }
 
-// For this application we say that time begins at this date.
+// For this application we say that time begins on 2020-03-25
 var beginningOfTime = int64(1585094400000)
 
 func init() {
