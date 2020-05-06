@@ -13,10 +13,10 @@ import (
 //
 type Message struct {
 	// Housekeeping
-	ID           int64     `db:"id" json:"id"`                      // Message ID (assigned by persistence layer)
-	DeviceID     string    `db:"device_id" json:"deviceID"`         // Horde device ID
-	ReceivedTime time.Time `db:"received_time" json:"receivedTime"` // Received time when Horde received he message
-	PacketSize   int       `db:"packetsize" json:"packetSize"`      // Original packet size as received by Horde
+	ID           int64  `db:"id" json:"id"`                      // Message ID (assigned by persistence layer)
+	DeviceID     string `db:"device_id" json:"deviceID"`         // Horde device ID
+	ReceivedTime int64  `db:"received_time" json:"receivedTime"` // Received time when Horde received he message
+	PacketSize   int    `db:"packetsize" json:"packetSize"`      // Original packet size as received by Horde
 
 	// Board fields
 	SysID            uint64  `db:"sysid" json:"sysID"`                    // System id, CPU id or similar

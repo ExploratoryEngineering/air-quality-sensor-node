@@ -2,7 +2,6 @@ package sqlitestore
 
 import (
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/jmoiron/sqlx"
@@ -15,7 +14,7 @@ const schema = `
 CREATE TABLE IF NOT EXISTS messages (
   id             INTEGER PRIMARY KEY AUTOINCREMENT,
   device_id      TEXT NOT NULL,
-  received_time  DATETIME NOT NULL,
+  received_time  BIGINT NOT NULL,
   packetsize     INTEGER NOT NULL,
 
   sysid          INTEGER NOT NULL,
@@ -38,10 +37,10 @@ CREATE TABLE IF NOT EXISTS messages (
   sensor3aux    INTEGER NOT NULL,
   afe3_temp_raw   INTEGER NOT NULL,
 
-  no2_ppb         REAL,
-  o3_ppb          REAL,
-  no_ppb          REAL,
-  afe3_temp_value REAL,
+  no2_ppb         REAL NOT NULL,
+  o3_ppb          REAL NOT NULL,
+  no_ppb          REAL NOT NULL,
+  afe3_temp_value REAL NOT NULL,
 
   opcpma        INTEGER NOT NULL,
   opcpmb        INTEGER NOT NULL,
@@ -128,8 +127,6 @@ CREATE TABLE IF NOT EXISTS cal (
 `
 
 func createSchema(db *sqlx.DB, fileName string) {
-	log.Printf("Creating database schema in %s", fileName)
-
 	for n, statement := range strings.Split(schema, ";") {
 		if _, err := db.Exec(statement); err != nil {
 			panic(fmt.Sprintf("Statement %d failed: \"%s\" : %s", n+1, statement, err))

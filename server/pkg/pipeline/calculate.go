@@ -17,11 +17,12 @@ type Calculate struct {
 	db               store.Store
 	calibrationCache map[string][]model.Cal
 	cacheRefreshChan chan bool
-	quitChan         chan bool
+	lastCacheUpdate  time.Time
 }
 
 const (
-	maxint = ^0 >> 1 // no idea why maxint doesn't already exist
+	maxint              = ^0 >> 1 // no idea why maxint doesn't already exist
+	minCacheUpdateDelay = (5 * time.Second)
 )
 
 // NewCalculate creates a new instance of Calculate pipeline element
@@ -32,18 +33,22 @@ func NewCalculate(opts *opts.Opts, db store.Store) *Calculate {
 		cacheRefreshChan: make(chan bool),
 	}
 
-	// Do initial population of cache
-	cals, err := db.ListCals(0, maxint)
+	err := c.loadCache()
 	if err != nil {
 		log.Fatalf("Unable to pre-populate calibration cache: %v", err)
 	}
-
-	c.populateCache(cals)
-
-	// Start cache refresh goroutine
-	go c.cacheRefresh()
-
 	return c
+}
+
+func (p *Calculate) loadCache() error {
+	cals, err := p.db.ListCals(0, maxint)
+	if err != nil {
+		return err
+	}
+
+	p.populateCache(cals)
+
+	return nil
 }
 
 func (p *Calculate) populateCache(cals []model.Cal) {
@@ -65,27 +70,47 @@ func (p *Calculate) populateCache(cals []model.Cal) {
 	}
 
 	p.calibrationCache = m
-}
-
-func (p *Calculate) cacheRefresh() {
-	for {
-		log.Printf("Cache refresh...")
-
-		select {
-		case <-p.quitChan:
-			log.Printf("Terminating cache refresher")
-
-		case <-p.cacheRefreshChan:
-			log.Printf("Refresh cache")
-		}
-
-	}
+	p.lastCacheUpdate = time.Now()
 }
 
 // findCacheEntry assumes that the calibration entries are sorted in
 // descending order by date in the cache.
-func (p *Calculate) findCacheEntry(deviceID string, date time.Time) *model.Cal {
-	deviceCalEntries := p.calibrationCache[deviceID]
+func (p *Calculate) findCacheEntry(deviceID string, t int64) *model.Cal {
+
+	// Somewhat hokey caching logic.  Replace this nonsense with a
+	// proper caching layer that uses the Store interface.
+	refreshedCache := false
+	var deviceCalEntries []model.Cal
+	for {
+		deviceCalEntries = p.calibrationCache[deviceID]
+		if deviceCalEntries != nil {
+			// We found cache entry so bail out
+			break
+		}
+
+		// We did not find a cached entry.  If we have already
+		// refreshed, we bail and accept the consequences.
+		if refreshedCache {
+			log.Printf("Missing calibration data for '%s' (will only report every %.2f seconds)", deviceID, minCacheUpdateDelay.Seconds())
+			break
+		}
+
+		// Check when we last updated cache.  If it is less than
+		// minCacheUpdateDelay we skip the update
+		if time.Now().Before(p.lastCacheUpdate.Add(minCacheUpdateDelay)) {
+			break
+		}
+
+		// We load refresh the cache and go around once more
+		err := p.loadCache()
+		if err != nil {
+			log.Printf("Error updating cache, continuing with possibly stale data: %v", err)
+		}
+		refreshedCache = true
+		log.Print("Refreshed calibration data cache")
+	}
+
+	date := time.Unix(0, t*int64(time.Millisecond))
 
 	var cal model.Cal
 	for i := 0; i < len(deviceCalEntries); i++ {

@@ -16,13 +16,11 @@ type ListCommand struct {
 	Limit  int `short:"l" long:"limit" description:"Number of entries to show" default:"100"`
 }
 
-var listCommand ListCommand
-
 func init() {
 	parser.AddCommand("list",
 		"List calibration data",
 		"List calibration data",
-		&listCommand)
+		&ListCommand{})
 }
 
 // Execute runs the list command

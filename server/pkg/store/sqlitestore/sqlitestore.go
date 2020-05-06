@@ -3,6 +3,7 @@ package sqlitestore
 import (
 	"os"
 	"sync"
+	"log"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3" // Load sqlite3 driver
@@ -21,7 +22,11 @@ func New(dbFile string) (*SqliteStore, error) {
 		databaseFileExisted = true
 	}
 
-	d, err := sqlx.Open("sqlite3", dbFile)
+	// Turn on write-ahead log journaling annd turn off mutex
+	// since we don't trust this to work anyway.
+	cs := dbFile + "?" + "_journal=WAL&_mutex=no"
+
+	d, err := sqlx.Open("sqlite3", cs)
 	if err != nil {
 		return nil, err
 	}
@@ -31,7 +36,8 @@ func New(dbFile string) (*SqliteStore, error) {
 	}
 
 	if !databaseFileExisted {
-		createSchema(d, dbFile)
+		log.Printf("Creating database schema in %s", dbFile)
+		createSchema(d, cs)
 	}
 
 	return &SqliteStore{db: d}, nil

@@ -1,11 +1,11 @@
 GOOS ?= darwin
 GOARCH ?= amd64
 CGO_ENABLED ?= 1
-CGO_CFLAGS ?=
+CGO_CFLAGS ?= 
 CGO_LDFLAGS ?=
 BUILD_TAGS ?=
-APP_NAME ?= server
-VERSION ?= 0.1.0
+APP_NAME ?= aq
+VERSION ?= 0.1.1
 BIN_EXT ?=
 
 GO := GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED=$(CGO_ENABLED) CGO_CFLAGS=$(CGO_CFLAGS) CGO_LDFLAGS=$(CGO_LDFLAGS) GO111MODULE=auto go
@@ -72,4 +72,4 @@ clean:
 	@rm -rf ./bin
 	@rm -rf ./data
 	@rm -rf ./dist
-	@rm -rf ./aq.db
+	@rm -rf ./aq.db*
