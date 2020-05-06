@@ -71,7 +71,8 @@ int send_samples(uint8_t *buffer, size_t len)
 
 void main(void)
 {
-	init_board();
+ 	init_board();
+
 	// TODO: Watchdog init
 
 	LOG_INF("This is the AQ node with version %s (%s)", AQ_VERSION, AQ_NAME);

@@ -1,5 +1,7 @@
 #include <zephyr.h>
 
+/*
+
 uint64_t atoll(char *number_string)
 {
   uint64_t retval;
@@ -11,3 +13,4 @@ uint64_t atoll(char *number_string)
   }
   return retval;
 }
+*/

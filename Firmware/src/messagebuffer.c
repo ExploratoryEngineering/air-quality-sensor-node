@@ -10,6 +10,7 @@
 #include <logging/log.h>
 #include "util.h"
 #include "fota.h"
+#include <stdlib.h>
 
 #define LOG_LEVEL CONFIG_MESSAGEBUFFER_LOG_LEVEL
 LOG_MODULE_REGISTER(MESSAGEBUFFER);
@@ -106,7 +107,7 @@ size_t mb_encode(SENSOR_NODE_MESSAGE *msg, char *buffer, size_t max)
     message.sensor_2_aux = msg->afe3_sample.op4;
     message.sensor_3_work = msg->afe3_sample.op5;
     message.sensor_3_aux = msg->afe3_sample.op6;
-    message.afe3_temp = msg->afe3_sample.pt;
+    message.afe3_temp_raw = msg->afe3_sample.pt;
 
     message.opc_pm_a = msg->opc_sample.pm_a;
     message.opc_pm_b = msg->opc_sample.pm_b;
