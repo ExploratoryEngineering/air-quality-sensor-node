@@ -12,6 +12,7 @@ require (
 	github.com/fhmq/hmq v0.0.0-20200119031921-55f1f1aa8001
 	github.com/golang/protobuf v1.4.0
 	github.com/google/easypki v1.1.0
+	github.com/gorilla/mux v1.7.4
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/kataras/tablewriter v0.0.0-20180708051242-e063d29b7c23 // indirect

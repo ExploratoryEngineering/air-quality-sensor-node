@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/api"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/caldata"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/listener"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline"
@@ -18,7 +19,9 @@ const checkForNewCalibrationDataPeriod = (12 * time.Hour)
 // RunCommand ...
 type RunCommand struct {
 	// Webserver options
-	WebServer string `short:"w" long:"webserver" description:"Listen address for webserver" default:":8888" value-name:"<[host]:port>"`
+	WebListenAddr  string `short:"w" long:"web-listen-address" description:"Listen address for webserver" default:":8888" value-name:"<[host]:port>"`
+	WebStaticDir   string `short:"s" long:"web-static-dir" description:"Static directory for webserver" default:"./web" value-name:"<dir>"`
+	WebTemplateDir string `short:"t" long:"web-template-dir" description:"Template directory for webserver" default:"./templates" value-name:"<dir>"`
 
 	// Horde listener
 	HordeListenerDisable bool `short:"x" long:"no-horde" description:"Do not connect to Horde"`
@@ -141,10 +144,20 @@ func (a *RunCommand) Execute(args []string) error {
 		listeners = append(listeners, udpListener)
 	}
 
+	// Start api server
+	api := api.New(&api.ServerConfig{
+		ListenAddr:  a.WebListenAddr,
+		StaticDir:   a.WebStaticDir,
+		TemplateDir: a.WebTemplateDir,
+	})
+	api.Start()
+
 	// Wait for all listeners to shut down
 	for _, listener := range listeners {
 		listener.WaitForShutdown()
 	}
+
+	api.Shutdown()
 
 	return nil
 }
