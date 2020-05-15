@@ -7,4 +7,5 @@ hyphenate: false
 listings-disable-line-numbers: true
 header-includes:
     - \newcommand{\sectionbreak}{\clearpage}
+	- \usepackage[utf8x]{inputenc}
 ---
