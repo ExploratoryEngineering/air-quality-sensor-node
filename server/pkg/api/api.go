@@ -7,28 +7,34 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline"
+	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline/stream"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/store"
 	"github.com/gorilla/mux"
 )
 
 // Server represents the webserver state
 type Server struct {
-	db           store.Store
-	listenAddr   string
-	staticDir    string
-	templateDir  string
-	templates    *template.Template
-	readTimeout  time.Duration
-	writeTimeout time.Duration
-	httpServer   http.Server
+	db             store.Store
+	broker         *stream.Broker
+	circularBuffer *pipeline.CircularBuffer
+	listenAddr     string
+	staticDir      string
+	templateDir    string
+	templates      *template.Template
+	readTimeout    time.Duration
+	writeTimeout   time.Duration
+	httpServer     http.Server
 }
 
 // ServerConfig represents the webserver configuration
 type ServerConfig struct {
-	DB          store.Store
-	ListenAddr  string
-	StaticDir   string
-	TemplateDir string
+	DB             store.Store
+	Broker         *stream.Broker
+	CircularBuffer *pipeline.CircularBuffer
+	ListenAddr     string
+	StaticDir      string
+	TemplateDir    string
 }
 
 const (
@@ -45,13 +51,15 @@ func New(config *ServerConfig) *Server {
 		log.Fatalf("Error reading templates: %v", err)
 	}
 	return &Server{
-		listenAddr:   config.ListenAddr,
-		staticDir:    config.StaticDir,
-		templateDir:  config.TemplateDir,
-		db:           config.DB,
-		readTimeout:  defaultReadTimeout,
-		writeTimeout: defaultWriteTimeout,
-		templates:    t,
+		db:             config.DB,
+		broker:         config.Broker,
+		circularBuffer: config.CircularBuffer,
+		listenAddr:     config.ListenAddr,
+		staticDir:      config.StaticDir,
+		templateDir:    config.TemplateDir,
+		readTimeout:    defaultReadTimeout,
+		writeTimeout:   defaultWriteTimeout,
+		templates:      t,
 	}
 }
 
@@ -60,9 +68,7 @@ func (s *Server) Start() {
 	m := mux.NewRouter().StrictSlash(true)
 	m.HandleFunc("/", s.mainHandler).Methods("GET")
 	m.HandleFunc("/stream", s.streamHandler).Methods("GET")
-	m.HandleFunc("/data", s.dataHandler).Methods("GET")
-	m.HandleFunc("/data/{year}", s.dataYearHandler).Methods("GET")
-	m.HandleFunc("/data/{year}/{month}", s.dataYearMonthHandler).Methods("GET")
+	m.HandleFunc("/data", s.lastDataHandler).Methods("GET")
 
 	server := &http.Server{
 		Handler:      m,
@@ -87,8 +93,3 @@ func (s *Server) Shutdown() {
 		log.Printf("Webserver shutdown error: %v", err)
 	}
 }
-
-func (s *Server) streamHandler(w http.ResponseWriter, r *http.Request)        {}
-func (s *Server) dataHandler(w http.ResponseWriter, r *http.Request)          {}
-func (s *Server) dataYearHandler(w http.ResponseWriter, r *http.Request)      {}
-func (s *Server) dataYearMonthHandler(w http.ResponseWriter, r *http.Request) {}

@@ -84,12 +84,14 @@ func TestPipeline(t *testing.T) {
 
 	root := NewRoot(opts, db)
 	calculate := NewCalculate(opts, db)
-	logger := NewLog(opts)
 	persist := NewPersist(opts, db)
+	logger := NewLog(opts)
+	circular := NewCircularBuffer(10)
 
 	root.AddNext(calculate)
 	calculate.AddNext(persist)
 	persist.AddNext(logger)
+	logger.AddNext(circular)
 
 	// Make defensive copy
 	msg := *testMessage
@@ -103,4 +105,9 @@ func TestPipeline(t *testing.T) {
 	m, err := db.GetMessage(msg.ID)
 	assert.Nil(t, err)
 	assert.Equal(t, msg.ID, m.ID)
+
+	// Make sure there's at least one message in the circular buffer
+	msgs := circular.GetContents()
+	assert.NotNil(t, msgs)
+	assert.Equal(t, 1, len(msgs))
 }

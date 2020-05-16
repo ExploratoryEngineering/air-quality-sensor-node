@@ -13,6 +13,7 @@ require (
 	github.com/golang/protobuf v1.4.0
 	github.com/google/easypki v1.1.0
 	github.com/gorilla/mux v1.7.4
+	github.com/gorilla/websocket v1.4.0
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/kataras/tablewriter v0.0.0-20180708051242-e063d29b7c23 // indirect

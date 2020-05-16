@@ -3,16 +3,23 @@
 	<head>
 		<meta name="viewport" content="width=device-width, initial-scale=1">
 		<link rel="stylesheet" href="https://unpkg.com/tachyons@4.12.0/css/tachyons.min.css"/>
-		<title>AQ</title>
+		<title>AQ - Last data</title>
 	</head>
 	<body>
 		<article class="pa3 pa5-ns">
 			<h1 class="f3 f1-m f-headline-m">AQ</h1>
 			<section>			
-				This is the AQ server.
+				Contents of circular buffer
 			</section>
 			<section class="w7 bg-yellow">
-				<div id="log"></div>
+
+				{{ . }}
+				
+				<ul>
+					{{range $element := . }}
+						<li>{{$element}} </li>
+					{{ end }}
+				</ul>
 			</section>
 		</article>
 	</body>

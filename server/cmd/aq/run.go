@@ -9,12 +9,16 @@ import (
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/caldata"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/listener"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline"
+	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline/stream"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/store"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/store/sqlitestore"
 )
 
 // How often do we poll for new calibration data
-const checkForNewCalibrationDataPeriod = (12 * time.Hour)
+const (
+	checkForNewCalibrationDataPeriod = (12 * time.Hour)
+	circularBufferLength             = 100
+)
 
 // RunCommand ...
 type RunCommand struct {
@@ -116,10 +120,14 @@ func (a *RunCommand) Execute(args []string) error {
 	pipelineCalc := pipeline.NewCalculate(&options, db)
 	pipelinePersist := pipeline.NewPersist(&options, db)
 	pipelineLog := pipeline.NewLog(&options)
+	pipelineCirc := pipeline.NewCircularBuffer(circularBufferLength)
+	pipelineStream := stream.NewBroker()
 
 	pipelineRoot.AddNext(pipelineCalc)
 	pipelineCalc.AddNext(pipelinePersist)
 	pipelinePersist.AddNext(pipelineLog)
+	pipelineLog.AddNext(pipelineStream)
+	pipelineStream.AddNext(pipelineCirc)
 
 	// Start Horde listener unless disabled
 	if !a.HordeListenerDisable {
@@ -146,9 +154,12 @@ func (a *RunCommand) Execute(args []string) error {
 
 	// Start api server
 	api := api.New(&api.ServerConfig{
-		ListenAddr:  a.WebListenAddr,
-		StaticDir:   a.WebStaticDir,
-		TemplateDir: a.WebTemplateDir,
+		Broker:         pipelineStream,
+		DB:             db,
+		CircularBuffer: pipelineCirc,
+		ListenAddr:     a.WebListenAddr,
+		StaticDir:      a.WebStaticDir,
+		TemplateDir:    a.WebTemplateDir,
 	})
 	api.Start()
 
