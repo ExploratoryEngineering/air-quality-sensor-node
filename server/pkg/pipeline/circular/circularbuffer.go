@@ -1,29 +1,29 @@
-package pipeline
+package circular
 
 import (
 	"container/ring"
 	"sync"
 
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/model"
+	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline"
 )
 
-// CircularBuffer is a ring-buffer holding the last N messages
-// received.
-type CircularBuffer struct {
+// Buffer is a ring-buffer holding the last N messages received.
+type Buffer struct {
 	ring *ring.Ring
 	mu   sync.Mutex
-	next Pipeline
+	next pipeline.Pipeline
 }
 
-// NewCircularBuffer creates a new ring buffer pipeline element.
-func NewCircularBuffer(size int) *CircularBuffer {
-	return &CircularBuffer{
+// New creates a new ring buffer pipeline element.
+func New(size int) *Buffer {
+	return &Buffer{
 		ring: ring.New(size),
 	}
 }
 
 // Publish adds a message to the ring buffer
-func (c *CircularBuffer) Publish(m *model.Message) error {
+func (c *Buffer) Publish(m *model.Message) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -37,7 +37,7 @@ func (c *CircularBuffer) Publish(m *model.Message) error {
 }
 
 // GetContents returns the contents of the circular buffer
-func (c *CircularBuffer) GetContents() []*model.Message {
+func (c *Buffer) GetContents() []*model.Message {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -52,11 +52,11 @@ func (c *CircularBuffer) GetContents() []*model.Message {
 }
 
 // AddNext adds a Pipeline element after this pipeline element
-func (c *CircularBuffer) AddNext(pe Pipeline) {
+func (c *Buffer) AddNext(pe pipeline.Pipeline) {
 	c.next = pe
 }
 
 // Next returns the next pipeline element
-func (c *CircularBuffer) Next() Pipeline {
+func (c *Buffer) Next() pipeline.Pipeline {
 	return c.next
 }

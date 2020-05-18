@@ -20,7 +20,7 @@ type Root struct {
 }
 
 // NewRoot creates a new Root instance
-func NewRoot(opts *opts.Opts, db store.Store) *Root {
+func New(opts *opts.Opts, db store.Store) *Root {
 	return &Root{
 		opts: opts,
 		db:   db,

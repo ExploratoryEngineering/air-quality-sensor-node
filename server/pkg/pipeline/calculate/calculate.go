@@ -1,4 +1,4 @@
-package pipeline
+package calculate
 
 import (
 	"log"
@@ -7,12 +7,13 @@ import (
 
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/model"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/opts"
+	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/store"
 )
 
 // Calculate holds the configuration the calculation processor.
 type Calculate struct {
-	next             Pipeline
+	next             pipeline.Pipeline
 	opts             *opts.Opts
 	db               store.Store
 	calibrationCache map[string][]model.Cal
@@ -25,8 +26,8 @@ const (
 	minCacheUpdateDelay = (5 * time.Second)
 )
 
-// NewCalculate creates a new instance of Calculate pipeline element
-func NewCalculate(opts *opts.Opts, db store.Store) *Calculate {
+// New creates a new instance of Calculate pipeline element
+func New(opts *opts.Opts, db store.Store) *Calculate {
 	c := &Calculate{
 		opts:             opts,
 		db:               db,
@@ -135,11 +136,11 @@ func (p *Calculate) Publish(m *model.Message) error {
 }
 
 // AddNext ...
-func (p *Calculate) AddNext(pe Pipeline) {
+func (p *Calculate) AddNext(pe pipeline.Pipeline) {
 	p.next = pe
 }
 
 // Next ...
-func (p *Calculate) Next() Pipeline {
+func (p *Calculate) Next() pipeline.Pipeline {
 	return p.next
 }

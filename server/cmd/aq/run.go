@@ -9,6 +9,10 @@ import (
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/caldata"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/listener"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline"
+	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline/calculate"
+	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline/circular"
+	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline/persist"
+	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline/pipelog"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline/stream"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/store"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/store/sqlitestore"
@@ -16,7 +20,7 @@ import (
 
 // How often do we poll for new calibration data
 const (
-	checkForNewCalibrationDataPeriod = (12 * time.Hour)
+	checkForNewCalibrationDataPeriod = (1 * time.Hour)
 	circularBufferLength             = 100
 )
 
@@ -115,14 +119,15 @@ func (a *RunCommand) Execute(args []string) error {
 		go periodicCheckForNewCalibrationData(db)
 	}
 
-	// Set up pipeline
-	pipelineRoot := pipeline.NewRoot(&options, db)
-	pipelineCalc := pipeline.NewCalculate(&options, db)
-	pipelinePersist := pipeline.NewPersist(&options, db)
-	pipelineLog := pipeline.NewLog(&options)
-	pipelineCirc := pipeline.NewCircularBuffer(circularBufferLength)
+	// Create pipeline elements
+	pipelineRoot := pipeline.New(&options, db)
+	pipelineCalc := calculate.New(&options, db)
+	pipelinePersist := persist.New(&options, db)
+	pipelineLog := pipelog.New(&options)
+	pipelineCirc := circular.New(circularBufferLength)
 	pipelineStream := stream.NewBroker()
 
+	// Chain them together
 	pipelineRoot.AddNext(pipelineCalc)
 	pipelineCalc.AddNext(pipelinePersist)
 	pipelinePersist.AddNext(pipelineLog)

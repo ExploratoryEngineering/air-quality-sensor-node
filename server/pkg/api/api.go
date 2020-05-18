@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline"
+	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline/circular"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline/stream"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/store"
 	"github.com/gorilla/mux"
@@ -17,7 +17,7 @@ import (
 type Server struct {
 	db             store.Store
 	broker         *stream.Broker
-	circularBuffer *pipeline.CircularBuffer
+	circularBuffer *circular.Buffer
 	listenAddr     string
 	staticDir      string
 	templateDir    string
@@ -31,7 +31,7 @@ type Server struct {
 type ServerConfig struct {
 	DB             store.Store
 	Broker         *stream.Broker
-	CircularBuffer *pipeline.CircularBuffer
+	CircularBuffer *circular.Buffer
 	ListenAddr     string
 	StaticDir      string
 	TemplateDir    string

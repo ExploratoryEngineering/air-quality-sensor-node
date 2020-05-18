@@ -1,10 +1,15 @@
-package pipeline
+package pipelinetest
 
 import (
 	"testing"
 
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/model"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/opts"
+	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline"
+	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline/calculate"
+	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline/circular"
+	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline/persist"
+	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline/pipelog"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/store/sqlitestore"
 	"github.com/stretchr/testify/assert"
 )
@@ -63,7 +68,7 @@ func TestRoot(t *testing.T) {
 		DBFilename:      ":memory:",
 	}
 
-	root := NewRoot(opts, db)
+	root := pipeline.New(opts, db)
 	assert.NotNil(t, root)
 
 	root.Publish(testMessage)
@@ -82,11 +87,11 @@ func TestPipeline(t *testing.T) {
 		DBFilename:      ":memory:",
 	}
 
-	root := NewRoot(opts, db)
-	calculate := NewCalculate(opts, db)
-	persist := NewPersist(opts, db)
-	logger := NewLog(opts)
-	circular := NewCircularBuffer(10)
+	root := pipeline.New(opts, db)
+	calculate := calculate.New(opts, db)
+	persist := persist.New(opts, db)
+	logger := pipelog.New(opts)
+	circular := circular.New(10)
 
 	root.AddNext(calculate)
 	calculate.AddNext(persist)
