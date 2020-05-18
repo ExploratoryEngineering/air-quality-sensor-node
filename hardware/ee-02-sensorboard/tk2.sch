@@ -10883,6 +10883,7 @@
 <part name="U$2" library="EE" deviceset="PHOENIX_CONTACT_MSTBVA_2_5" device=""/>
 <part name="U$3" library="EE" deviceset="PHOENIX_CONTACT_MSTBVA_2_5" device=""/>
 <part name="GND22" library="supply1" library_urn="urn:adsk.eagle:library:371" deviceset="GND" device=""/>
+<part name="GND23" library="supply1" library_urn="urn:adsk.eagle:library:371" deviceset="GND" device=""/>
 </parts>
 <sheets>
 <sheet>
@@ -10957,6 +10958,7 @@
 <instance part="GND11" gate="1" x="236.22" y="86.36"/>
 <instance part="GND21" gate="1" x="203.2" y="2.54"/>
 <instance part="GND22" gate="1" x="276.86" y="38.1"/>
+<instance part="GND23" gate="1" x="210.82" y="55.88"/>
 </instances>
 <busses>
 <bus name="SCL,SDA,SWDIO,SWDCLK,P1,P2">
@@ -11086,6 +11088,12 @@
 <pinref part="U8" gate="G$1" pin="GND@6"/>
 <pinref part="GND10" gate="1" pin="GND"/>
 <wire x1="119.38" y1="-30.48" x2="119.38" y2="-33.02" width="0.1524" layer="91"/>
+<pinref part="U8" gate="G$1" pin="GND@5"/>
+<wire x1="121.92" y1="-30.48" x2="119.38" y2="-30.48" width="0.1524" layer="91"/>
+<junction x="119.38" y="-30.48"/>
+<pinref part="U8" gate="G$1" pin="GND@2"/>
+<wire x1="124.46" y1="-30.48" x2="121.92" y2="-30.48" width="0.1524" layer="91"/>
+<junction x="121.92" y="-30.48"/>
 </segment>
 <segment>
 <pinref part="U6" gate="G$1" pin="EP"/>
@@ -11158,6 +11166,11 @@
 <pinref part="GND22" gate="1" pin="GND"/>
 <wire x1="271.78" y1="43.18" x2="276.86" y2="43.18" width="0.1524" layer="91"/>
 <wire x1="276.86" y1="43.18" x2="276.86" y2="40.64" width="0.1524" layer="91"/>
+</segment>
+<segment>
+<pinref part="U4" gate="G$1" pin="AINCOM"/>
+<pinref part="GND23" gate="1" pin="GND"/>
+<wire x1="220.98" y1="58.42" x2="210.82" y2="58.42" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="+3V3" class="0">
@@ -11760,6 +11773,9 @@
 </nets>
 </sheet>
 </sheets>
+<errors>
+<approved hash="104,1,220.98,63.5,U4,IOVDD,+3V3,,,"/>
+</errors>
 </schematic>
 </drawing>
 <compatibility>
