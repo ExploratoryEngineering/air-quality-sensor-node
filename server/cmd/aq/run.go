@@ -27,9 +27,12 @@ const (
 // RunCommand ...
 type RunCommand struct {
 	// Webserver options
-	WebListenAddr  string `short:"w" long:"web-listen-address" description:"Listen address for webserver" default:":8888" value-name:"<[host]:port>"`
-	WebStaticDir   string `short:"s" long:"web-static-dir" description:"Static directory for webserver" default:"./web" value-name:"<dir>"`
-	WebTemplateDir string `short:"t" long:"web-template-dir" description:"Template directory for webserver" default:"./templates" value-name:"<dir>"`
+	WebListenAddr   string `short:"w" long:"web-listen-address" description:"Listen address for webserver" default:":8888" value-name:"<[host]:port>"`
+	WebStaticDir    string `short:"s" long:"web-static-dir" description:"Static directory for webserver" default:"./web" value-name:"<dir>"`
+	WebTemplateDir  string `short:"t" long:"web-template-dir" description:"Template directory for webserver" default:"./templates" value-name:"<dir>"`
+	WebCertDir      string `short:"c" long:"web-cert-dir" description:"Certificate directory for webserver" default:"./cert" value-name:"<dir>"`
+	WebCertDomain   string `short:"d" long:"web-cert-domain" description:"Certificate domain" default:"borud.no" value-name:"<dir>"`
+	WebAccessLogDir string `short:"l" long:"web-access-log-dir" description:"Directory for access logs" default:"./logs" value-name:"<dir>"`
 
 	// Horde listener
 	HordeListenerDisable bool `short:"x" long:"no-horde" description:"Do not connect to Horde"`
@@ -165,6 +168,9 @@ func (a *RunCommand) Execute(args []string) error {
 		ListenAddr:     a.WebListenAddr,
 		StaticDir:      a.WebStaticDir,
 		TemplateDir:    a.WebTemplateDir,
+		CertDir:        a.WebCertDir,
+		CertDomain:     a.WebCertDomain,
+		AccessLogDir:   a.WebAccessLogDir,
 	})
 	api.Start()
 

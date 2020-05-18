@@ -12,6 +12,7 @@ require (
 	github.com/fhmq/hmq v0.0.0-20200119031921-55f1f1aa8001
 	github.com/golang/protobuf v1.4.0
 	github.com/google/easypki v1.1.0
+	github.com/gorilla/handlers v1.4.2
 	github.com/gorilla/mux v1.7.4
 	github.com/gorilla/websocket v1.4.0
 	github.com/jessevdk/go-flags v1.4.0
@@ -23,5 +24,6 @@ require (
 	github.com/mattn/go-sqlite3 v1.9.0
 	github.com/sgreben/piecewiselinear v0.0.0-20200103140426-2cdc2ca8c19b
 	github.com/stretchr/testify v1.5.1
+	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
 	google.golang.org/protobuf v1.21.0
 )
