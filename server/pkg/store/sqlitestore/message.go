@@ -2,7 +2,6 @@ package sqlitestore
 
 import (
 	"math"
-	"time"
 
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/model"
 )
@@ -185,7 +184,7 @@ func (s *SqliteStore) ListMessages(offset int, limit int) ([]model.Message, erro
 }
 
 // ListMessagesByDate ...
-func (s *SqliteStore) ListMessagesByDate(from time.Time, to time.Time) ([]model.Message, error) {
+func (s *SqliteStore) ListMessagesByDate(from int64, to int64) ([]model.Message, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -195,7 +194,7 @@ func (s *SqliteStore) ListMessagesByDate(from time.Time, to time.Time) ([]model.
 }
 
 // ListDeviceMessagesByDate ...
-func (s *SqliteStore) ListDeviceMessagesByDate(deviceID string, from time.Time, to time.Time) ([]model.Message, error) {
+func (s *SqliteStore) ListDeviceMessagesByDate(deviceID string, from int64, to int64) ([]model.Message, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
