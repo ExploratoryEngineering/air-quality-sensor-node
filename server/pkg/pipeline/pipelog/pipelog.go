@@ -1,20 +1,21 @@
-package pipeline
+package pipelog
 
 import (
 	"log"
 
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/model"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/opts"
+	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline"
 )
 
 // Log is a pipeline processor that logs incoming messages
 type Log struct {
-	next Pipeline
+	next pipeline.Pipeline
 	opts *opts.Opts
 }
 
-// NewLog creates new instance of Log pipeline element
-func NewLog(opts *opts.Opts) *Log {
+// New creates new instance of Log pipeline element
+func New(opts *opts.Opts) *Log {
 	return &Log{
 		opts: opts,
 	}
@@ -31,11 +32,11 @@ func (p *Log) Publish(m *model.Message) error {
 }
 
 // AddNext ...
-func (p *Log) AddNext(pe Pipeline) {
+func (p *Log) AddNext(pe pipeline.Pipeline) {
 	p.next = pe
 }
 
 // Next ...
-func (p *Log) Next() Pipeline {
+func (p *Log) Next() pipeline.Pipeline {
 	return p.next
 }

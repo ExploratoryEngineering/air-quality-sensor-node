@@ -5,20 +5,34 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/api"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/caldata"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/listener"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline"
+	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline/calculate"
+	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline/circular"
+	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline/persist"
+	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline/pipelog"
+	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline/stream"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/store"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/store/sqlitestore"
 )
 
 // How often do we poll for new calibration data
-const checkForNewCalibrationDataPeriod = (12 * time.Hour)
+const (
+	checkForNewCalibrationDataPeriod = (1 * time.Hour)
+	circularBufferLength             = 100
+)
 
 // RunCommand ...
 type RunCommand struct {
 	// Webserver options
-	WebServer string `short:"w" long:"webserver" description:"Listen address for webserver" default:":8888" value-name:"<[host]:port>"`
+	WebListenAddr   string `short:"w" long:"web-listen-address" description:"Listen address for webserver" default:":8888" value-name:"<[host]:port>"`
+	WebStaticDir    string `short:"s" long:"web-static-dir" description:"Static directory for webserver" default:"./web" value-name:"<dir>"`
+	WebTemplateDir  string `short:"t" long:"web-template-dir" description:"Template directory for webserver" default:"./templates" value-name:"<dir>"`
+	WebCertDir      string `short:"c" long:"web-cert-dir" description:"Certificate directory for webserver" default:"./cert" value-name:"<dir>"`
+	WebCertDomain   string `short:"d" long:"web-cert-domain" description:"Certificate domain" default:"borud.no" value-name:"<dir>"`
+	WebAccessLogDir string `short:"l" long:"web-access-log-dir" description:"Directory for access logs" default:"./logs" value-name:"<dir>"`
 
 	// Horde listener
 	HordeListenerDisable bool `short:"x" long:"no-horde" description:"Do not connect to Horde"`
@@ -108,15 +122,20 @@ func (a *RunCommand) Execute(args []string) error {
 		go periodicCheckForNewCalibrationData(db)
 	}
 
-	// Set up pipeline
-	pipelineRoot := pipeline.NewRoot(&options, db)
-	pipelineCalc := pipeline.NewCalculate(&options, db)
-	pipelinePersist := pipeline.NewPersist(&options, db)
-	pipelineLog := pipeline.NewLog(&options)
+	// Create pipeline elements
+	pipelineRoot := pipeline.New(&options, db)
+	pipelineCalc := calculate.New(&options, db)
+	pipelinePersist := persist.New(&options, db)
+	pipelineLog := pipelog.New(&options)
+	pipelineCirc := circular.New(circularBufferLength)
+	pipelineStream := stream.NewBroker()
 
+	// Chain them together
 	pipelineRoot.AddNext(pipelineCalc)
 	pipelineCalc.AddNext(pipelinePersist)
 	pipelinePersist.AddNext(pipelineLog)
+	pipelineLog.AddNext(pipelineStream)
+	pipelineStream.AddNext(pipelineCirc)
 
 	// Start Horde listener unless disabled
 	if !a.HordeListenerDisable {
@@ -141,10 +160,26 @@ func (a *RunCommand) Execute(args []string) error {
 		listeners = append(listeners, udpListener)
 	}
 
+	// Start api server
+	api := api.New(&api.ServerConfig{
+		Broker:         pipelineStream,
+		DB:             db,
+		CircularBuffer: pipelineCirc,
+		ListenAddr:     a.WebListenAddr,
+		StaticDir:      a.WebStaticDir,
+		TemplateDir:    a.WebTemplateDir,
+		CertDir:        a.WebCertDir,
+		CertDomain:     a.WebCertDomain,
+		AccessLogDir:   a.WebAccessLogDir,
+	})
+	api.Start()
+
 	// Wait for all listeners to shut down
 	for _, listener := range listeners {
 		listener.WaitForShutdown()
 	}
+
+	api.Shutdown()
 
 	return nil
 }

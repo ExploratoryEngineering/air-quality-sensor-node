@@ -6,4 +6,4 @@ cmd/aq/aq
 .telenor-nbiot
 aq.db
 aq.db*
-
+logs

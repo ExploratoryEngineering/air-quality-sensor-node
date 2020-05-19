@@ -6,6 +6,8 @@ import (
 
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/model"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline"
+	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline/calculate"
+	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline/persist"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/store/sqlitestore"
 	"github.com/telenordigital/nbiot-go"
 )
@@ -59,9 +61,9 @@ func (a *FetchCommand) Execute(args []string) error {
 	}
 
 	// Set up pipeline
-	pipelineRoot := pipeline.NewRoot(&options, db)
-	pipelineCalc := pipeline.NewCalculate(&options, db)
-	pipelinePersist := pipeline.NewPersist(&options, db)
+	pipelineRoot := pipeline.New(&options, db)
+	pipelineCalc := calculate.New(&options, db)
+	pipelinePersist := persist.New(&options, db)
 
 	pipelineRoot.AddNext(pipelineCalc)
 	pipelineCalc.AddNext(pipelinePersist)

@@ -2,6 +2,7 @@ package store
 
 import (
 	"fmt"
+	"log"
 	"math/rand"
 	"testing"
 	"time"
@@ -139,13 +140,13 @@ func messageTests(t *testing.T, db Store) {
 		deviceID := fmt.Sprintf("msg-device-%d", i)
 
 		for j := 0; j < numMessagesPerDevice; j++ {
-			id, err := db.PutMessage(&model.Message{
+			msg := &model.Message{
 				DeviceID:     deviceID,
-				ReceivedTime: t0.Add(time.Duration(j) * time.Minute),
-			})
+				ReceivedTime: ms(t0.Add(time.Duration(j) * time.Minute)),
+			}
+			id, err := db.PutMessage(msg)
 			assert.Nil(t, err)
 			assert.True(t, id > 0)
-
 			messageIDs = append(messageIDs, id)
 		}
 	}
@@ -173,7 +174,13 @@ func messageTests(t *testing.T, db Store) {
 	// ListMessagesByDate
 	{
 		duration := time.Minute * 10
-		msgs, err := db.ListMessagesByDate(t0, t0.Add(duration))
+
+		from := ms(t0)
+		to := ms(t0.Add(duration))
+
+		log.Printf("From: %d, To: %d", from, to)
+
+		msgs, err := db.ListMessagesByDate(from, to)
 		assert.Nil(t, err)
 		assert.Equal(t, numDevices*10, len(msgs))
 	}
@@ -183,9 +190,13 @@ func messageTests(t *testing.T, db Store) {
 		for i := 0; i < numDevices; i++ {
 			deviceID := fmt.Sprintf("msg-device-%d", i)
 			duration := time.Minute * 10
-			msgs, err := db.ListDeviceMessagesByDate(deviceID, t0, t0.Add(duration))
+			msgs, err := db.ListDeviceMessagesByDate(deviceID, ms(t0), ms(t0.Add(duration)))
 			assert.Nil(t, err)
 			assert.Equal(t, 10, len(msgs))
 		}
 	}
+}
+
+func ms(t time.Time) int64 {
+	return t.UnixNano() / int64(time.Millisecond)
 }

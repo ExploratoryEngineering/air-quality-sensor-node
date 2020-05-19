@@ -2,7 +2,6 @@ package store
 
 import (
 	"errors"
-	"time"
 
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/model"
 )
@@ -47,10 +46,10 @@ type Store interface {
 	ListMessages(offset int, limit int) ([]model.Message, error)
 
 	// ListMessagesByDate lists messages by date [from:to>
-	ListMessagesByDate(from time.Time, to time.Time) ([]model.Message, error)
+	ListMessagesByDate(from int64, to int64) ([]model.Message, error)
 
 	// ListDeviceMessagesByDate lists messages by device and date [from:to>
-	ListDeviceMessagesByDate(deviceID string, from time.Time, to time.Time) ([]model.Message, error)
+	ListDeviceMessagesByDate(deviceID string, from int64, to int64) ([]model.Message, error)
 
 	// Close the database
 	Close() error
