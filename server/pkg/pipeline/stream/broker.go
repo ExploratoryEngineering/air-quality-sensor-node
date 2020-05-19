@@ -19,6 +19,12 @@ type Broker struct {
 	unregister chan *client
 	list       chan *listRequest
 	next       pipeline.Pipeline
+	quit       chan bool
+
+	listBlockedCounter      int64
+	clientDroppedCounter    int64
+	clientRegisterCounter   int64
+	clientUnRegisterCounter int64
 }
 
 type listRequest struct {
@@ -33,6 +39,7 @@ func NewBroker() *Broker {
 		register:   make(chan *client),
 		unregister: make(chan *client),
 		list:       make(chan *listRequest, 10),
+		quit:       make(chan bool),
 	}
 
 	go b.mainLoop()
@@ -43,33 +50,43 @@ func NewBroker() *Broker {
 func (b *Broker) mainLoop() {
 	for {
 		select {
+		case message := <-b.broadcast:
+			for client := range b.clients {
+				select {
+				case client.send <- message:
+				default:
+					delete(b.clients, client)
+					close(client.send)
+					b.clientDroppedCounter++
+				}
+			}
 
 		case client := <-b.register:
 			b.clients[client] = true
+			b.clientRegisterCounter++
 			log.Printf("CONNECT WebSocket from %v", client.conn.RemoteAddr())
 
 		case client := <-b.unregister:
 			if _, ok := b.clients[client]; ok {
 				delete(b.clients, client)
 				close(client.send)
+				b.clientUnRegisterCounter++
 				log.Printf("DISCONNECT WebSocket from %v", client.conn.RemoteAddr())
 			}
 
 		case listRequest := <-b.list:
 			for client := range b.clients {
-				listRequest.responseChannel <- client
+				select {
+				case listRequest.responseChannel <- client:
+				default:
+					// Indicate that responseChannel blocked
+					b.listBlockedCounter++
+				}
 			}
 			close(listRequest.responseChannel)
 
-		case message := <-b.broadcast:
-			for client := range b.clients {
-				select {
-				case client.send <- message:
-				default:
-					close(client.send)
-					delete(b.clients, client)
-				}
-			}
+		case <-b.quit:
+			return
 		}
 	}
 }

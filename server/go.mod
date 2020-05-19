@@ -9,6 +9,7 @@ require (
 	github.com/aws/aws-sdk-go v1.30.4
 	github.com/boltdb/bolt v1.3.1 // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect
+	github.com/eclipse/paho.mqtt.golang v1.2.0
 	github.com/fhmq/hmq v0.0.0-20200119031921-55f1f1aa8001
 	github.com/golang/protobuf v1.4.0
 	github.com/google/easypki v1.1.0
