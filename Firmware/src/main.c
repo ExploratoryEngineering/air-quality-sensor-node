@@ -93,7 +93,7 @@ int send_samples(uint8_t *data_buffer, size_t len)
 
 	net_addr_pton(AF_INET, SAMPLE_COAP_SERVER, &remote_addr.sin_addr);
 
-	int err = sendto(sock, coap_buffer, p.offset, 0, (struct sockaddr *)&remote_addr, sizeof(remote_addr));
+	err = sendto(sock, coap_buffer, p.offset, 0, (struct sockaddr *)&remote_addr, sizeof(remote_addr));
 	if (err < 0)
 	{
 		LOG_ERR("Unable to send data: %d", err);
@@ -110,7 +110,7 @@ int send_samples(uint8_t *data_buffer, size_t len)
 		close(sock);
 		return -1;
 	}
-	received = recvfrom(sock, coap_buffer, sizeof(coap_buffer), 0, (struct sockaddr *)&remove_addr, sizeof(remote_addr));
+	received = recvfrom(sock, coap_buffer, sizeof(coap_buffer), 0, NULL, NULL);
 	if (received < 0)
 	{
 		LOG_ERR("Error receiving data: %d", received);
@@ -174,7 +174,7 @@ void main(void)
 #endif
 
 		int ret = send_samples(buffer, len);
-		if (ret < len)
+		if (!ret)
 		{
 			LOG_WRN("Could not send message to server: %d", ret);
 		}
