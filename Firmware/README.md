@@ -74,19 +74,15 @@ Open a second shell and issue the following command to see log output:
 JLinkRTTClient
 ```
 
-
-
-
-
-
 If you have an existing key put it into the `aq_fota.pem` file and skip this step. This is included in `.gitignore` so you won't check it in by accident.
 
 
 ### Message format
 
 The message format uses protobuffers.  You can find these under
-[common/protobuf](../common/proobuf) in this Github repository.  Both
-the server and the firmware uses the same protobuffer definition file.
+[common/protobuf](../tree/master/common/proobuf) in this Github
+repository.  Both the server and the firmware uses the same
+protobuffer definition file.
 
 ## Enabling FOTA
 
