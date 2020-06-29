@@ -45,9 +45,42 @@ make build_mcuboot
 make install_mcuboot
 ```
 
+### Flashing and debugging
+
+#### Prerequisites
+
+1. Install [JLink](https://www.segger.com/downloads/jlink/) 
+2. The ZEPHYR_BASE environment variable has to point to the deps\zephyr
+3. Source deps\zephyr\zephyr-env.sh
+
+#### Flashing
+
+1. The target device has to be powered on
+2. Connect the EE-04 programmer to a computer via a USB cable
+3. Connect the ribbon debug cable between the EE-04 and the target device
+4. `make flash`.
+
+#### Debug output
+
+Open a new shell and issue the following command to connect JLink:
+
+```shell
+JLinkExe -if swd -device nrf52 -speed 4000 -autoconnect 1
+```
+
+Open a second shell and issue the following command to see log output:
+
+```shell
+JLinkRTTClient
+```
+
+
+
+
+
+
 If you have an existing key put it into the `aq_fota.pem` file and skip this step. This is included in `.gitignore` so you won't check it in by accident.
 
-Flash it to the device with `make flash`.
 
 ### Message format
 
