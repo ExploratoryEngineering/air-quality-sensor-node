@@ -61,35 +61,6 @@ static int init_image()
 	return 0;
 }
 
-static bool wait_for_response(int sock)
-{
-	// Poll for response.
-	struct pollfd poll_set[1];
-	poll_set[0].fd = sock;
-	poll_set[0].events = POLLIN;
-
-	bool data = false;
-	int wait = 0;
-	const int poll_wait_ms = 500;
-	const int max_wait_time_ms = 60000;
-	while (!data)
-	{
-		poll(poll_set, 1, poll_wait_ms);
-		if ((poll_set[0].revents & POLLIN) == POLLIN)
-		{
-			data = true;
-			continue;
-		}
-		wait++;
-		if (wait > (max_wait_time_ms / poll_wait_ms))
-		{
-			LOG_ERR("Server response timed out");
-			return false;
-		}
-	}
-	return true;
-}
-
 static int fota_encode_simple_report(uint8_t *buffer, size_t *len)
 {
 	size_t sz = encode_tlv_string(buffer, FIRMWARE_VER_ID, CLIENT_FIRMWARE_VER);
@@ -403,4 +374,33 @@ bool fota_run()
 		return true;
 	}
 	return false;
+}
+
+bool wait_for_response(int sock)
+{
+	// Poll for response.
+	struct pollfd poll_set[1];
+	poll_set[0].fd = sock;
+	poll_set[0].events = POLLIN;
+
+	bool data = false;
+	int wait = 0;
+	const int poll_wait_ms = 500;
+	const int max_wait_time_ms = 60000;
+	while (!data)
+	{
+		poll(poll_set, 1, poll_wait_ms);
+		if ((poll_set[0].revents & POLLIN) == POLLIN)
+		{
+			data = true;
+			continue;
+		}
+		wait++;
+		if (wait > (max_wait_time_ms / poll_wait_ms))
+		{
+			LOG_ERR("Server response timed out");
+			return false;
+		}
+	}
+	return true;
 }

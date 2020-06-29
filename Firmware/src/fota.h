@@ -34,3 +34,8 @@ bool fota_init();
  * @brief Run a FOTA upgrade
  */
 bool fota_run();
+
+/**
+ * @brief Wait for response on a socket fd
+ */
+bool wait_for_response(int sock);

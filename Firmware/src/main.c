@@ -27,6 +27,7 @@
 #include "n2_offload.h"
 #include "fota.h"
 #include "comms.h"
+#include <net/coap.h>
 
 #define LOG_LEVEL CONFIG_MAIN_LOG_LEVEL
 LOG_MODULE_REGISTER(MAIN);
@@ -38,9 +39,43 @@ LOG_MODULE_REGISTER(MAIN);
 
 #define MAX_SEND_BUFFER 450
 static uint8_t buffer[MAX_SEND_BUFFER];
+static uint8_t coap_buffer[MAX_SEND_BUFFER];
+#define SAMPLE_COAP_PATH "aq"
+#define SAMPLE_COAP_SERVER "172.16.15.14"
+#define SAMPLE_COAP_PORT 5683
 
-int send_samples(uint8_t *buffer, size_t len)
+int send_samples(uint8_t *data_buffer, size_t len)
 {
+	struct coap_packet p;
+	int err = 0;
+#define TOKEN_SIZE 8
+	char token[TOKEN_SIZE];
+	sys_csrand_get(token, TOKEN_SIZE);
+
+	if (coap_packet_init(&p, coap_buffer, sizeof(coap_buffer), 1, COAP_TYPE_CON,
+						 TOKEN_SIZE, token, COAP_METHOD_POST,
+						 coap_next_id()) < 0)
+	{
+		LOG_ERR("Unable to iniitialize CoAP packet");
+		return -1;
+	}
+	if (coap_packet_append_option(&p, COAP_OPTION_URI_PATH,
+								  SAMPLE_COAP_PATH,
+								  strlen(SAMPLE_COAP_PATH)) < 0)
+	{
+		LOG_ERR("Could not append path option to packet");
+		return -1;
+	}
+	if (coap_packet_append_payload_marker(&p) < 0)
+	{
+		LOG_ERR("Unable to append payload marker to packet");
+		return -1;
+	}
+	if (coap_packet_append_payload(&p, data_buffer, len) < 0)
+	{
+		LOG_ERR("Unable to append payload to CoAP packet");
+		return -1;
+	}
 
 	modem_restart_without_triggering_network_signalling_storm_but_hopefully_picking_up_the_correct_cell___maybe();
 
@@ -54,24 +89,45 @@ int send_samples(uint8_t *buffer, size_t len)
 	static struct sockaddr_in remote_addr = {
 		sin_family : AF_INET,
 	};
-	remote_addr.sin_port = htons(1234);
+	remote_addr.sin_port = htons(SAMPLE_COAP_PORT);
 
-	net_addr_pton(AF_INET, "172.16.15.14", &remote_addr.sin_addr);
+	net_addr_pton(AF_INET, SAMPLE_COAP_SERVER, &remote_addr.sin_addr);
 
-	int err = sendto(sock, buffer, len, 0, (struct sockaddr *)&remote_addr, sizeof(remote_addr));
+	int err = sendto(sock, coap_buffer, p.offset, 0, (struct sockaddr *)&remote_addr, sizeof(remote_addr));
 	if (err < 0)
 	{
 		LOG_ERR("Unable to send data: %d", err);
 		close(sock);
 		return err;
 	}
+
+	LOG_DBG("Sent %d bytes, waiting for response", p.offset);
+
+	int received = 0;
+
+	if (!wait_for_response(sock))
+	{
+		close(sock);
+		return -1;
+	}
+	received = recvfrom(sock, coap_buffer, sizeof(coap_buffer), 0, (struct sockaddr *)&remove_addr, sizeof(remote_addr));
+	if (received < 0)
+	{
+		LOG_ERR("Error receiving data: %d", received);
+		close(sock);
+		return received;
+	}
+
 	close(sock);
-	return err;
+
+	struct coap_packet resp;
+
+	return coap_packet_parse(&resp, coap_buffer, received, NULL, 0);
 }
 
 void main(void)
 {
- 	init_board();
+	init_board();
 
 	// TODO: Watchdog init
 
@@ -113,9 +169,9 @@ void main(void)
 
 		int len = mb_encode(&last_message, buffer, MAX_SEND_BUFFER);
 		LOG_DBG("Sample complete, encoded buffer = %d bytes", len);
-	#if 1
+#if 1
 		mb_hex_dump_message(buffer, len);
-	#endif
+#endif
 
 		int ret = send_samples(buffer, len);
 		if (ret < len)
@@ -140,9 +196,7 @@ void main(void)
 			}
 		}
 #if 1
-			mb_dump_message(&last_message);
+		mb_dump_message(&last_message);
 #endif
 	}
-
-	
 }
