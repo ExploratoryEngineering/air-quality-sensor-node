@@ -168,7 +168,7 @@ bool modem_is_ready()
 
 void modem_configure()
 {
-    modem_write("AT+CGDCONT=0,\"IP\",\"mda.ee\"\r");
+    modem_write("AT+CGDCONT=0,\"IP\",\"telenor.iotgw\"\r");
     if (at_generic_decode() != AT_OK)
     {
         LOG_ERR("AT+CGPADDR (APN config) did not return OK");

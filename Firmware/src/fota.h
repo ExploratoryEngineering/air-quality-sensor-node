@@ -18,10 +18,10 @@
 // images uploaded via the Horde API (at https://api.nbiot.engineering/)
 #define CLIENT_FIRMWARE_VER AQ_VERSION
 
-// Server configuration. The reporting endpoint is at coap://172.16.15.14/u and
-// the response points to the firmware download (usually coap://172.16.15.14/fw
+// Server configuration. The reporting endpoint is at coap://172.16.32.1/u and
+// the response points to the firmware download (usually coap://172.16.32.1/fw
 // but don't quote me on that)
-#define FOTA_COAP_SERVER "172.16.15.14"
+#define FOTA_COAP_SERVER "172.16.32.1"
 #define FOTA_COAP_PORT 5683
 #define FOTA_COAP_REPORT_PATH "u"
 

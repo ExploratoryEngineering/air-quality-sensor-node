@@ -41,7 +41,7 @@ LOG_MODULE_REGISTER(MAIN);
 static uint8_t buffer[MAX_SEND_BUFFER];
 static uint8_t coap_buffer[MAX_SEND_BUFFER];
 #define SAMPLE_COAP_PATH "aq"
-#define SAMPLE_COAP_SERVER "172.16.15.14"
+#define SAMPLE_COAP_SERVER "172.16.32.1"
 #define SAMPLE_COAP_PORT 5683
 
 int send_samples(uint8_t *data_buffer, size_t len)
