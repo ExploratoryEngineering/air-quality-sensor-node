@@ -23,8 +23,6 @@ type Server struct {
 	circularBuffer *circular.Buffer
 	listenAddr     string
 	staticDir      string
-	certDir        string
-	certDomain     string
 	templateDir    string
 	templates      *template.Template
 	readTimeout    time.Duration
@@ -41,8 +39,6 @@ type ServerConfig struct {
 	ListenAddr     string
 	StaticDir      string
 	TemplateDir    string
-	CertDir        string
-	CertDomain     string
 	AccessLogDir   string
 }
 
@@ -66,8 +62,6 @@ func New(config *ServerConfig) *Server {
 		circularBuffer: config.CircularBuffer,
 		listenAddr:     config.ListenAddr,
 		staticDir:      config.StaticDir,
-		certDir:        config.CertDir,
-		certDomain:     config.CertDomain,
 		templateDir:    config.TemplateDir,
 		readTimeout:    defaultReadTimeout,
 		writeTimeout:   defaultWriteTimeout,

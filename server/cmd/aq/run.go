@@ -2,19 +2,17 @@ package main
 
 import (
 	"log"
-	"strings"
 	"time"
 
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/api"
-	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/caldata"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/listener"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline/calculate"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline/circular"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline/persist"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline/pipelog"
+	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline/pipemqtt"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline/stream"
-	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/store"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/store/sqlitestore"
 )
 
@@ -30,9 +28,13 @@ type RunCommand struct {
 	WebListenAddr   string `short:"w" long:"web-listen-address" description:"Listen address for webserver" default:":8888" value-name:"<[host]:port>"`
 	WebStaticDir    string `short:"s" long:"web-static-dir" description:"Static directory for webserver" default:"./web" value-name:"<dir>"`
 	WebTemplateDir  string `short:"t" long:"web-template-dir" description:"Template directory for webserver" default:"./templates" value-name:"<dir>"`
-	WebCertDir      string `short:"c" long:"web-cert-dir" description:"Certificate directory for webserver" default:"./cert" value-name:"<dir>"`
-	WebCertDomain   string `short:"d" long:"web-cert-domain" description:"Certificate domain" default:"borud.no" value-name:"<dir>"`
 	WebAccessLogDir string `short:"l" long:"web-access-log-dir" description:"Directory for access logs" default:"./logs" value-name:"<dir>"`
+
+	// MQTT
+	MQTTAddress     string `short:"m" long:"mqtt-address" description:"MQTT Address" default:"" value-name:"<[host]:port>"`
+	MQTTClientID    string `short:"c" long:"mqtt-client-id" description:"MQTT Client ID" default:"id"`
+	MQTTPassword    string `short:"p" long:"mqtt-password" description:"MQTT Password" default:""`
+	MQTTTopicPrefix string `long:"mqtt-topic-prefix" description:"MQTT topic prefix" default:"aq" value-name:"MQTT topic prefix"`
 
 	// Horde listener
 	HordeListenerDisable bool `short:"x" long:"no-horde" description:"Do not connect to Horde"`
@@ -55,52 +57,6 @@ func init() {
 
 var listeners []listener.Listener
 
-// checkForNewCalibrationData fetches the calibration data from the
-// distribution point in S3 and attempts to insert it into the
-// database.  If it already exists the database will just reject it
-// with a constraint error.
-func checkForNewCalibrationData(db store.Store) error {
-	c, err := caldata.NewCaldata(options.CalDataS3URL)
-	if err != nil {
-		return err
-	}
-
-	// Get all the calibration data available from the S3 distribution point
-	cals, err := c.DownloadFromS3()
-	if err != nil {
-		return err
-	}
-
-	// Loop through it and see if we have calibration data for the device
-	for _, cal := range cals {
-		// Just try to insert it and see if it succeeds, if we get a
-		// constraint error we know the calibration data is there
-		// already
-		_, err := db.PutCal(&cal)
-		if err != nil {
-			if !strings.Contains(err.Error(), "UNIQUE constraint failed") {
-				log.Printf("Error inserting calibration data: %+v", err)
-			}
-		}
-	}
-
-	return nil
-}
-
-// periodicCheckForNewCalibrationData sleeps for
-// checkForNewCalibrationDataPeriod and then downloads calibration
-// data and attempts to insert it.
-func periodicCheckForNewCalibrationData(db store.Store) {
-	for {
-		time.Sleep(checkForNewCalibrationDataPeriod)
-		log.Printf("Checking for new calibration data")
-		err := checkForNewCalibrationData(db)
-		if err != nil {
-			log.Printf("Failed to check for new calibration data: %v", err)
-		}
-	}
-}
-
 // Execute ...
 func (a *RunCommand) Execute(args []string) error {
 	// Set up persistence
@@ -112,6 +68,7 @@ func (a *RunCommand) Execute(args []string) error {
 
 	if !a.NoCalDownload {
 		// Check for new calibration data
+		log.Printf("Checking for new calibration data (disable with -n option)")
 		err = checkForNewCalibrationData(db)
 		if err != nil {
 			log.Printf("Unable to check for calibration data: %v", err)
@@ -136,6 +93,11 @@ func (a *RunCommand) Execute(args []string) error {
 	pipelinePersist.AddNext(pipelineLog)
 	pipelineLog.AddNext(pipelineStream)
 	pipelineStream.AddNext(pipelineCirc)
+
+	if a.MQTTAddress != "" {
+		pipelineMQTT := pipemqtt.New(a.MQTTClientID, a.MQTTPassword, a.MQTTAddress, a.MQTTTopicPrefix)
+		pipelineCirc.AddNext(pipelineMQTT)
+	}
 
 	// Start Horde listener unless disabled
 	if !a.HordeListenerDisable {
@@ -168,8 +130,6 @@ func (a *RunCommand) Execute(args []string) error {
 		ListenAddr:     a.WebListenAddr,
 		StaticDir:      a.WebStaticDir,
 		TemplateDir:    a.WebTemplateDir,
-		CertDir:        a.WebCertDir,
-		CertDomain:     a.WebCertDomain,
 		AccessLogDir:   a.WebAccessLogDir,
 	})
 	api.Start()
