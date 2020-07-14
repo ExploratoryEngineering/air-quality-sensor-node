@@ -6,6 +6,8 @@ import (
 
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/api"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/listener"
+	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/listener/hordelistener"
+	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/listener/udplistener"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline/calculate"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline/circular"
@@ -13,6 +15,7 @@ import (
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline/pipelog"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline/pipemqtt"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline/stream"
+	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/store"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/store/sqlitestore"
 )
 
@@ -31,17 +34,28 @@ type RunCommand struct {
 	WebAccessLogDir string `short:"l" long:"web-access-log-dir" description:"Directory for access logs" default:"./logs" value-name:"<dir>"`
 
 	// MQTT
-	MQTTAddress     string `short:"m" long:"mqtt-address" description:"MQTT Address" default:"" value-name:"<[host]:port>"`
-	MQTTClientID    string `short:"c" long:"mqtt-client-id" description:"MQTT Client ID" default:"id"`
-	MQTTPassword    string `short:"p" long:"mqtt-password" description:"MQTT Password" default:""`
+	MQTTAddress     string `long:"mqtt-address" description:"MQTT Address" default:"" value-name:"<[host]:port>"`
+	MQTTClientID    string `long:"mqtt-client-id" env:"MQTT_CLIENT_ID" description:"MQTT Client ID" default:""`
+	MQTTPassword    string `long:"mqtt-password" env:"MQTT_PASSWORD" description:"MQTT Password" default:""`
 	MQTTTopicPrefix string `long:"mqtt-topic-prefix" description:"MQTT topic prefix" default:"aq" value-name:"MQTT topic prefix"`
 
+	// MIC
+	MICUsername  string `long:"mic-username" env:"MIC_USERNAME" description:"MIC Username" default:""`
+	MICPassword  string `long:"mic-password" env:"MIC_PASSWORD" description:"MIC Username" default:""`
+	MICAWSAPIKey string `long:"mic-api-key" env:"MIC_AWS_API_KEY" description:"MIC Username" default:""`
+
+	MICTopic          string `long:"mic-topic" description:"MIC topic we should listen to" default:"thing-update/StartIoT/trondheim.kommune.no/#"`
+	MICAWSRegion      string `long:"mic-aws-region" description:"AWS region for MIC" default:"eu-west-1"`
+	MICAWSAPIGateway  string `long:"mic-aws-api-gw" description:"AWS API gateway" default:"https://3ohe8pnzfb.execute-api.eu-west-1.amazonaws.com/prod"`
+	MICAWSUserPool    string `long:"mic-aws-user-pool" description:"AWS User pool" default:"eu-west-1_wsOo2av1M"`
+	MICAWSIoTEndpoint string `long:"mic-aws-iot-endpoint" desciption:"AWS IoT Endpoint" default:"a15nxxwvsld4o-ats"`
+
 	// Horde listener
-	HordeListenerDisable bool `short:"x" long:"no-horde" description:"Do not connect to Horde"`
+	HordeListenerEnable bool `short:"r" long:"horde-listener" description:"Connect to Horde"`
 
 	// UDP listener
-	UDPListenAddress string `short:"u" long:"udp-listener" description:"Listen address for UDP listener" default:"" value-name:"<[host]:port>"`
-	UDPBufferSize    int    `short:"b" long:"udp-buffer-size" description:"Size of UDP read buffer" default:"1024" value-name:"<num bytes>"`
+	UDPListenAddress string `long:"udp-listener" description:"Listen address for UDP listener" default:"" value-name:"<[host]:port>"`
+	UDPBufferSize    int    `long:"udp-buffer-size" description:"Size of UDP read buffer" default:"1024" value-name:"<num bytes>"`
 
 	// Turn off downloading of calibration data
 	NoCalDownload bool `short:"n" long:"no-cal-download" description:"Turn off download of calibration data"`
@@ -57,6 +71,38 @@ func init() {
 
 var listeners []listener.Listener
 
+func (a *RunCommand) downloadCalibrationData(db store.Store) {
+	// Check for new calibration data
+	log.Printf("Checking for new calibration data (disable with -n option)")
+	err := checkForNewCalibrationData(db)
+	if err != nil {
+		log.Printf("Unable to check for calibration data: %v", err)
+		log.Printf("Will continue with possibly stale calibration data")
+	}
+}
+
+// startUDPListener starts the UDP listener
+func (a *RunCommand) startUDPListener(r pipeline.Pipeline) {
+	log.Printf("Starting UDP listener on %s", a.UDPListenAddress)
+	udpListener := udplistener.New(a.UDPListenAddress, a.UDPBufferSize, r)
+	err := udpListener.Start()
+	if err != nil {
+		log.Fatalf("Unable to start UDP listener: %v", err)
+	}
+	listeners = append(listeners, udpListener)
+}
+
+// startHordeListener
+func (a *RunCommand) startHordeListener(r pipeline.Pipeline) {
+	log.Printf("Starting Horde listener.  Listening to collection='%s'", options.HordeCollection)
+	hordeListener := hordelistener.New(&options, r)
+	err := hordeListener.Start()
+	if err != nil {
+		log.Fatalf("Unable to start Horde listener: %v", err)
+	}
+	listeners = append(listeners, hordeListener)
+}
+
 // Execute ...
 func (a *RunCommand) Execute(args []string) error {
 	// Set up persistence
@@ -66,20 +112,18 @@ func (a *RunCommand) Execute(args []string) error {
 	}
 	defer db.Close()
 
+	// Download calibration data.
 	if !a.NoCalDownload {
-		// Check for new calibration data
-		log.Printf("Checking for new calibration data (disable with -n option)")
-		err = checkForNewCalibrationData(db)
-		if err != nil {
-			log.Printf("Unable to check for calibration data: %v", err)
-			log.Printf("Will continue with possibly stale calibration data")
-		}
-
-		// Start periodic download of new calibration data
-		go periodicCheckForNewCalibrationData(db)
+		a.downloadCalibrationData(db)
 	}
 
+	log.Printf("MIC_AWS_API_KEY = %s", a.MICAWSAPIKey)
+
+	// Start periodic download of new calibration data
+	go periodicCheckForNewCalibrationData(db)
+
 	// Create pipeline elements
+	// TODO(borud): make streaming broker configurable
 	pipelineRoot := pipeline.New(&options, db)
 	pipelineCalc := calculate.New(&options, db)
 	pipelinePersist := persist.New(&options, db)
@@ -94,32 +138,25 @@ func (a *RunCommand) Execute(args []string) error {
 	pipelineLog.AddNext(pipelineStream)
 	pipelineStream.AddNext(pipelineCirc)
 
+	// Stream to MQTT server if enabled
 	if a.MQTTAddress != "" {
 		pipelineMQTT := pipemqtt.New(a.MQTTClientID, a.MQTTPassword, a.MQTTAddress, a.MQTTTopicPrefix)
 		pipelineCirc.AddNext(pipelineMQTT)
 	}
 
 	// Start Horde listener unless disabled
-	if !a.HordeListenerDisable {
-		log.Printf("Starting Horde listener.  Listening to collection='%s'", options.HordeCollection)
-		hordeListener := listener.NewHordeListener(&options, pipelineRoot)
-		err := hordeListener.Start()
-		if err != nil {
-			log.Fatalf("Unable to start Horde listener: %v", err)
-		}
-		listeners = append(listeners, hordeListener)
+	if a.HordeListenerEnable {
+		a.startHordeListener(pipelineRoot)
 	}
 
 	// Start UDP listener if configured
 	if a.UDPListenAddress != "" {
-		// Start UDP Listener
-		log.Printf("Starting UDP listener on %s", a.UDPListenAddress)
-		udpListener := listener.NewUDPListener(a.UDPListenAddress, a.UDPBufferSize, pipelineRoot)
-		err := udpListener.Start()
-		if err != nil {
-			log.Fatalf("Unable to start UDP listener: %v", err)
-		}
-		listeners = append(listeners, udpListener)
+		a.startUDPListener(pipelineRoot)
+	}
+
+	// If we have no listeners there is no point to starting so we terminate
+	if len(listeners) == 0 {
+		log.Fatalf("No listeners defined so terminating.  Please specify at least one listener.")
 	}
 
 	// Start api server
@@ -138,8 +175,6 @@ func (a *RunCommand) Execute(args []string) error {
 	for _, listener := range listeners {
 		listener.WaitForShutdown()
 	}
-
 	api.Shutdown()
-
 	return nil
 }
