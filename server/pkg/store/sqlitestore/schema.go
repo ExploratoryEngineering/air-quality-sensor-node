@@ -83,6 +83,7 @@ CREATE TABLE IF NOT EXISTS messages (
 CREATE TABLE IF NOT EXISTS cal (
   id                    INTEGER PRIMARY KEY AUTOINCREMENT,
   device_id             TEXT NOT NULL,
+  sysid                 INTEGER NOT NULL,
   collection_id         TEXT NOT NULL,
   valid_from            DATETIME NOT NULL,
 
@@ -123,7 +124,6 @@ CREATE TABLE IF NOT EXISTS cal (
 
   UNIQUE(device_id, collection_id, afe_serial, valid_from)
 );
-
 `
 
 func createSchema(db *sqlx.DB, fileName string) {

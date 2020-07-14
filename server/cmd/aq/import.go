@@ -10,7 +10,7 @@ import (
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/store/sqlitestore"
 )
 
-// ImportCommand defines the command line parameters for import command
+// ImportCommand defines the command line parameters for import command.
 type ImportCommand struct {
 	CalFetch bool   `short:"f" long:"fetch-cal" description:"Fetch calibration data from network"`
 	CalURL   string `short:"u" long:"cal-url" description:"Distribution URL for calibration data" default:""`
@@ -20,16 +20,15 @@ const (
 	layout = "2006-01-02T15:04:05.000Z"
 )
 
-// var importCommand ImportCommand
-
 func init() {
-	parser.AddCommand("import",
+	parser.AddCommand(
+		"import",
 		"Import a calibration data",
 		"The import command imports a the calibration data to the database",
 		&ImportCommand{})
 }
 
-// Execute runs the import command
+// Execute runs the import command.
 func (a *ImportCommand) Execute(args []string) error {
 	if len(args) < 1 {
 		log.Fatalf("Please provide name of JSON file(s)")

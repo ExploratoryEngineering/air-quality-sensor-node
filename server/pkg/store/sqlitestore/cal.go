@@ -13,6 +13,7 @@ func (s *SqliteStore) PutCal(c *model.Cal) (int64, error) {
 INSERT INTO cal
 (
   device_id,
+  sysid,
   collection_id,
   valid_from,
   afe_serial,
@@ -44,6 +45,7 @@ INSERT INTO cal
 )
 VALUES(
   :device_id,
+  :sysid,
   :collection_id,
   :valid_from,
   :afe_serial,

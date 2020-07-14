@@ -7,6 +7,7 @@ import (
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/api"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/listener"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/listener/hordelistener"
+	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/listener/miclistener"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/listener/udplistener"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline/calculate"
@@ -40,25 +41,25 @@ type RunCommand struct {
 	MQTTTopicPrefix string `long:"mqtt-topic-prefix" description:"MQTT topic prefix" default:"aq" value-name:"MQTT topic prefix"`
 
 	// MIC
-	MICUsername  string `long:"mic-username" env:"MIC_USERNAME" description:"MIC Username" default:""`
-	MICPassword  string `long:"mic-password" env:"MIC_PASSWORD" description:"MIC Username" default:""`
-	MICAWSAPIKey string `long:"mic-api-key" env:"MIC_AWS_API_KEY" description:"MIC Username" default:""`
-
-	MICTopic          string `long:"mic-topic" description:"MIC topic we should listen to" default:"thing-update/StartIoT/trondheim.kommune.no/#"`
-	MICAWSRegion      string `long:"mic-aws-region" description:"AWS region for MIC" default:"eu-west-1"`
-	MICAWSAPIGateway  string `long:"mic-aws-api-gw" description:"AWS API gateway" default:"https://3ohe8pnzfb.execute-api.eu-west-1.amazonaws.com/prod"`
-	MICAWSUserPool    string `long:"mic-aws-user-pool" description:"AWS User pool" default:"eu-west-1_wsOo2av1M"`
-	MICAWSIoTEndpoint string `long:"mic-aws-iot-endpoint" desciption:"AWS IoT Endpoint" default:"a15nxxwvsld4o-ats"`
+	MICListenerEnabled bool   `long:"enable-mic" description:"Connect to MIC"`
+	MICUsername        string `long:"mic-username" env:"MIC_USERNAME" description:"MIC Username" default:""`
+	MICPassword        string `long:"mic-password" env:"MIC_PASSWORD" description:"MIC Username" default:""`
+	MICAWSAPIKey       string `long:"mic-api-key" env:"MIC_AWS_API_KEY" description:"MIC Username" default:""`
+	MICTopic           string `long:"mic-topic" description:"MIC topic we should listen to" default:"thing-update/StartIoT/trondheim.kommune.no/#"`
+	MICAWSRegion       string `long:"mic-aws-region" description:"AWS region for MIC" default:"eu-west-1"`
+	MICAWSAPIGateway   string `long:"mic-aws-api-gw" description:"AWS API gateway" default:"https://3ohe8pnzfb.execute-api.eu-west-1.amazonaws.com/prod"`
+	MICAWSUserPool     string `long:"mic-aws-user-pool" description:"AWS User pool" default:"eu-west-1_wsOo2av1M"`
+	MICAWSIoTEndpoint  string `long:"mic-aws-iot-endpoint" desciption:"AWS IoT Endpoint" default:"a15nxxwvsld4o-ats"`
 
 	// Horde listener
-	HordeListenerEnable bool `short:"r" long:"horde-listener" description:"Connect to Horde"`
+	HordeListenerEnable bool `long:"enable-horde" description:"Connect to Horde"`
 
 	// UDP listener
 	UDPListenAddress string `long:"udp-listener" description:"Listen address for UDP listener" default:"" value-name:"<[host]:port>"`
 	UDPBufferSize    int    `long:"udp-buffer-size" description:"Size of UDP read buffer" default:"1024" value-name:"<num bytes>"`
 
-	// Turn off downloading of calibration data
-	NoCalDownload bool `short:"n" long:"no-cal-download" description:"Turn off download of calibration data"`
+	// Skip initial download of calibration data
+	SkipInitialCalDownload bool `short:"n" long:"skip-cal-download" description:"Turn off initial download of calibration data"`
 }
 
 func init() {
@@ -81,8 +82,29 @@ func (a *RunCommand) downloadCalibrationData(db store.Store) {
 	}
 }
 
+// startMICListener starts the MIC listener
+func (a *RunCommand) startMICListener(r pipeline.Pipeline) listener.Listener {
+	log.Printf("Starting MIC listener. endpoint='%s' topic='%s'", a.MICAWSIoTEndpoint, a.MICTopic)
+	micListener := miclistener.New(&options, r, &miclistener.Config{
+		Username:       a.MICUsername,
+		Password:       a.MICPassword,
+		AWSAPIKey:      a.MICAWSAPIKey,
+		Topic:          a.MICTopic,
+		AWSRegion:      a.MICAWSRegion,
+		AWSAPIGateway:  a.MICAWSAPIGateway,
+		AWSUserPool:    a.MICAWSUserPool,
+		AWSIoTEndpoint: a.MICAWSIoTEndpoint,
+	})
+	err := micListener.Start()
+	if err != nil {
+		log.Fatalf("Unable to start UDP listener: %v", err)
+	}
+	listeners = append(listeners, micListener)
+	return micListener
+}
+
 // startUDPListener starts the UDP listener
-func (a *RunCommand) startUDPListener(r pipeline.Pipeline) {
+func (a *RunCommand) startUDPListener(r pipeline.Pipeline) listener.Listener {
 	log.Printf("Starting UDP listener on %s", a.UDPListenAddress)
 	udpListener := udplistener.New(a.UDPListenAddress, a.UDPBufferSize, r)
 	err := udpListener.Start()
@@ -90,10 +112,11 @@ func (a *RunCommand) startUDPListener(r pipeline.Pipeline) {
 		log.Fatalf("Unable to start UDP listener: %v", err)
 	}
 	listeners = append(listeners, udpListener)
+	return udpListener
 }
 
 // startHordeListener
-func (a *RunCommand) startHordeListener(r pipeline.Pipeline) {
+func (a *RunCommand) startHordeListener(r pipeline.Pipeline) listener.Listener {
 	log.Printf("Starting Horde listener.  Listening to collection='%s'", options.HordeCollection)
 	hordeListener := hordelistener.New(&options, r)
 	err := hordeListener.Start()
@@ -101,6 +124,7 @@ func (a *RunCommand) startHordeListener(r pipeline.Pipeline) {
 		log.Fatalf("Unable to start Horde listener: %v", err)
 	}
 	listeners = append(listeners, hordeListener)
+	return hordeListener
 }
 
 // Execute ...
@@ -113,11 +137,9 @@ func (a *RunCommand) Execute(args []string) error {
 	defer db.Close()
 
 	// Download calibration data.
-	if !a.NoCalDownload {
+	if !a.SkipInitialCalDownload {
 		a.downloadCalibrationData(db)
 	}
-
-	log.Printf("MIC_AWS_API_KEY = %s", a.MICAWSAPIKey)
 
 	// Start periodic download of new calibration data
 	go periodicCheckForNewCalibrationData(db)
@@ -144,7 +166,12 @@ func (a *RunCommand) Execute(args []string) error {
 		pipelineCirc.AddNext(pipelineMQTT)
 	}
 
-	// Start Horde listener unless disabled
+	// Start MIC listener if enabled
+	if a.MICListenerEnabled {
+		a.startMICListener(pipelineRoot)
+	}
+
+	// Start Horde listener if enabled
 	if a.HordeListenerEnable {
 		a.startHordeListener(pipelineRoot)
 	}

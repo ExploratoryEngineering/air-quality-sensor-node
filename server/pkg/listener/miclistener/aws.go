@@ -22,19 +22,19 @@ import (
 // References:
 // 		https://github.com/aws/aws-sdk-go/issues/820
 // 		https://github.com/aws/aws-sdk-go/issues/706
-func micLogin() (*cognitoidentity.GetCredentialsForIdentityOutput, error) {
+func (h *MICListener) micLogin() (*cognitoidentity.GetCredentialsForIdentityOutput, error) {
 	reqBody, err := json.Marshal(map[string]string{
-		"userName": micUsername,
-		"password": micPassword,
+		"userName": h.config.Username,
+		"password": h.config.Password,
 	})
 	if err != nil {
 		return nil, err
 	}
 
 	client := http.Client{}
-	request, err := http.NewRequest("POST", awsAPIGateway+"/auth/login", bytes.NewBuffer(reqBody))
+	request, err := http.NewRequest("POST", h.config.AWSAPIGateway+"/auth/login", bytes.NewBuffer(reqBody))
 	request.Header.Set("Content-type", "application/json")
-	request.Header.Set("x-api-key", awsAPIKey)
+	request.Header.Set("x-api-key", h.config.AWSAPIKey)
 	if err != nil {
 		return nil, err
 	}
@@ -60,12 +60,12 @@ func micLogin() (*cognitoidentity.GetCredentialsForIdentityOutput, error) {
 	token := data["credentials"].Token
 	identityID := data["credentials"].IdentityID
 
-	ses, _ := session.NewSession(&aws.Config{Region: aws.String(awsRegion)})
+	ses, _ := session.NewSession(&aws.Config{Region: aws.String(h.config.AWSRegion)})
 	svc := cognitoidentity.New(ses)
 	credRes, err := svc.GetCredentialsForIdentity(&cognitoidentity.GetCredentialsForIdentityInput{
 		IdentityId: aws.String(identityID),
 		Logins: map[string]*string{
-			"cognito-idp." + awsRegion + ".amazonaws.com/" + awsUserPool: &token,
+			"cognito-idp." + h.config.AWSRegion + ".amazonaws.com/" + h.config.AWSUserPool: &token,
 		},
 	})
 

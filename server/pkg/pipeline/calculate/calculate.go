@@ -16,7 +16,7 @@ type Calculate struct {
 	next             pipeline.Pipeline
 	opts             *opts.Opts
 	db               store.Store
-	calibrationCache map[string][]model.Cal
+	calibrationCache map[uint64][]model.Cal
 	cacheRefreshChan chan bool
 	lastCacheUpdate  time.Time
 }
@@ -53,10 +53,10 @@ func (p *Calculate) loadCache() error {
 }
 
 func (p *Calculate) populateCache(cals []model.Cal) {
-	m := make(map[string][]model.Cal)
+	m := make(map[uint64][]model.Cal)
 
 	for _, cal := range cals {
-		m[cal.DeviceID] = append(m[cal.DeviceID], cal)
+		m[cal.SysID] = append(m[cal.SysID], cal)
 	}
 
 	// Since the findCacheEntry algorithm absolutely depends on the
@@ -76,14 +76,13 @@ func (p *Calculate) populateCache(cals []model.Cal) {
 
 // findCacheEntry assumes that the calibration entries are sorted in
 // descending order by date in the cache.
-func (p *Calculate) findCacheEntry(deviceID string, t int64) *model.Cal {
-
+func (p *Calculate) findCacheEntry(sysID uint64, t int64) *model.Cal {
 	// Somewhat hokey caching logic.  Replace this nonsense with a
 	// proper caching layer that uses the Store interface.
 	refreshedCache := false
 	var deviceCalEntries []model.Cal
 	for {
-		deviceCalEntries = p.calibrationCache[deviceID]
+		deviceCalEntries = p.calibrationCache[sysID]
 		if deviceCalEntries != nil {
 			// We found cache entry so bail out
 			break
@@ -92,7 +91,7 @@ func (p *Calculate) findCacheEntry(deviceID string, t int64) *model.Cal {
 		// We did not find a cached entry.  If we have already
 		// refreshed, we bail and accept the consequences.
 		if refreshedCache {
-			log.Printf("Missing calibration data for '%s' (will only report every %.2f seconds)", deviceID, minCacheUpdateDelay.Seconds())
+			log.Printf("Missing calibration data for '%d' (will only report every %.2f seconds)", sysID, minCacheUpdateDelay.Seconds())
 			break
 		}
 
@@ -126,8 +125,10 @@ func (p *Calculate) findCacheEntry(deviceID string, t int64) *model.Cal {
 
 // Publish ...
 func (p *Calculate) Publish(m *model.Message) error {
-	cal := p.findCacheEntry(m.DeviceID, m.ReceivedTime)
+	cal := p.findCacheEntry(m.SysID, m.ReceivedTime)
 	model.CalculateSensorValues(m, cal)
+
+	log.Printf("Used cal entry for DeviceID = '%s', SysID = '%d'", m.DeviceID, m.SysID)
 
 	if p.next != nil {
 		return p.next.Publish(m)
