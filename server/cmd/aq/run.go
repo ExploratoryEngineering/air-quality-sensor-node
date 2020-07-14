@@ -8,6 +8,8 @@ import (
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/api"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/caldata"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/listener"
+	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/listener/hordelistener"
+	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/listener/udplistener"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline/calculate"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline/circular"
@@ -35,7 +37,7 @@ type RunCommand struct {
 	WebAccessLogDir string `short:"l" long:"web-access-log-dir" description:"Directory for access logs" default:"./logs" value-name:"<dir>"`
 
 	// Horde listener
-	HordeListenerDisable bool `short:"x" long:"no-horde" description:"Do not connect to Horde"`
+	HordeListenerEnable bool `short:"r" long:"horde-listener" description:"Connect to Horde"`
 
 	// UDP listener
 	UDPListenAddress string `short:"u" long:"udp-listener" description:"Listen address for UDP listener" default:"" value-name:"<[host]:port>"`
@@ -89,7 +91,8 @@ func checkForNewCalibrationData(db store.Store) error {
 
 // periodicCheckForNewCalibrationData sleeps for
 // checkForNewCalibrationDataPeriod and then downloads calibration
-// data and attempts to insert it.
+// data and attempts to insert it.  Note that this function only
+// downloads the calibration data - it does not update the cache.
 func periodicCheckForNewCalibrationData(db store.Store) {
 	for {
 		time.Sleep(checkForNewCalibrationDataPeriod)
@@ -110,6 +113,9 @@ func (a *RunCommand) Execute(args []string) error {
 	}
 	defer db.Close()
 
+	// Download calibration data.  We prefer to do this before we
+	// start the listeners since as soon as a listener is started,
+	// data might start to flow into the pipeline.
 	if !a.NoCalDownload {
 		// Check for new calibration data
 		err = checkForNewCalibrationData(db)
@@ -138,9 +144,9 @@ func (a *RunCommand) Execute(args []string) error {
 	pipelineStream.AddNext(pipelineCirc)
 
 	// Start Horde listener unless disabled
-	if !a.HordeListenerDisable {
+	if a.HordeListenerEnable {
 		log.Printf("Starting Horde listener.  Listening to collection='%s'", options.HordeCollection)
-		hordeListener := listener.NewHordeListener(&options, pipelineRoot)
+		hordeListener := hordelistener.New(&options, pipelineRoot)
 		err := hordeListener.Start()
 		if err != nil {
 			log.Fatalf("Unable to start Horde listener: %v", err)
@@ -152,12 +158,17 @@ func (a *RunCommand) Execute(args []string) error {
 	if a.UDPListenAddress != "" {
 		// Start UDP Listener
 		log.Printf("Starting UDP listener on %s", a.UDPListenAddress)
-		udpListener := listener.NewUDPListener(a.UDPListenAddress, a.UDPBufferSize, pipelineRoot)
+		udpListener := udplistener.New(a.UDPListenAddress, a.UDPBufferSize, pipelineRoot)
 		err := udpListener.Start()
 		if err != nil {
 			log.Fatalf("Unable to start UDP listener: %v", err)
 		}
 		listeners = append(listeners, udpListener)
+	}
+
+	// If we have no listeners there is no point to starting so we terminate
+	if len(listeners) == 0 {
+		log.Fatalf("No listeners defined so terminating.  Please specify at least one listener.")
 	}
 
 	// Start api server

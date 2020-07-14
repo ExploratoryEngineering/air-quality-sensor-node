@@ -82,7 +82,7 @@ func (s *Server) Start() {
 	m := mux.NewRouter().StrictSlash(true)
 	m.HandleFunc("/", s.mainHandler).Methods("GET")
 	m.HandleFunc("/stream", s.streamHandler).Methods("GET")
-	m.HandleFunc("/data", s.lastDataHandler).Methods("GET")
+	m.HandleFunc("/last", s.lastDataHandler).Methods("GET")
 
 	// Enable serving the static dir
 	m.PathPrefix("/").Handler(http.FileServer(http.Dir(s.staticDir)))

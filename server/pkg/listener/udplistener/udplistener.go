@@ -1,4 +1,4 @@
-package listener
+package udplistener
 
 import (
 	"context"
@@ -20,8 +20,8 @@ type UDPListener struct {
 	quit          chan bool
 }
 
-// NewUDPListener creates a new UDPListener instance
-func NewUDPListener(listenAddress string, bufferSize int, pipeline pipeline.Pipeline) *UDPListener {
+// New creates a new UDPListener instance
+func New(listenAddress string, bufferSize int, pipeline pipeline.Pipeline) *UDPListener {
 	return &UDPListener{
 		listenAddress: listenAddress,
 		bufferSize:    bufferSize,

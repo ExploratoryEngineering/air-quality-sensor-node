@@ -1,9 +1,10 @@
-package listener
+package hordelistener
 
 import (
 	"errors"
 	"io"
 	"log"
+	"time"
 
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/model"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/opts"
@@ -25,8 +26,8 @@ type HordeListener struct {
 	opts         *opts.Opts
 }
 
-// NewHordeListener creates a new HordeListener instance
-func NewHordeListener(opts *opts.Opts, pipeline pipeline.Pipeline) *HordeListener {
+// New creates a new HordeListener instance
+func New(opts *opts.Opts, pipeline pipeline.Pipeline) *HordeListener {
 	return &HordeListener{
 		opts:         opts,
 		pipeline:     pipeline,
@@ -35,6 +36,8 @@ func NewHordeListener(opts *opts.Opts, pipeline pipeline.Pipeline) *HordeListene
 		quit:         make(chan bool),
 	}
 }
+
+const reconnectDelay = 5 * time.Second
 
 // Start HordeListener instance
 func (h *HordeListener) Start() error {
@@ -48,47 +51,51 @@ func (h *HordeListener) Start() error {
 	}
 	h.client = c
 
-	stream, err := h.client.CollectionOutputStream(h.collectionID)
-	if err != nil {
-		log.Fatal("Error creating stream: ", err)
-	}
-
 	go func() {
-		defer stream.Close()
-		log.Printf("Starting Horde listening loop")
 		for {
-			data, err := stream.Recv()
-			if err == io.EOF {
-				h.doneChan <- err
-				break
-			}
+			stream, err := h.client.CollectionOutputStream(h.collectionID)
 			if err != nil {
-				h.doneChan <- err
+				log.Fatal("Error connecting to Horde: ", err)
 			}
 
-			pb, err := model.ProtobufFromData(data.Payload)
-			if err != nil {
-				log.Printf("Failed to decode protobuffer len=%d: %v", len(data.Payload), err)
-				continue
+			log.Printf("Connected. Starting Horde listening loop")
+			for {
+				data, err := stream.Recv()
+				if err == io.EOF {
+					h.doneChan <- err
+					break
+				}
+				if err != nil {
+					h.doneChan <- err
+				}
+
+				pb, err := model.ProtobufFromData(data.Payload)
+				if err != nil {
+					log.Printf("Failed to decode protobuffer len=%d: %v", len(data.Payload), err)
+					continue
+				}
+
+				m := model.MessageFromProtobuf(pb)
+				if m == nil {
+					log.Printf("Unable to create Message from protobuf")
+					continue
+				}
+
+				m.DeviceID = data.Device.ID
+				m.ReceivedTime = data.Received
+				m.PacketSize = len(data.Payload)
+
+				// TODO(borud): This is a good place to check if a device
+				//    is already known and inject it into the database.
+
+				if h.opts.Verbose {
+					log.Printf("Accepted packet from Horde %v", m)
+				}
+				h.pipeline.Publish(m)
 			}
-
-			m := model.MessageFromProtobuf(pb)
-			if m == nil {
-				log.Printf("Unable to create Message from protobuf")
-				continue
-			}
-
-			m.DeviceID = data.Device.ID
-			m.ReceivedTime = data.Received
-			m.PacketSize = len(data.Payload)
-
-			// TODO(borud): This is a good place to check if a device
-			//    is already known and inject it into the database.
-
-			if h.opts.Verbose {
-				log.Printf("Accepted packet from Horde %v", m)
-			}
-			h.pipeline.Publish(m)
+			log.Printf("Lost connection to Horde.  Will wait for %v to reconnect", reconnectDelay)
+			time.Sleep(reconnectDelay)
+			log.Printf("Reconnecting to Horde")
 		}
 	}()
 	return nil
