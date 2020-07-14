@@ -2,7 +2,6 @@ package miclistener
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"time"
 
@@ -21,6 +20,19 @@ type MICListener struct {
 	quit     chan bool
 	client   *nbiot.Client
 	opts     *opts.Opts
+	config   *Config
+}
+
+// Config contains the configuration for this listener
+type Config struct {
+	Username       string
+	Password       string
+	AWSAPIKey      string
+	Topic          string
+	AWSRegion      string
+	AWSAPIGateway  string
+	AWSUserPool    string
+	AWSIoTEndpoint string
 }
 
 // credentials struct to parse JSON response from MIC login endpoint.
@@ -53,23 +65,12 @@ type mqttPayloadRaw struct {
 	Data []byte `json:"data"`
 }
 
-// TODO(pontus): Find better placement for opts/configs.
-const (
-	micUsername    = "<redacted>"                                                  // not added
-	micPassword    = "<redacted>"                                                  // not added
-	micTopic       = "thing-update/StartIoT/trondheim.kommune.no/#"                // added
-	awsAPIKey      = "3puriPZzDf9Mo664Oyuow1GO1B7TzX9J7oqxXISx"                    // not added
-	awsAPIGateway  = "https://3ohe8pnzfb.execute-api.eu-west-1.amazonaws.com/prod" // added
-	awsRegion      = "eu-west-1"                                                   // added
-	awsUserPool    = "eu-west-1_wsOo2av1M"                                         // added
-	awsIoTEndpoint = "a15nxxwvsld4o-ats"                                           // added
-)
-
 // New creates a new MICListener instance
-func New(opts *opts.Opts, pipeline pipeline.Pipeline) *MICListener {
+func New(opts *opts.Opts, pipeline pipeline.Pipeline, config *Config) *MICListener {
 	return &MICListener{
 		opts:     opts,
 		pipeline: pipeline,
+		config:   config,
 		doneChan: make(chan error),
 		quit:     make(chan bool),
 	}
@@ -77,7 +78,7 @@ func New(opts *opts.Opts, pipeline pipeline.Pipeline) *MICListener {
 
 // Start MICListener instance
 func (h *MICListener) Start() error {
-	credRes, err := micLogin()
+	credRes, err := h.micLogin()
 	if err != nil {
 		return err
 	}
@@ -86,8 +87,8 @@ func (h *MICListener) Start() error {
 		*credRes.Credentials.AccessKeyId,
 		*credRes.Credentials.SecretKey,
 		*credRes.Credentials.SessionToken,
-		awsRegion,
-		awsIoTEndpoint,
+		h.config.AWSRegion,
+		h.config.AWSIoTEndpoint,
 	)
 
 	opts := MQTT.NewClientOptions().AddBroker(wsURL)
@@ -97,11 +98,12 @@ func (h *MICListener) Start() error {
 	if token := client.Connect(); token.Wait() && token.Error() != nil {
 		log.Fatal(token.Error())
 	} else {
-		log.Printf("Connected to server\n")
+		log.Printf("Connected to server: %s\n", h.config.AWSIoTEndpoint)
 
 		// Function invoked each time a new MQTT message is received
 		var f MQTT.MessageHandler = func(client MQTT.Client, msg MQTT.Message) {
 			var state mqttState
+
 			if err := json.Unmarshal(msg.Payload(), &state); err != nil {
 				log.Fatal(err)
 			}
@@ -111,8 +113,6 @@ func (h *MICListener) Start() error {
 			}
 
 			protobufBytes := state.State.Reported.Raw
-			fmt.Printf("%+v\n", protobufBytes)
-
 			pb, err := model.ProtobufFromData(protobufBytes.Data)
 			if err != nil {
 				log.Printf("Failed to decode protobuffer len=%d: %v", len(protobufBytes.Data), err)
@@ -123,24 +123,27 @@ func (h *MICListener) Start() error {
 				log.Printf("Unable to create Message from protobuf")
 			}
 
-			// TODO(pontus): unsure where deviceID can be found. If not in payload we don't have it :(
-			// m.DeviceID = data.Device.ID
-			// m.ReceivedTime = data.Received
+			// Since MIC does not provide us with the full metadata
+			// from Horde we have to find other sources for the
+			// metadata:
+			//
+			// We can't know the device ID
+			m.DeviceID = "no-id-from-mic"
+
+			// We can't know the received time (also note that MIC has
+			// pretty high latency and the latency is variable, so the
+			// timestamp can be several seconds late.
+			m.ReceivedTime = time.Now().UnixNano() / int64(time.Millisecond)
+
 			m.PacketSize = len(protobufBytes.Data)
-
-			// TODO(borud): This is a good place to check if a device
-			//    is already known and inject it into the database.
-
 			if h.opts.Verbose {
 				log.Printf("Accepted packet from Horde %v", m)
 			}
 			h.pipeline.Publish(m)
 		}
 
-		if token := client.Subscribe(micTopic, 0, f); token.Wait() && token.Error() != nil {
+		if token := client.Subscribe(h.config.Topic, 0, f); token.Wait() && token.Error() != nil {
 			log.Fatal(token.Error())
-		} else {
-			log.Printf("Subscribed to topic\n")
 		}
 	}
 

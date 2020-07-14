@@ -89,6 +89,7 @@ type Message struct {
 type Cal struct {
 	ID           int64     `db:"id" json:"-"`
 	DeviceID     string    `db:"device_id" json:"deviceID"`
+	SysID        uint64    `db:"sysid" json:"sysID"` // System id, CPU id or similar
 	CollectionID string    `db:"collection_id" json:"collectionID"`
 	ValidFrom    time.Time `db:"valid_from" json:"from"`
 
