@@ -126,9 +126,15 @@ func (p *Calculate) findCacheEntry(sysID uint64, t int64) *model.Cal {
 // Publish ...
 func (p *Calculate) Publish(m *model.Message) error {
 	cal := p.findCacheEntry(m.SysID, m.ReceivedTime)
-	model.CalculateSensorValues(m, cal)
 
-	log.Printf("Used cal entry for DeviceID = '%s', SysID = '%d'", m.DeviceID, m.SysID)
+	// This is a workaround for when we use MIC and we do not get
+	// access to the underlying DeviceID. We use the deviceID from the
+	// calibration data to populate the DeviceID field.
+	if m.DeviceID == "" {
+		m.DeviceID = cal.DeviceID
+	}
+
+	model.CalculateSensorValues(m, cal)
 
 	if p.next != nil {
 		return p.next.Publish(m)

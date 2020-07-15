@@ -84,6 +84,10 @@ func (a *RunCommand) downloadCalibrationData(db store.Store) {
 
 // startMICListener starts the MIC listener
 func (a *RunCommand) startMICListener(r pipeline.Pipeline) listener.Listener {
+	if a.MICUsername == "" || a.MICPassword == "" || a.MICAWSAPIKey == "" {
+		log.Fatalf("You have to set MIC_USERNAME, MIC_PASSWORD and MIC_AWS_API_KEY environment variables first.")
+	}
+
 	log.Printf("Starting MIC listener. endpoint='%s' topic='%s'", a.MICAWSIoTEndpoint, a.MICTopic)
 	micListener := miclistener.New(&options, r, &miclistener.Config{
 		Username:       a.MICUsername,

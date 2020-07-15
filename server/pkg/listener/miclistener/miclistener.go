@@ -105,9 +105,13 @@ func (h *MICListener) Start() error {
 			var state mqttState
 
 			if err := json.Unmarshal(msg.Payload(), &state); err != nil {
-				log.Fatal(err)
+				log.Printf("Unable to unmarshal MQTT payload: '%s': %v", msg.Payload(), err)
+				return
 			}
 
+			// We get two messages.  One is the one we want to parse
+			// that contains a protobuffer and the other is a
+			// backdated message.
 			if state.State.Reported.Backdate != 0 {
 				return
 			}
@@ -116,19 +120,10 @@ func (h *MICListener) Start() error {
 			pb, err := model.ProtobufFromData(protobufBytes.Data)
 			if err != nil {
 				log.Printf("Failed to decode protobuffer len=%d: %v", len(protobufBytes.Data), err)
+				return
 			}
 
 			m := model.MessageFromProtobuf(pb)
-			if m == nil {
-				log.Printf("Unable to create Message from protobuf")
-			}
-
-			// Since MIC does not provide us with the full metadata
-			// from Horde we have to find other sources for the
-			// metadata:
-			//
-			// We can't know the device ID
-			m.DeviceID = "no-id-from-mic"
 
 			// We can't know the received time (also note that MIC has
 			// pretty high latency and the latency is variable, so the
