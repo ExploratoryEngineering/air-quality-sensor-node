@@ -97,7 +97,7 @@ func (a *RunCommand) startMICListener(r pipeline.Pipeline) listener.Listener {
 	})
 	err := micListener.Start()
 	if err != nil {
-		log.Fatalf("Unable to start UDP listener: %v", err)
+		log.Fatalf("Unable to start MIC listener: %v", err)
 	}
 	listeners = append(listeners, micListener)
 	return micListener
