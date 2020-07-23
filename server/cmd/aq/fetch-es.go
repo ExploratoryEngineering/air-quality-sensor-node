@@ -74,15 +74,11 @@ type FetchCommand struct {
 var beginningOfTime = int64(1585094400000)
 
 const (
-	micUsername    = "<redacted>"
-	micPassword    = "<redacted>"
-	micTopic       = "thing-update/StartIoT/trondheim.kommune.no/#"
-	micThingType   = 191
-	awsAPIKey      = "3puriPZzDf9Mo664Oyuow1GO1B7TzX9J7oqxXISx"
-	awsAPIGateway  = "https://3ohe8pnzfb.execute-api.eu-west-1.amazonaws.com/prod"
-	awsRegion      = "eu-west-1"
-	awsUserPool    = "eu-west-1_wsOo2av1M"
-	awsIoTEndpoint = "a15nxxwvsld4o-ats"
+	micUsername   = "<redacted>"
+	micPassword   = "<redacted>"
+	micThingType  = 191
+	awsAPIKey     = "3puriPZzDf9Mo664Oyuow1GO1B7TzX9J7oqxXISx"
+	awsAPIGateway = "https://3ohe8pnzfb.execute-api.eu-west-1.amazonaws.com/prod"
 )
 
 func micLogin() (*string, error) {
