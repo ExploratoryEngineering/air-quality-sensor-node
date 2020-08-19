@@ -1,7 +1,6 @@
 package caldata
 
 import (
-	"log"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -17,9 +16,4 @@ func TestCaldata(t *testing.T) {
 	cals, err := cd.DownloadFromS3()
 	assert.Nil(t, err)
 	assert.NotNil(t, cals)
-
-	for _, cal := range cals {
-		log.Printf("%s %s %s", cal.DeviceID, cal.CollectionID, cal.ValidFrom)
-	}
-
 }
