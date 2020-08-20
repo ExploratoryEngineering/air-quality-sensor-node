@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"time"
 
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/api"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/listener"
@@ -16,14 +15,11 @@ import (
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline/pipelog"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline/pipemqtt"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/pipeline/stream"
-	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/store"
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/store/sqlitestore"
 )
 
-// How often do we poll for new calibration data
 const (
-	checkForNewCalibrationDataPeriod = (1 * time.Hour)
-	circularBufferLength             = 100
+	circularBufferLength = 100
 )
 
 // RunCommand ...
@@ -57,9 +53,6 @@ type RunCommand struct {
 	// UDP listener
 	UDPListenAddress string `long:"udp-listener" description:"Listen address for UDP listener" default:"" value-name:"<[host]:port>"`
 	UDPBufferSize    int    `long:"udp-buffer-size" description:"Size of UDP read buffer" default:"1024" value-name:"<num bytes>"`
-
-	// Skip initial download of calibration data
-	SkipInitialCalDownload bool `short:"n" long:"skip-cal-download" description:"Turn off initial download of calibration data"`
 }
 
 func init() {
@@ -71,16 +64,6 @@ func init() {
 }
 
 var listeners []listener.Listener
-
-func (a *RunCommand) downloadCalibrationData(db store.Store) {
-	// Check for new calibration data
-	log.Printf("Checking for new calibration data (disable with -n option)")
-	err := checkForNewCalibrationData(db)
-	if err != nil {
-		log.Printf("Unable to check for calibration data: %v", err)
-		log.Printf("Will continue with possibly stale calibration data")
-	}
-}
 
 // startMICListener starts the MIC listener
 func (a *RunCommand) startMICListener(r pipeline.Pipeline) listener.Listener {
@@ -140,13 +123,8 @@ func (a *RunCommand) Execute(args []string) error {
 	}
 	defer db.Close()
 
-	// Download calibration data.
-	if !a.SkipInitialCalDownload {
-		a.downloadCalibrationData(db)
-	}
-
-	// Start periodic download of new calibration data
-	go periodicCheckForNewCalibrationData(db)
+	// Load the calibration data to pick up any new calibration sets
+	loadCalibrationData(db, options.CalibrationDataDir)
 
 	// Create pipeline elements
 	// TODO(borud): make streaming broker configurable
