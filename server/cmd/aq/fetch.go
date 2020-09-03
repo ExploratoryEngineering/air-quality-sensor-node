@@ -12,7 +12,7 @@ import (
 	"github.com/telenordigital/nbiot-go"
 )
 
-// FetchCommand ...
+// FetchCommand fetches backlog of data
 type FetchCommand struct {
 	PageSize int `short:"p" long:"page-size" description:"Number of rows to fetch per page" default:"250"`
 }
@@ -22,7 +22,7 @@ var beginningOfTime = int64(1585094400000)
 
 func init() {
 	parser.AddCommand(
-		"fetch",
+		"fetch-horde",
 		"Fetch historical data",
 		"Fetch historical sensor data from Horde server",
 		&FetchCommand{})
@@ -115,9 +115,4 @@ func (a *FetchCommand) Execute(args []string) error {
 
 	log.Printf("Fetched a total of %d messages", countTotal)
 	return nil
-}
-
-// msToTime converts milliseconds since epoch to time.Time
-func msToTime(t int64) time.Time {
-	return time.Unix(t/int64(1000), (t%int64(1000))*int64(1000000))
 }
