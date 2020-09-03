@@ -22,56 +22,46 @@ type Credentials struct {
 	IdentityID string `json:"identityId"`
 }
 
-// ESResult ...
-type ESResult struct {
-	Shards ESShard `json:"_shards"`
-	Hits   ESHits  `json:"hits"`
+type esResult struct {
+	Shards esShard `json:"_shards"`
+	Hits   esHits  `json:"hits"`
 }
-
-// ESShard ...
-type ESShard struct {
+type esShard struct {
 	Total      int `json:"total"`
 	Successful int `json:"successful"`
 	Failed     int `json:"failed"`
 }
 
-// ESHits ...
-type ESHits struct {
+type esHits struct {
 	Total int     `json:"total"`
-	Hits  []ESHit `json:"hits"`
+	Hits  []esHit `json:"hits"`
 }
 
-// ESHit ...
-type ESHit struct {
-	Source ESSource `json:"_source"`
+type esHit struct {
+	Source esSource `json:"_source"`
 }
 
-// ESSource ...
-type ESSource struct {
+type esSource struct {
 	Timestamp int     `json:"timestamp"`
 	ThingName string  `json:"thingName"`
 	ThingType string  `json:"thingType"`
-	State     ESState `json:"state"`
+	State     esState `json:"state"`
 }
 
-// ESState ...
-type ESState struct {
+type esState struct {
 	Backdate int          `json:"backdate"`
-	Raw      ESPayloadRaw `json:"raw"`
+	Raw      esPayloadRaw `json:"raw"`
 }
 
 // ESPayloadRaw ...
-type ESPayloadRaw struct {
+type esPayloadRaw struct {
 	Data []byte `json:"data"`
 }
 
-// FetchCommand ...
-type FetchCommand struct {
+// FetchESCommand ...
+type FetchESCommand struct {
 	PageSize int `short:"p" long:"page-size" description:"Number of rows to fetch per page" default:"250"`
 }
-
-// For this application we say that time begins on 2020-03-25
-var beginningOfTime = int64(1585094400000)
 
 const (
 	micUsername   = "<redacted>"
@@ -121,7 +111,7 @@ func micLogin() (*string, error) {
 	return &token, nil
 }
 
-func fetchPage(token *string, pageSize int, gte int64, lte int64) ([]ESHit, error) {
+func fetchPage(token *string, pageSize int, gte int64, lte int64) ([]esHit, error) {
 	query := fmt.Sprintf(`
 	{
 		"queryScope": {
@@ -159,18 +149,22 @@ func fetchPage(token *string, pageSize int, gte int64, lte int64) ([]ESHit, erro
 
 	client := http.Client{}
 	request, err := http.NewRequest("POST", awsAPIGateway+"/observations/find", bytes.NewBufferString(query))
-	request.Header.Set("Content-type", "application/json")
-	request.Header.Set("x-api-key", awsAPIKey)
-	request.Header.Set("Authorization", *token)
 	if err != nil {
 		return nil, err
 	}
+
+	request.Header.Set("Content-type", "application/json")
+	request.Header.Set("x-api-key", awsAPIKey)
+	request.Header.Set("Authorization", *token)
 
 	resp, err := client.Do(request)
 	if err != nil {
 		return nil, err
 	}
 
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("Failed to fetch data: %s", resp.Status)
+	}
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
@@ -178,7 +172,7 @@ func fetchPage(token *string, pageSize int, gte int64, lte int64) ([]ESHit, erro
 		return nil, err
 	}
 
-	var data ESResult
+	var data esResult
 	err = json.Unmarshal([]byte(body), &data)
 	if err != nil {
 		return nil, err
@@ -189,14 +183,14 @@ func fetchPage(token *string, pageSize int, gte int64, lte int64) ([]ESHit, erro
 
 func init() {
 	parser.AddCommand(
-		"fetch",
+		"fetch-mic",
 		"Fetch historical data",
 		"Fetch historical sensor data from MIC Elasticsearch index",
-		&FetchCommand{})
+		&FetchESCommand{})
 }
 
 // Execute ...
-func (a *FetchCommand) Execute(args []string) error {
+func (a *FetchESCommand) Execute(args []string) error {
 	token, err := micLogin()
 	if err != nil {
 		return err
@@ -285,9 +279,4 @@ func (a *FetchCommand) Execute(args []string) error {
 
 	log.Printf("Fetched a total of %d messages", countTotal)
 	return nil
-}
-
-// msToTime converts milliseconds since epoch to time.Time
-func msToTime(t int64) time.Time {
-	return time.Unix(t/int64(1000), (t%int64(1000))*int64(1000000))
 }
