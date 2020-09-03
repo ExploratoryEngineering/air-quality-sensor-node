@@ -185,7 +185,7 @@ func (a *FetchESCommand) fetchPage(token *string, pageSize int, gte int64, lte i
 
 func init() {
 	parser.AddCommand(
-		"fetch-mic",
+		"fetch",
 		"Fetch historical data",
 		"Fetch historical sensor data from MIC Elasticsearch index",
 		&FetchESCommand{})

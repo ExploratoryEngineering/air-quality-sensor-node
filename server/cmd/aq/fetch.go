@@ -22,7 +22,7 @@ var beginningOfTime = int64(1585094400000)
 
 func init() {
 	parser.AddCommand(
-		"fetch",
+		"fetch-span",
 		"Fetch historical data",
 		"Fetch historical sensor data from Horde server",
 		&FetchCommand{})
