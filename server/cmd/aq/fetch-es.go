@@ -16,8 +16,7 @@ import (
 	"github.com/ExploratoryEngineering/air-quality-sensor-node/server/pkg/store/sqlitestore"
 )
 
-// Credentials ...
-type Credentials struct {
+type credentials struct {
 	Token      string `json:"token"`
 	IdentityID string `json:"identityId"`
 }
@@ -60,47 +59,50 @@ type esPayloadRaw struct {
 
 // FetchESCommand ...
 type FetchESCommand struct {
-	PageSize int `short:"p" long:"page-size" description:"Number of rows to fetch per page" default:"250"`
+	PageSize         int    `short:"p" long:"page-size" description:"Number of rows to fetch per page" default:"250"`
+	MICUsername      string `long:"mic-username" env:"MIC_USERNAME" description:"MIC Username" default:""`
+	MICPassword      string `long:"mic-password" env:"MIC_PASSWORD" description:"MIC Username" default:""`
+	MICAWSAPIKey     string `long:"mic-api-key" env:"MIC_AWS_API_KEY" description:"MIC Username" default:""`
+	MICAWSRegion     string `long:"mic-aws-region" description:"AWS region for MIC" default:"eu-west-1"`
+	MICAWSAPIGateway string `long:"mic-aws-api-gw" description:"AWS API gateway" default:"https://3ohe8pnzfb.execute-api.eu-west-1.amazonaws.com/prod"`
+	MICThingType     int    `long:"mic-thing-type" description:"MIC thing type" default:"191"`
 }
 
-const (
-	micUsername   = "<redacted>"
-	micPassword   = "<redacted>"
-	micThingType  = 191
-	awsAPIKey     = "3puriPZzDf9Mo664Oyuow1GO1B7TzX9J7oqxXISx"
-	awsAPIGateway = "https://3ohe8pnzfb.execute-api.eu-west-1.amazonaws.com/prod"
-)
-
-func micLogin() (*string, error) {
+func (a *FetchESCommand) micLogin() (*string, error) {
 	reqBody, err := json.Marshal(map[string]string{
-		"userName": micUsername,
-		"password": micPassword,
+		"userName": a.MICUsername,
+		"password": a.MICPassword,
 	})
 	if err != nil {
 		return nil, err
 	}
 
+	log.Printf("ReqBody: \n%s\n", reqBody)
+
 	client := http.Client{}
-	request, err := http.NewRequest("POST", awsAPIGateway+"/auth/login", bytes.NewBuffer(reqBody))
-	request.Header.Set("Content-type", "application/json")
-	request.Header.Set("x-api-key", awsAPIKey)
+	request, err := http.NewRequest("POST", a.MICAWSAPIGateway+"/auth/login", bytes.NewBuffer(reqBody))
 	if err != nil {
 		return nil, err
 	}
+
+	request.Header.Set("Content-type", "application/json")
+	request.Header.Set("x-api-key", a.MICAWSAPIKey)
 
 	resp, err := client.Do(request)
 	if err != nil {
 		return nil, err
 	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("Failed to log into MIC: %s", resp.Status)
+	}
 
 	defer resp.Body.Close()
-
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
 
-	var data map[string]Credentials
+	var data map[string]credentials
 	err = json.Unmarshal([]byte(body), &data)
 	if err != nil {
 		return nil, err
@@ -111,7 +113,7 @@ func micLogin() (*string, error) {
 	return &token, nil
 }
 
-func fetchPage(token *string, pageSize int, gte int64, lte int64) ([]esHit, error) {
+func (a *FetchESCommand) fetchPage(token *string, pageSize int, gte int64, lte int64) ([]esHit, error) {
 	query := fmt.Sprintf(`
 	{
 		"queryScope": {
@@ -145,16 +147,16 @@ func fetchPage(token *string, pageSize int, gte int64, lte int64) ([]esHit, erro
 			}
 		}
 	}
-	`, micThingType, pageSize, gte, lte)
+	`, a.MICThingType, pageSize, gte, lte)
 
 	client := http.Client{}
-	request, err := http.NewRequest("POST", awsAPIGateway+"/observations/find", bytes.NewBufferString(query))
+	request, err := http.NewRequest("POST", a.MICAWSAPIGateway+"/observations/find", bytes.NewBufferString(query))
 	if err != nil {
 		return nil, err
 	}
 
 	request.Header.Set("Content-type", "application/json")
-	request.Header.Set("x-api-key", awsAPIKey)
+	request.Header.Set("x-api-key", a.MICAWSAPIKey)
 	request.Header.Set("Authorization", *token)
 
 	resp, err := client.Do(request)
@@ -191,7 +193,7 @@ func init() {
 
 // Execute ...
 func (a *FetchESCommand) Execute(args []string) error {
-	token, err := micLogin()
+	token, err := a.micLogin()
 	if err != nil {
 		return err
 	}
@@ -203,10 +205,7 @@ func (a *FetchESCommand) Execute(args []string) error {
 	defer db.Close()
 
 	// Make sure we have latest calibration data before fetching
-	err = checkForNewCalibrationData(db)
-	if err != nil {
-		log.Printf("Unable to download calibration data: %v", err)
-	}
+	loadCalibrationData(db, options.CalibrationDataDir)
 
 	data, err := db.ListMessages(0, 1)
 	if err != nil {
@@ -235,7 +234,7 @@ func (a *FetchESCommand) Execute(args []string) error {
 	var countTotal = 0
 
 	for {
-		data, err := fetchPage(token, a.PageSize, since, until)
+		data, err := a.fetchPage(token, a.PageSize, since, until)
 		if err != nil {
 			log.Fatalf("Error while reading data: %v", err)
 		}
@@ -259,9 +258,7 @@ func (a *FetchESCommand) Execute(args []string) error {
 				continue
 			}
 
-			// TODO(pontus): unsure where deviceID can be found. If not in payload we don't have it :(
-			// m.DeviceID = d.Device.ID
-			// m.ReceivedTime = d.Received
+			m.ReceivedTime = int64(d.Source.Timestamp)
 			m.PacketSize = len(protobufBytes.Data)
 
 			pipelineRoot.Publish(m)
