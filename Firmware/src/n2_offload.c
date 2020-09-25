@@ -21,6 +21,8 @@ LOG_MODULE_REGISTER(N2);
 
 #include "comms.h"
 #include "at_commands.h"
+#include "n2_offload.h"
+#include "config.h"
 
 // The maximum number of sockets in SARA N2 is 7
 #define MDM_MAX_SOCKETS 7
@@ -41,7 +43,7 @@ struct n2_socket
 
 static struct n2_socket sockets[MDM_MAX_SOCKETS];
 
-static int next_free_port = 6000;
+int next_free_port = NEXT_FREE_PORT;
 
 #define CMD_BUFFER_SIZE 64
 static char modem_command_buffer[CMD_BUFFER_SIZE];
@@ -462,6 +464,8 @@ static int n2_init(struct device *dev)
     LOG_INF("Initalise offloading");
     k_sem_init(&mdm_sem, 1, 1);
     k_sem_init(&socket_sem, 0, 1);
+    
+    init_config_nvs();
 
     receive_callback(receive_cb);
 

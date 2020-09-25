@@ -39,6 +39,11 @@ bool modem_is_ready();
 void modem_restart();
 
 /**
+ * Configure modem
+ */
+void modem_configure();
+
+/**
  * Restart modem (in a more network friendly way than modem_restart())
  *  NOTE: This function has to be tested while moving between cells - and maybe also renamed at some point.
  */

@@ -2,5 +2,9 @@
 deps/
 modules/
 tools/
+build/
 Firmware/mcuboot/
+Firmware/.apikey
 Firmware/nanopb/
+.DS_Store
+.vscode/

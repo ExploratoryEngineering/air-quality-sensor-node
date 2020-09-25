@@ -9,6 +9,7 @@ project(aqnode)
 find_package(Nanopb REQUIRED)
 include_directories(${NANOPB_INCLUDE_DIRS})
 nanopb_generate_cpp(PROTO_SRCS PROTO_HDRS ../common/protobuf/aq.proto)
+nanopb_generate_cpp(PROTO_SRCS PROTO_HDRS ../common/protobuf/config.proto)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 add_custom_target(generate_proto_sources DEPENDS ${PROTO_SRCS} ${PROTO_HDRS})
 set_source_files_properties(${PROTO_SRCS} ${PROTO_HDRS}

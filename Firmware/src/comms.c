@@ -10,6 +10,8 @@
 #include "at_commands.h"
 #include "init.h"
 #include "priorities.h"
+#include "n2_offload.h"
+#include "config.h"
 
 #include <logging/log.h>
 LOG_MODULE_REGISTER(COMMS, CONFIG_COMMS_LOG_LEVEL);
@@ -25,6 +27,11 @@ static struct k_sem urc_sem;
 static uint8_t urcbuffer[URC_SIZE];
 static struct ring_buf urc_rb;
 static struct k_sem rx_sem;
+
+// APN_NAME array and ACTIVE_APN_INDEX are initialized in init_config_nvs()
+extern char APN_NAME[NVS_APN_COUNT][APN_NAME_SIZE];
+extern int ACTIVE_APN_INDEX;
+
 
 #define URC_THREAD_STACK 512
 #define DUMP_MODEM 0
@@ -66,7 +73,6 @@ void urc_threadproc(void)
                 {
                     if (recv_cb && strncmp(buf, "+NSONMI:", 8) == 0)
                     {
-                        LOG_DBG("nsonmi");
                         // This is a receive notification. Invoke callback
                         char *countptr = NULL;
                         char *fdptr = buf;
@@ -166,23 +172,34 @@ bool modem_is_ready()
     return false;
 }
 
+char define_context[APN_NAME_SIZE+21];
 void modem_configure()
 {
-    modem_write("AT+CGDCONT=0,\"IP\",\"telenor.iotgw\"\r");
+    sprintf(define_context, "AT+CGDCONT=0,\"IP\",\"%s\"\r", APN_NAME[ACTIVE_APN_INDEX]);
+    LOG_INF("TRYING APN INDEX: %d", ACTIVE_APN_INDEX);
+    LOG_INF("TRYING APN: %s", log_strdup(APN_NAME[ACTIVE_APN_INDEX]));
+
+    modem_write(define_context);
+
     if (at_generic_decode() != AT_OK)
     {
-        LOG_ERR("AT+CGPADDR (APN config) did not return OK");
+        LOG_ERR("AT+CGDCONT (APN config) did not return OK");
     }
+
     modem_write("AT+NCONFIG=\"AUTOCONNECT\",\"TRUE\"\r");
     if (at_generic_decode() != AT_OK)
     {
         LOG_ERR("AT+NCONFIG (auto connect) did not return OK");
     }
+
+    k_sleep(1000);
 }
 
+extern int next_free_port;
 void modem_restart()
 {
     modem_write("AT+NRB\r");
+    next_free_port = NEXT_FREE_PORT;
     atnrb_decode();
 }
 
@@ -195,10 +212,15 @@ void modem_restart_without_triggering_network_signalling_storm_but_hopefully_pic
     modem_write("AT+CFUN=1\r");
     atnrb_decode();
 
+    next_free_port = NEXT_FREE_PORT;
+
     LOG_DBG("Waiting for modem to connect...");
-    while (!modem_is_ready())
+
+    int retries = 0;
+    while (!modem_is_ready() & (retries++ < APN_QUERY_RETRY_COUNT))
+    //while (!modem_is_ready())
     {
-        k_sleep(K_MSEC(2000));
+        k_sleep(K_MSEC(APN_RETRY_DELAY_MS));
     }
 }
 
@@ -237,9 +259,12 @@ void modem_init(void)
     modem_restart();
 
     LOG_DBG("Waiting for modem to connect...");
-    while (!modem_is_ready())
+
+    int retries = 0;
+    while (!modem_is_ready() & (retries++ < APN_QUERY_RETRY_COUNT))
+    //while (!modem_is_ready())
     {
-        k_sleep(K_MSEC(2000));
+        k_sleep(K_MSEC(APN_RETRY_DELAY_MS));
     }
 
     memset(imsi, 0, IMEI_IMSI_BUF_SIZE);

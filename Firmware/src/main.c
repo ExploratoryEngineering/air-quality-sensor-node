@@ -18,6 +18,8 @@
 #include <stdio.h>
 #include <logging/log.h>
 #include <net/socket.h>
+#include <misc/reboot.h>
+#include <drivers/watchdog.h>
 
 #include "gps.h"
 #include "messagebuffer.h"
@@ -27,7 +29,7 @@
 #include "n2_offload.h"
 #include "fota.h"
 #include "comms.h"
-#include <net/coap.h>
+#include "config.h"
 
 #define LOG_LEVEL CONFIG_MAIN_LOG_LEVEL
 LOG_MODULE_REGISTER(MAIN);
@@ -39,97 +41,74 @@ LOG_MODULE_REGISTER(MAIN);
 
 #define MAX_SEND_BUFFER 450
 static uint8_t buffer[MAX_SEND_BUFFER];
-static uint8_t coap_buffer[MAX_SEND_BUFFER];
-#define SAMPLE_COAP_PATH "aq"
-#define SAMPLE_COAP_SERVER "172.16.32.1"
-#define SAMPLE_COAP_PORT 5683
+#define MAX_COMMAND_BUFFER 1024
+static uint8_t command_buffer[MAX_COMMAND_BUFFER];
 
-int send_samples(uint8_t *data_buffer, size_t len)
+// Watchdog
+#define WDT_DEV_NAME DT_WDT_0_NAME
+struct device *wdt;
+int wdt_channel_id;
+
+extern char APN_NAME[NVS_APN_COUNT][APN_NAME_SIZE];  // Testing only. Remove
+
+static void wdt_callback(struct device *wdt_dev, int channel_id)
 {
-	struct coap_packet p;
-	int err = 0;
-#define TOKEN_SIZE 8
-	char token[TOKEN_SIZE];
-	sys_csrand_get(token, TOKEN_SIZE);
+	LOG_WRN("Watchdog timer expired. Rebooting in 1 second");
+	k_sleep(1000);
+	sys_reboot(0);
+}
 
-	if (coap_packet_init(&p, coap_buffer, sizeof(coap_buffer), 1, COAP_TYPE_CON,
-						 TOKEN_SIZE, token, COAP_METHOD_POST,
-						 coap_next_id()) < 0)
-	{
-		LOG_ERR("Unable to iniitialize CoAP packet");
-		return -1;
-	}
-	if (coap_packet_append_option(&p, COAP_OPTION_URI_PATH,
-								  SAMPLE_COAP_PATH,
-								  strlen(SAMPLE_COAP_PATH)) < 0)
-	{
-		LOG_ERR("Could not append path option to packet");
-		return -1;
-	}
-	if (coap_packet_append_payload_marker(&p) < 0)
-	{
-		LOG_ERR("Unable to append payload marker to packet");
-		return -1;
-	}
-	if (coap_packet_append_payload(&p, data_buffer, len) < 0)
-	{
-		LOG_ERR("Unable to append payload to CoAP packet");
-		return -1;
+void watchdog_init()
+{
+	int err;
+	struct wdt_timeout_cfg wdt_config;
+
+	LOG_INF("Initializing watchdog");
+
+	wdt = device_get_binding(WDT_DEV_NAME);
+	if (!wdt) {
+		printk("Cannot get WDT device\n");
+		return;
 	}
 
-	modem_restart_without_triggering_network_signalling_storm_but_hopefully_picking_up_the_correct_cell___maybe();
+	// Reset SoC when watchdog timer expires.
+	wdt_config.flags = WDT_FLAG_RESET_SOC;
 
-	int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-	if (sock < 0)
+	// Expire watchdog after two hours. 
+	wdt_config.window.min = 0U;
+	wdt_config.window.max = 7200000U;
+
+	// Set up watchdog callback. Jump into it when watchdog expired.
+	wdt_config.callback = wdt_callback;
+
+	wdt_channel_id = wdt_install_timeout(wdt, &wdt_config);
+	if (wdt_channel_id == -ENOTSUP) 
 	{
-		LOG_ERR("Error opening socket: %d", sock);
-		return sock;
+		wdt_config.callback = NULL;
+		wdt_channel_id = wdt_install_timeout(wdt, &wdt_config);
+	}
+	if (wdt_channel_id < 0) 
+	{
+		LOG_ERR("Watchdog install error");
+		return;
 	}
 
-	static struct sockaddr_in remote_addr = {
-		sin_family : AF_INET,
-	};
-	remote_addr.sin_port = htons(SAMPLE_COAP_PORT);
-
-	net_addr_pton(AF_INET, SAMPLE_COAP_SERVER, &remote_addr.sin_addr);
-
-	err = sendto(sock, coap_buffer, p.offset, 0, (struct sockaddr *)&remote_addr, sizeof(remote_addr));
-	if (err < 0)
+	err = wdt_setup(wdt, 0);
+	if (err < 0) 
 	{
-		LOG_ERR("Unable to send data: %d", err);
-		close(sock);
-		return err;
+		LOG_ERR("Watchdog setup error\n");
+		return;
 	}
 
-	LOG_DBG("Sent %d bytes, waiting for response", p.offset);
-
-	int received = 0;
-
-	if (!wait_for_response(sock))
-	{
-		close(sock);
-		return -1;
-	}
-	received = recvfrom(sock, coap_buffer, sizeof(coap_buffer), 0, NULL, NULL);
-	if (received < 0)
-	{
-		LOG_ERR("Error receiving data: %d", received);
-		close(sock);
-		return received;
-	}
-
-	close(sock);
-
-	struct coap_packet resp;
-
-	return coap_packet_parse(&resp, coap_buffer, received, NULL, 0);
+	LOG_INF("Watchdog channel id: %d", wdt_channel_id);
 }
 
 void main(void)
 {
-	init_board();
+ 	init_board();
+	watchdog_init();
 
-	// TODO: Watchdog init
+	k_sleep(1000);
 
 	LOG_INF("This is the AQ node with version %s (%s)", AQ_VERSION, AQ_NAME);
 
@@ -141,16 +120,38 @@ void main(void)
 	wait_for_sockets();
 	LOG_DBG("Ready to run");
 
+	select_active_apn();
 	fota_init();
-
 	if (fota_run())
 	{
 		k_sleep(1000);
 	}
 
+	// Main loop
 	int fota_interval = 0;
 	while (true)
 	{
+		modem_restart_without_triggering_network_signalling_storm_but_hopefully_picking_up_the_correct_cell___maybe();
+
+		wdt_feed(wdt, wdt_channel_id); // Tickle and feed the watchdog
+
+
+// Open a socket
+	int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	if (sock < 0)
+	{
+		LOG_ERR("Error opening socket: %d", sock);
+		k_sleep(1000);
+		sys_reboot(0);
+	}
+	static struct sockaddr_in remote_addr = {
+		sin_family : AF_INET,
+	};
+	remote_addr.sin_port = htons(1234);
+	net_addr_pton(AF_INET, "172.16.15.14", &remote_addr.sin_addr);
+
+
+
 		LOG_DBG("Sampling sensors");
 		SENSOR_NODE_MESSAGE last_message;
 
@@ -169,19 +170,33 @@ void main(void)
 
 		int len = mb_encode(&last_message, buffer, MAX_SEND_BUFFER);
 		LOG_DBG("Sample complete, encoded buffer = %d bytes", len);
-#if 1
+	#if 0
 		mb_hex_dump_message(buffer, len);
-#endif
+	#endif
 
-		int ret = send_samples(buffer, len);
-		if (!ret)
+
+		int err = sendto(sock, buffer, len, 0, (struct sockaddr *)&remote_addr, sizeof(remote_addr));
+		if (err < 0)
 		{
-			LOG_WRN("Could not send message to server: %d", ret);
+			LOG_ERR("Unable to send data: %d", err);
+			k_sleep(5000);
+			sys_reboot(0);
+		}
+		int received = recvfrom(sock, command_buffer, sizeof(command_buffer), 0, NULL, NULL);
+		if (received == 0)
+		{
+			LOG_INF("No data received...");
 		}
 		else
 		{
-			LOG_DBG("Successfully sent %d bytes to backend", len);
+			LOG_INF("CONFIG message received");
+#pragma message("TODO: Implement message decode / protobuf parsing")
+			// TODO :
+			//		- decode message
+			//		- validate arguments
+			//		- send response
 		}
+
 		LOG_DBG("Done sending, sending again in %d seconds", SEND_INTERVAL_SEC);
 		k_sleep(SEND_INTERVAL_SEC * K_MSEC(1000));
 
@@ -195,8 +210,21 @@ void main(void)
 				k_sleep(1000);
 			}
 		}
-#if 1
-		mb_dump_message(&last_message);
+
+		close (sock);
+
+		// Force a reboot once a day. This wil implicitly trigger a new APN scan
+		int uptime_seconds = k_uptime_get() / 1000;
+		LOG_INF("Uptime: %d seconds", uptime_seconds);
+		if (uptime_seconds > UPTIME_FORCE_REBOOT_LIMIT_SECONDS)
+		{
+			sys_reboot(0);
+		}
+		
+#if 0
+			mb_dump_message(&last_message);
 #endif
 	}
+
+
 }

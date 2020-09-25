@@ -14,17 +14,13 @@
 
 LOG_MODULE_REGISTER(FOTA, CONFIG_FOTA_LOG_LEVEL);
 
-typedef struct
-{
-	char host[25];
-	uint32_t port;
-	char path[25];
-	bool scheduled_update;
-} simple_fota_response_t;
-
 #define BLOCK_SIZE COAP_BLOCK_256
 #define BLOCK_BYTES 256
 #define MAX_BUFFER_LEN 512
+
+extern char FOTA_COAP_SERVER[FOTA_COAP_SERVER_SIZE];
+extern int FOTA_COAP_PORT;
+extern char FOTA_COAP_REPORT_PATH[FOTA_COAP_REPORT_PATH_SIZE];
 
 // This is the general buffer used by the FOTA and flash writing functions
 static uint8_t request_buffer[MAX_BUFFER_LEN];
@@ -116,7 +112,7 @@ static int fota_decode_simple_response(simple_fota_response_t *resp, const uint8
 	return 0;
 }
 
-static int fota_report_version(simple_fota_response_t *resp)
+/*static */int fota_report_version(simple_fota_response_t *resp)
 {
 	struct coap_packet p;
 	int err = 0;
