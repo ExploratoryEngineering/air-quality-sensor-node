@@ -166,6 +166,7 @@ bool modem_is_ready()
     {
         if (len > 1)
         {
+            LOG_INF("IP Address is: %s", log_strdup(ip));
             return true;
         }
     }

@@ -30,6 +30,8 @@
 #include "fota.h"
 #include "comms.h"
 #include "config.h"
+#include "config_message.h"
+
 
 #define LOG_LEVEL CONFIG_MAIN_LOG_LEVEL
 LOG_MODULE_REGISTER(MAIN);
@@ -185,11 +187,18 @@ void main(void)
 		int received = recvfrom(sock, command_buffer, sizeof(command_buffer), 0, NULL, NULL);
 		if (received == 0)
 		{
-			LOG_INF("No data received...");
+//			LOG_INF("No data received...");
 		}
 		else
 		{
-			LOG_INF("CONFIG message received");
+			LOG_INF("---------------------------------");
+			LOG_INF("CONFIG message received. %d bytes", received);
+			LOG_INF("---------------------------------");
+			decode_config_message(command_buffer, received);
+
+
+
+
 #pragma message("TODO: Implement message decode / protobuf parsing")
 			// TODO :
 			//		- decode message

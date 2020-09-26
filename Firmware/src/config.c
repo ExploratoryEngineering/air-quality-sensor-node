@@ -1,10 +1,13 @@
 #include <zephyr.h>
+#include <stdio.h>
 #include "config.h"
 #include "comms.h"
 #include <drivers/flash.h>
 #include <fs/nvs.h>
 #include <device.h>
 #include <misc/reboot.h>
+#include "config_message.h"
+
 
 #include <logging/log.h>
 LOG_MODULE_REGISTER(NVS, CONFIG_NVS_LOG_LEVEL);
@@ -24,6 +27,7 @@ static struct nvs_fs fs;
 #define DEFAULT_APN_1 "mda.lab5e"
 #define DEFAULT_APN_2 "mda.ee"
 #define DEFAULT_APN_3 "telenor.iotgw"
+#define DEFAULT_APN_4 "telenor.iotgw"
 
 // Default COAP parameters
 #define DEFAULT_FOTA_COAP_SERVER "172.16.15.14"
@@ -38,15 +42,12 @@ char APN_NAME[NVS_APN_COUNT][APN_NAME_SIZE];
 int ACTIVE_APN_INDEX = 0;
 
 
-void save_new_apn_config()
+void save_new_apn_config(set_apn_list_command cmd)
 {
-	#pragma message("TODO: Implement save_new_apn_config()")
-	// TODO:
-	//		- function arguments
-	//		- decide on argument validation rules
-	// 		- validation (validate attribute or ruleset)
-	//		- save to NVS or discard
-	//		- it should be possible to store a new APN, even if we can't validate the COAP arguments
+	LOG_INF("Storing new APN list in flash")
+	nvs_write(&fs, NVS_APN_NAME_ID, cmd.apn[0], strlen(cmd.apn[0])+1);
+	nvs_write(&fs, NVS_APN_NAME_ID+1, cmd.apn[1], strlen(cmd.apn[1])+1);
+	nvs_write(&fs, NVS_APN_NAME_ID+2, cmd.apn[2], strlen(cmd.apn[2])+1);
 }
 
 void save_new_coap_config()
@@ -121,6 +122,7 @@ void init_default_apn_list()
 		nvs_write(&fs, NVS_APN_NAME_ID, &DEFAULT_APN_1, strlen(DEFAULT_APN_1)+1);
 		nvs_write(&fs, NVS_APN_NAME_ID+1, &DEFAULT_APN_2, strlen(DEFAULT_APN_2)+1);
 		nvs_write(&fs, NVS_APN_NAME_ID+2, &DEFAULT_APN_3, strlen(DEFAULT_APN_3)+1);
+		nvs_write(&fs, NVS_APN_NAME_ID+3, &DEFAULT_APN_4, strlen(DEFAULT_APN_4)+1);
 	}
 }
 

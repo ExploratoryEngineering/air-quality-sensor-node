@@ -1,6 +1,8 @@
 build
 aq_fota.pem
 mcuboot
+.DS_Store
+.vscode/
 
 
 
