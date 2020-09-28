@@ -18,9 +18,10 @@ LOG_MODULE_REGISTER(FOTA, CONFIG_FOTA_LOG_LEVEL);
 #define BLOCK_BYTES 256
 #define MAX_BUFFER_LEN 512
 
-extern char FOTA_COAP_SERVER[FOTA_COAP_SERVER_SIZE];
-extern int FOTA_COAP_PORT;
-extern char FOTA_COAP_REPORT_PATH[FOTA_COAP_REPORT_PATH_SIZE];
+extern char FOTA_COAP_SERVER[NVS_APN_COUNT][CONFIG_NAME_SIZE];
+extern int FOTA_COAP_PORT[NVS_APN_COUNT];
+extern char FOTA_COAP_REPORT_PATH[NVS_APN_COUNT][CONFIG_NAME_SIZE];
+extern int ACTIVE_APN_INDEX;
 
 // This is the general buffer used by the FOTA and flash writing functions
 static uint8_t request_buffer[MAX_BUFFER_LEN];
@@ -128,8 +129,8 @@ static int fota_decode_simple_response(simple_fota_response_t *resp, const uint8
 		return -1;
 	}
 	if (coap_packet_append_option(&p, COAP_OPTION_URI_PATH,
-								  FOTA_COAP_REPORT_PATH,
-								  strlen(FOTA_COAP_REPORT_PATH)) < 0)
+								  FOTA_COAP_REPORT_PATH[ACTIVE_APN_INDEX],
+								  strlen(FOTA_COAP_REPORT_PATH[ACTIVE_APN_INDEX])) < 0)
 	{
 		LOG_ERR("Could not append path option to packet");
 		return -1;
@@ -153,7 +154,7 @@ static int fota_decode_simple_response(simple_fota_response_t *resp, const uint8
 		return -1;
 	}
 
-	LOG_DBG("Sending %d bytes to %s:%d", p.offset, log_strdup(FOTA_COAP_SERVER), FOTA_COAP_PORT);
+	LOG_DBG("Sending %d bytes to %s:%d", p.offset, log_strdup(FOTA_COAP_SERVER[ACTIVE_APN_INDEX]), FOTA_COAP_PORT[ACTIVE_APN_INDEX]);
 
 	int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (sock < 0)
@@ -165,8 +166,8 @@ static int fota_decode_simple_response(simple_fota_response_t *resp, const uint8
 	struct sockaddr_in remote_addr = {
 		sin_family : AF_INET,
 	};
-	remote_addr.sin_port = htons(FOTA_COAP_PORT);
-	net_addr_pton(AF_INET, FOTA_COAP_SERVER, &remote_addr.sin_addr);
+	remote_addr.sin_port = htons(FOTA_COAP_PORT[ACTIVE_APN_INDEX]);
+	net_addr_pton(AF_INET, FOTA_COAP_SERVER[ACTIVE_APN_INDEX], &remote_addr.sin_addr);
 
 	err = sendto(sock, request_buffer, p.offset, 0, (const struct sockaddr *)&remote_addr, sizeof(remote_addr));
 	if (err < 0)

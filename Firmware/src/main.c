@@ -43,7 +43,7 @@ LOG_MODULE_REGISTER(MAIN);
 
 #define MAX_SEND_BUFFER 450
 static uint8_t buffer[MAX_SEND_BUFFER];
-#define MAX_COMMAND_BUFFER 1024
+#define MAX_COMMAND_BUFFER 256
 static uint8_t command_buffer[MAX_COMMAND_BUFFER];
 
 // Watchdog
@@ -51,7 +51,10 @@ static uint8_t command_buffer[MAX_COMMAND_BUFFER];
 struct device *wdt;
 int wdt_channel_id;
 
-extern char APN_NAME[NVS_APN_COUNT][APN_NAME_SIZE];  // Testing only. Remove
+extern char APN_NAME[NVS_APN_COUNT][CONFIG_NAME_SIZE];  // Testing only. Remove
+extern char FOTA_COAP_SERVER[NVS_APN_COUNT][CONFIG_NAME_SIZE];
+extern int ACTIVE_APN_INDEX;
+
 
 static void wdt_callback(struct device *wdt_dev, int channel_id)
 {
@@ -129,28 +132,73 @@ void main(void)
 		k_sleep(1000);
 	}
 
+
+
+	// Create config socket
+	int config_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	if (config_sock < 0)
+	{
+		LOG_ERR("Error opening socket: %d", config_sock);
+		k_sleep(1000);
+		sys_reboot(0);
+	}
+	
+	static struct sockaddr_in remote_addr_config = {
+		sin_family : AF_INET,
+	};
+	remote_addr_config.sin_port = htons(1234);
+	//net_addr_pton(AF_INET, "172.16.15.14", &remote_addr.sin_addr);
+	net_addr_pton(AF_INET, FOTA_COAP_SERVER[ACTIVE_APN_INDEX], &remote_addr_config.sin_addr);
+
+
+	
 	// Main loop
 	int fota_interval = 0;
 	while (true)
 	{
-		modem_restart_without_triggering_network_signalling_storm_but_hopefully_picking_up_the_correct_cell___maybe();
+		// modem_restart_without_triggering_network_signalling_storm_but_hopefully_picking_up_the_correct_cell___maybe();
 
 		wdt_feed(wdt, wdt_channel_id); // Tickle and feed the watchdog
 
 
-// Open a socket
-	int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-	if (sock < 0)
-	{
-		LOG_ERR("Error opening socket: %d", sock);
-		k_sleep(1000);
-		sys_reboot(0);
-	}
-	static struct sockaddr_in remote_addr = {
-		sin_family : AF_INET,
-	};
-	remote_addr.sin_port = htons(1234);
-	net_addr_pton(AF_INET, "172.16.15.14", &remote_addr.sin_addr);
+
+		// Check if we have received any configuration messsages
+		int received = recvfrom(config_sock, command_buffer, sizeof(command_buffer), 0, NULL, NULL);
+		if (received == 0)
+		{
+			LOG_INF("No data received on socket.");
+		}
+		else
+		{
+			LOG_INF("---------------------------------");
+			LOG_INF("CONFIG message received. %d bytes", received);
+			LOG_INF("---------------------------------");
+			k_sleep(1000);
+			config_response r = decode_config_message(command_buffer, received);
+			uint8_t response_buffer[64];
+			size_t length = encode_response(r, response_buffer, sizeof(response_buffer));
+			if (0!=length)
+			{
+				sendto(config_sock, response_buffer, length, 0, (struct sockaddr *)&remote_addr_config, sizeof(remote_addr_config));
+			}
+		}
+
+
+		// Create send socket
+		int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+		if (sock < 0)
+		{
+			LOG_ERR("Error opening socket: %d", sock);
+			k_sleep(1000);
+			sys_reboot(0);
+		}
+		
+		static struct sockaddr_in remote_addr = {
+			sin_family : AF_INET,
+		};
+		remote_addr.sin_port = htons(1234);
+		//net_addr_pton(AF_INET, "172.16.15.14", &remote_addr.sin_addr);
+		net_addr_pton(AF_INET, FOTA_COAP_SERVER[ACTIVE_APN_INDEX], &remote_addr.sin_addr);
 
 
 
@@ -184,27 +232,26 @@ void main(void)
 			k_sleep(5000);
 			sys_reboot(0);
 		}
+		/*
 		int received = recvfrom(sock, command_buffer, sizeof(command_buffer), 0, NULL, NULL);
 		if (received == 0)
 		{
-//			LOG_INF("No data received...");
+			LOG_INF("No data received on socket.");
 		}
 		else
 		{
 			LOG_INF("---------------------------------");
 			LOG_INF("CONFIG message received. %d bytes", received);
 			LOG_INF("---------------------------------");
-			decode_config_message(command_buffer, received);
-
-
-
-
-#pragma message("TODO: Implement message decode / protobuf parsing")
-			// TODO :
-			//		- decode message
-			//		- validate arguments
-			//		- send response
+			config_response r = decode_config_message(command_buffer, received);
+			uint8_t response_buffer[64];
+			size_t length = encode_response(r, response_buffer, sizeof(response_buffer));
+			if (0!=length)
+			{
+				sendto(sock, response_buffer, length, 0, (struct sockaddr *)&remote_addr, sizeof(remote_addr));
+			}
 		}
+		*/
 
 		LOG_DBG("Done sending, sending again in %d seconds", SEND_INTERVAL_SEC);
 		k_sleep(SEND_INTERVAL_SEC * K_MSEC(1000));
@@ -234,6 +281,5 @@ void main(void)
 			mb_dump_message(&last_message);
 #endif
 	}
-
 
 }

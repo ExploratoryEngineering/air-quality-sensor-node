@@ -15,49 +15,96 @@ LOG_MODULE_REGISTER(NVS, CONFIG_NVS_LOG_LEVEL);
 static struct nvs_fs fs;
 
 #define NVS_FOTA_COAP_SERVER_ID 1
-#define NVS_FOTA_COAP_PORT_ID 2
-#define NVS_FOTA_COAP_REPORT_PATH_ID 3
-#define NVS_APN_NAME_ID 4
+#define NVS_FOTA_COAP_PORT_ID 5
+#define NVS_FOTA_COAP_UPDATE_PATH_ID 9
+#define NVS_FOTA_COAP_REPORT_PATH_ID 13
+#define NVS_APN_NAME_ID 17
 
 // Errors
 #define INVALID_APN_PARAMETER -1
 #define INVALID_COAP_PARAMETER -2
 
 // Default APN list
-#define DEFAULT_APN_1 "mda.lab5e"
-#define DEFAULT_APN_2 "mda.ee"
-#define DEFAULT_APN_3 "telenor.iotgw"
-#define DEFAULT_APN_4 "telenor.iotgw"
+char DEFAULT_APN[4][CONFIG_NAME_SIZE] = {"mda.lab5e", "mda.ee", "telenor.iotgw", "telenor.iot"};
 
 // Default COAP parameters
 #define DEFAULT_FOTA_COAP_SERVER "172.16.15.14"
 #define DEFAULT_FOTA_COAP_REPORT_PATH  "u"
+#define DEFAULT_FOTA_COAP_UPDATE_PATH	 "fw"
 #define DEFAULT_FOTA_COAP_PORT 5683
 
 // Global variables
-char FOTA_COAP_SERVER[FOTA_COAP_SERVER_SIZE];
-int FOTA_COAP_PORT;
-char FOTA_COAP_REPORT_PATH[FOTA_COAP_REPORT_PATH_SIZE];
-char APN_NAME[NVS_APN_COUNT][APN_NAME_SIZE];
+char APN_NAME[NVS_APN_COUNT][CONFIG_NAME_SIZE];
+
+char FOTA_COAP_SERVER[NVS_APN_COUNT][CONFIG_NAME_SIZE];
+char FOTA_COAP_REPORT_PATH[NVS_APN_COUNT][CONFIG_NAME_SIZE];
+char FOTA_COAP_UPDATE_PATH[NVS_APN_COUNT][CONFIG_NAME_SIZE];
+
+int FOTA_COAP_PORT[NVS_APN_COUNT];
 int ACTIVE_APN_INDEX = 0;
 
+extern decoded_config_value decoded_values[APN_COMMAND_ARGUMENTS];
 
-void save_new_apn_config(set_apn_list_command cmd)
+int save_new_apn_config(int argument_count)
 {
-	LOG_INF("Storing new APN list in flash")
-	nvs_write(&fs, NVS_APN_NAME_ID, cmd.apn[0], strlen(cmd.apn[0])+1);
-	nvs_write(&fs, NVS_APN_NAME_ID+1, cmd.apn[1], strlen(cmd.apn[1])+1);
-	nvs_write(&fs, NVS_APN_NAME_ID+2, cmd.apn[2], strlen(cmd.apn[2])+1);
-}
+	for (int i=0; i<argument_count; i++)
+    {
+			char * stringval = decoded_values[i].string_val;
+			int length = strlen(stringval)+1;
+			int intval = decoded_values[i].int_val;
+			if (decoded_values[i].id == 1) // First APN
+			{
+				nvs_write(&fs, NVS_APN_NAME_ID, stringval, length);
+			}
+			else if (decoded_values[i].id == 2) // Second APN)
+			{
+				nvs_write(&fs, NVS_APN_NAME_ID+1, stringval, length);
+			}
+			else if (decoded_values[i].id == 3) // Third APN)
+			{
+				nvs_write(&fs, NVS_APN_NAME_ID+2, stringval, length);
+			}
 
-void save_new_coap_config()
-{
-	#pragma message("TODO: Implement save_new_coap_config()")
-	// TODO:
-	//		- function arguments
-	//		- decide on argument validation rules
-	// 		- validation (validate attribute or ruleset)
-	//		- save to NVS or discard
+			else if (decoded_values[i].id == 10) // First COAP server)
+			{
+				nvs_write(&fs, NVS_FOTA_COAP_SERVER_ID, stringval, length);
+			}
+			else if (decoded_values[i].id == 11) // First COAP port)
+			{
+				nvs_write(&fs, NVS_FOTA_COAP_PORT_ID, &intval, sizeof(intval));
+			}
+			else if (decoded_values[i].id == 12) // First COAP update path)
+			{
+				nvs_write(&fs, NVS_FOTA_COAP_UPDATE_PATH_ID, stringval, length);
+			}
+
+			else if (decoded_values[i].id == 13) // Second COAP server)
+			{
+				nvs_write(&fs, NVS_FOTA_COAP_SERVER_ID+1, stringval, length);
+			}
+			else if (decoded_values[i].id == 14) // Second COAP port)
+			{
+				nvs_write(&fs, NVS_FOTA_COAP_PORT_ID+1, &intval, sizeof(intval));
+			}
+			else if (decoded_values[i].id == 15) // Second COAP update path)
+			{
+				nvs_write(&fs, NVS_FOTA_COAP_UPDATE_PATH_ID+1, stringval, length);
+			}
+
+			else if (decoded_values[i].id == 16) // Third COAP server)
+			{
+				nvs_write(&fs, NVS_FOTA_COAP_SERVER_ID+2, stringval, length);
+			}
+			else if (decoded_values[i].id == 17) // Third COAP port)
+			{
+				nvs_write(&fs, NVS_FOTA_COAP_PORT_ID+2, &intval, sizeof(intval));
+			}
+			else if (decoded_values[i].id == 18) // Third COAP update path)
+			{
+				nvs_write(&fs, NVS_FOTA_COAP_UPDATE_PATH_ID+2, stringval, length);
+			}
+    }
+		return 0;
 }
 
 void select_active_apn()
@@ -90,6 +137,109 @@ void select_active_apn()
 	sys_reboot(0);
 }
 
+void write_default_values_to_flash()
+{
+	LOG_INF("Populating default APN list in flash");
+	for (int i=0; i<NVS_APN_COUNT; i++)
+	{
+		LOG_INF("Writing default APN %s (id:%d)", log_strdup(DEFAULT_APN[i]), NVS_APN_NAME_ID+i);
+		nvs_write(&fs, NVS_APN_NAME_ID+i, 	&DEFAULT_APN[i], strlen(DEFAULT_APN[i])+1);
+	}
+
+	for (int i=0; i<NVS_APN_COUNT; i++)
+	{
+		strcpy(FOTA_COAP_SERVER[i], DEFAULT_FOTA_COAP_SERVER);
+		strcpy(FOTA_COAP_REPORT_PATH[i], DEFAULT_FOTA_COAP_REPORT_PATH);
+		strcpy(FOTA_COAP_UPDATE_PATH[i], DEFAULT_FOTA_COAP_UPDATE_PATH);
+		FOTA_COAP_PORT[i] = DEFAULT_FOTA_COAP_PORT;
+
+		LOG_INF("Writing default COAP Server %s (id:%d)", log_strdup(FOTA_COAP_SERVER[i]), i+1);
+		LOG_INF("Writing default COAP Report path %s (id:%d)", log_strdup(FOTA_COAP_REPORT_PATH[i]), i+1);
+		LOG_INF("Writing default COAP Update path %s (id:%d)", log_strdup(FOTA_COAP_UPDATE_PATH[i]), i+1);
+		LOG_INF("Writing default COAP Port %d (id:%d)", FOTA_COAP_PORT[i], i+1);
+
+		nvs_write(&fs, NVS_FOTA_COAP_SERVER_ID+i, 			FOTA_COAP_SERVER[i], strlen(FOTA_COAP_SERVER[i])+1);
+		nvs_write(&fs, NVS_FOTA_COAP_REPORT_PATH_ID+i, 	FOTA_COAP_REPORT_PATH[i], strlen(FOTA_COAP_REPORT_PATH[i])+1);
+		nvs_write(&fs, NVS_FOTA_COAP_UPDATE_PATH_ID+i, 	FOTA_COAP_UPDATE_PATH[i], strlen(FOTA_COAP_UPDATE_PATH[i])+1);
+		nvs_write(&fs, NVS_FOTA_COAP_PORT_ID+i, 				&FOTA_COAP_PORT[i], sizeof(int));
+	}
+}
+
+bool missing_flash_parameter()
+{
+	// Check APNs
+	for (int i=0; i<NVS_APN_COUNT; i++)
+	{
+		int rc = nvs_read(&fs, NVS_APN_NAME_ID + i, &APN_NAME[i], CONFIG_NAME_SIZE);
+		if (rc > 0) 
+		{  
+			LOG_INF("APN Name %d read ok from FLASH : %s", i+1, log_strdup(APN_NAME[i]));
+		} else   
+		{
+			LOG_INF("Missing APN name at offset :%d", i);
+			return true;
+		}
+	}
+
+	// Check COAP servers
+	for (int i=0; i<NVS_APN_COUNT; i++)
+	{
+		int rc = nvs_read(&fs, NVS_FOTA_COAP_SERVER_ID + i, &FOTA_COAP_SERVER[i], CONFIG_NAME_SIZE);
+		if (rc > 0) 
+		{  
+			LOG_INF("COAP Server %d read ok from FLASH : %s", i+1, log_strdup(FOTA_COAP_SERVER[i]));
+		} else   
+		{
+			LOG_INF("Missing COAP Server name at offset :%d", i);
+			return true;
+		}
+	}
+
+	// Check COAP Report paths
+	for (int i=0; i<NVS_APN_COUNT; i++)
+	{
+		int rc = nvs_read(&fs, NVS_FOTA_COAP_REPORT_PATH_ID + i, &FOTA_COAP_REPORT_PATH[i], CONFIG_NAME_SIZE);
+		if (rc > 0) 
+		{  
+			LOG_INF("COAP Report path %d read ok from FLASH : %s", i+1, log_strdup(FOTA_COAP_REPORT_PATH[i]));
+		} else   
+		{
+			LOG_INF("Missing COAP Report path at offset :%d", i);
+			return true;
+		}
+	}
+
+	// Check COAP Update paths
+	for (int i=0; i<NVS_APN_COUNT; i++)
+	{
+		int rc = nvs_read(&fs, NVS_FOTA_COAP_UPDATE_PATH_ID + i, &FOTA_COAP_UPDATE_PATH[i], CONFIG_NAME_SIZE);
+		if (rc > 0) 
+		{  
+			LOG_INF("COAP Update path %d read ok from FLASH : %s", i+1, log_strdup(FOTA_COAP_UPDATE_PATH[i]));
+		} else   
+		{
+			LOG_INF("Missing COAP Update path at offset :%d", i);
+			return true;
+		}
+	}
+	
+	// Check COAP ports
+	for (int i=0; i<NVS_APN_COUNT; i++)
+	{
+		int rc = nvs_read(&fs, NVS_FOTA_COAP_PORT_ID + i, &FOTA_COAP_PORT[i], sizeof(int));
+		if (rc > 0) 
+		{  
+			LOG_INF("COAP Update port %d read ok from FLASH : %d", i+1, FOTA_COAP_PORT[i]);
+		} else   
+		{
+			LOG_INF("Missing COAP PORT at offset :%d", i);
+			return true;
+		}
+	}
+
+	return false;
+}
+
 /**
  * Checks for the existense of a predefined APN list in FLASH memory
  * If the list is missing or incomplete, a default list consisting of
@@ -102,77 +252,9 @@ void init_default_apn_list()
 {
 	LOG_INF("Scanning stored APN NAMES in flash");
 
-	bool missing_apn = false;
-	for (int apn_index=0; apn_index<NVS_APN_COUNT; apn_index++)
+	if (missing_flash_parameter())
 	{
-		int rc = nvs_read(&fs, NVS_APN_NAME_ID + apn_index, &APN_NAME[apn_index], APN_NAME_SIZE);
-		if (rc > 0) 
-		{  
-			LOG_INF("Found APN Name at offset %d in FLASH : %s", apn_index, log_strdup(APN_NAME[apn_index]));
-		} else   
-		{
-			LOG_INF("Missing APN name at offset :%d", apn_index);
-			missing_apn = true;
-		}
-	}
-
-	if (missing_apn)
-	{
-		LOG_INF("Populating default APN list in flash");
-		nvs_write(&fs, NVS_APN_NAME_ID, &DEFAULT_APN_1, strlen(DEFAULT_APN_1)+1);
-		nvs_write(&fs, NVS_APN_NAME_ID+1, &DEFAULT_APN_2, strlen(DEFAULT_APN_2)+1);
-		nvs_write(&fs, NVS_APN_NAME_ID+2, &DEFAULT_APN_3, strlen(DEFAULT_APN_3)+1);
-		nvs_write(&fs, NVS_APN_NAME_ID+3, &DEFAULT_APN_4, strlen(DEFAULT_APN_4)+1);
-	}
-}
-
-/**
- * Checks for the existense of predefined COAP parametersin FLASH memory
- * If parameters are incomplete or missing, they are created from the
- * definitions in DEFAULT_FOTA_COAP_SERVER, DEFAULT_FOTA_COAP_REPORT_PATH, DEFAULT_FOTA_COAP_PORT
- * and saved to FLASH memory
- * 
- * Must be called after init_config_nvs();
-  */
-void init_default_COAP_parameters()
-{
-	// Check if the Coap server is stored in flash. If not. Initialize it with the default value
-	int rc = nvs_read(&fs, NVS_FOTA_COAP_SERVER_ID, &FOTA_COAP_SERVER, sizeof(FOTA_COAP_SERVER));
-	if (rc > 0) 
-	{  
-		LOG_INF("COAP Server read ok from FLASH : %s", log_strdup(FOTA_COAP_SERVER));
-	} else   
-	{
-		strcpy(FOTA_COAP_SERVER, DEFAULT_FOTA_COAP_SERVER);
-		LOG_INF("COAP Server NOT FOUND in FLASH storage. Defaulting to : %s", log_strdup(FOTA_COAP_SERVER));
-		LOG_INF("Writing default APN name to flash storage");
-		nvs_write(&fs, NVS_FOTA_COAP_SERVER_ID, &FOTA_COAP_SERVER, strlen(FOTA_COAP_SERVER)+1);
-	}
-
-	// Check if the Coap report path is stored in flash. If not. Initialize it with the default value
-	rc = nvs_read(&fs, NVS_FOTA_COAP_REPORT_PATH_ID, &FOTA_COAP_REPORT_PATH, sizeof(FOTA_COAP_REPORT_PATH));
-	if (rc > 0) 
-	{  
-		LOG_INF("COAP Report path read ok from FLASH : %s", log_strdup(FOTA_COAP_REPORT_PATH));
-	} else   
-	{
-		strcpy(FOTA_COAP_REPORT_PATH, DEFAULT_FOTA_COAP_REPORT_PATH);
-		LOG_INF("COAP report path NOT FOUND in FLASH storage. Defaulting to : %s", log_strdup(FOTA_COAP_REPORT_PATH));
-		LOG_INF("Writing default coap report path to flash storage");
-		nvs_write(&fs, NVS_FOTA_COAP_REPORT_PATH_ID, &FOTA_COAP_REPORT_PATH, strlen(FOTA_COAP_REPORT_PATH)+1);
-	}
-
-	// Check if the Coap port is stored in flash. If not. Initialize it with the default value
-	rc = nvs_read(&fs, NVS_FOTA_COAP_PORT_ID, &FOTA_COAP_PORT, sizeof(FOTA_COAP_PORT));
-	if (rc > 0) 
-	{  
-		LOG_INF("COAP port read ok from FLASH : %d", FOTA_COAP_PORT);
-	} else   
-	{
-		FOTA_COAP_PORT = DEFAULT_FOTA_COAP_PORT;;
-		LOG_INF("COAP port NOT FOUND in FLASH storage. Defaulting to : %d", FOTA_COAP_PORT);
-		LOG_INF("Writing default coap port to flash storage");
-		nvs_write(&fs, NVS_FOTA_COAP_PORT_ID, &FOTA_COAP_PORT, sizeof(FOTA_COAP_PORT));
+		write_default_values_to_flash();
 	}
 }
 
@@ -203,9 +285,20 @@ void init_config_nvs()
 		LOG_ERR("Flash Init failed\n");
 	}
 
-	init_default_apn_list();
-	init_default_COAP_parameters();
+ // nvs_clear(&fs); // Nuke the file system
 
+	size_t freespace = nvs_calc_free_space(&fs);
+ 	LOG_INF("Calculated free space: %d", freespace);
+
+	init_default_apn_list();
+
+	if (!missing_flash_parameter())
+	{
+		LOG_INF("Flash parameter list is ok.");
+	}
+	
 	// We will have to select_active_apn() after the rest of the hardware has been initialized.
 	// At dawn, look to main()
 }
+
+

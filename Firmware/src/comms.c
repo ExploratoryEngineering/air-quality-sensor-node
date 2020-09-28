@@ -29,7 +29,7 @@ static struct ring_buf urc_rb;
 static struct k_sem rx_sem;
 
 // APN_NAME array and ACTIVE_APN_INDEX are initialized in init_config_nvs()
-extern char APN_NAME[NVS_APN_COUNT][APN_NAME_SIZE];
+extern char APN_NAME[NVS_APN_COUNT][CONFIG_NAME_SIZE];
 extern int ACTIVE_APN_INDEX;
 
 
@@ -173,7 +173,7 @@ bool modem_is_ready()
     return false;
 }
 
-char define_context[APN_NAME_SIZE+21];
+char define_context[CONFIG_NAME_SIZE+21];
 void modem_configure()
 {
     sprintf(define_context, "AT+CGDCONT=0,\"IP\",\"%s\"\r", APN_NAME[ACTIVE_APN_INDEX]);
