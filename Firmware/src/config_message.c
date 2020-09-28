@@ -12,16 +12,6 @@ LOG_MODULE_DECLARE(NVS);
 int string_index = 0;
 uint8_t string_buffer[APN_LIST_SIZE][APN_NAME_SIZE] = {0};
 
-
-/*
-2) Kun sett APN hvis kommandoID == 3 og det er ett eller flere APN i lista
-	Hekt også da på string decode funksjonen
-3) Implementer reboot-kommando
-4) Responsmelding
-
-Sjekk inn kode i kveld
-*/
-
 /*
 *   string_callback is called for each occurence of string values in the incoming stream.
 */
