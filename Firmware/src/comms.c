@@ -28,10 +28,8 @@ static uint8_t urcbuffer[URC_SIZE];
 static struct ring_buf urc_rb;
 static struct k_sem rx_sem;
 
-// APN_NAME array and ACTIVE_APN_INDEX are initialized in init_config_nvs()
-extern char APN_NAME[NVS_APN_COUNT][CONFIG_NAME_SIZE];
-extern int ACTIVE_APN_INDEX;
-
+// CURRENT_APN_BUFFER is initialized in init_config_nvs()
+extern char CURRENT_APN_BUFFER[64];
 
 #define URC_THREAD_STACK 512
 #define DUMP_MODEM 0
@@ -173,12 +171,10 @@ bool modem_is_ready()
     return false;
 }
 
-char define_context[CONFIG_NAME_SIZE+21];
+char define_context[64+21];
 void modem_configure()
 {
-    sprintf(define_context, "AT+CGDCONT=0,\"IP\",\"%s\"\r", APN_NAME[ACTIVE_APN_INDEX]);
-    LOG_INF("TRYING APN INDEX: %d", ACTIVE_APN_INDEX);
-    LOG_INF("TRYING APN: %s", log_strdup(APN_NAME[ACTIVE_APN_INDEX]));
+    sprintf(define_context, "AT+CGDCONT=0,\"IP\",\"%s\"\r", CURRENT_APN_BUFFER);
 
     modem_write(define_context);
 

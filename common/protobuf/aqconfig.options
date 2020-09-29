@@ -1,0 +1,6 @@
+aqconfig.setapn.apn1 max_size:64
+aqconfig.setapn.apn2 max_size:64
+aqconfig.setapn.apn3 max_size:64
+aqconfig.setapn.coap1 max_size:128
+aqconfig.setapn.coap2 max_size:128
+aqconfig.setapn.coap3 max_size:128

@@ -14,117 +14,74 @@ LOG_MODULE_REGISTER(NVS, CONFIG_NVS_LOG_LEVEL);
 
 static struct nvs_fs fs;
 
-#define NVS_FOTA_COAP_SERVER_ID 1
-#define NVS_FOTA_COAP_PORT_ID 5
-#define NVS_FOTA_COAP_UPDATE_PATH_ID 9
-#define NVS_FOTA_COAP_REPORT_PATH_ID 13
-#define NVS_APN_NAME_ID 17
+// Handle for NVS file system
+#define NVS_APN_NAME_ID	1
 
-// Errors
-#define INVALID_APN_PARAMETER -1
-#define INVALID_COAP_PARAMETER -2
+apn_config CURRENT_APN_CONFIG;
+char CURRENT_APN_BUFFER[64] = {0};
+char CURRENT_COAP_BUFFER[128] = {0};
 
-// Default APN list
-char DEFAULT_APN[4][CONFIG_NAME_SIZE] = {"mda.lab5e", "mda.ee", "telenor.iotgw", "telenor.iot"};
-
-// Default COAP parameters
-#define DEFAULT_FOTA_COAP_SERVER "172.16.15.14"
-#define DEFAULT_FOTA_COAP_REPORT_PATH  "u"
-#define DEFAULT_FOTA_COAP_UPDATE_PATH	 "fw"
-#define DEFAULT_FOTA_COAP_PORT 5683
-
-// Global variables
-char APN_NAME[NVS_APN_COUNT][CONFIG_NAME_SIZE];
-
-char FOTA_COAP_SERVER[NVS_APN_COUNT][CONFIG_NAME_SIZE];
-char FOTA_COAP_REPORT_PATH[NVS_APN_COUNT][CONFIG_NAME_SIZE];
-char FOTA_COAP_UPDATE_PATH[NVS_APN_COUNT][CONFIG_NAME_SIZE];
-
-int FOTA_COAP_PORT[NVS_APN_COUNT];
-int ACTIVE_APN_INDEX = 0;
-
-extern decoded_config_value decoded_values[APN_COMMAND_ARGUMENTS];
-
-int save_new_apn_config(int argument_count)
+int save_apn_config()
 {
-	for (int i=0; i<argument_count; i++)
-    {
-			char * stringval = decoded_values[i].string_val;
-			int length = strlen(stringval)+1;
-			int intval = decoded_values[i].int_val;
-			if (decoded_values[i].id == 1) // First APN
-			{
-				nvs_write(&fs, NVS_APN_NAME_ID, stringval, length);
-			}
-			else if (decoded_values[i].id == 2) // Second APN)
-			{
-				nvs_write(&fs, NVS_APN_NAME_ID+1, stringval, length);
-			}
-			else if (decoded_values[i].id == 3) // Third APN)
-			{
-				nvs_write(&fs, NVS_APN_NAME_ID+2, stringval, length);
-			}
+	LOG_INF("Saving new APN configuration to flash.");
+  LOG_INF("Saving APN1: %s", log_strdup(CURRENT_APN_CONFIG.apn1));
+  LOG_INF("Saving APN2: %s", log_strdup(CURRENT_APN_CONFIG.apn2));
+  LOG_INF("Saving APN3: %s", log_strdup(CURRENT_APN_CONFIG.apn3));
+  LOG_INF("Saving APN4: %s", log_strdup(CURRENT_APN_CONFIG.apn4));
+  LOG_INF("Saving COAP1: %s", log_strdup(CURRENT_APN_CONFIG.coap1));
+  LOG_INF("Saving COAP2: %s", log_strdup(CURRENT_APN_CONFIG.coap2));
+  LOG_INF("Saving COAP3: %s", log_strdup(CURRENT_APN_CONFIG.coap3));
+  LOG_INF("Saving COAP4: %s", log_strdup(CURRENT_APN_CONFIG.coap4));
 
-			else if (decoded_values[i].id == 10) // First COAP server)
-			{
-				nvs_write(&fs, NVS_FOTA_COAP_SERVER_ID, stringval, length);
-			}
-			else if (decoded_values[i].id == 11) // First COAP port)
-			{
-				nvs_write(&fs, NVS_FOTA_COAP_PORT_ID, &intval, sizeof(intval));
-			}
-			else if (decoded_values[i].id == 12) // First COAP update path)
-			{
-				nvs_write(&fs, NVS_FOTA_COAP_UPDATE_PATH_ID, stringval, length);
-			}
+	int b = nvs_write(&fs, NVS_APN_NAME_ID, &CURRENT_APN_CONFIG, sizeof(CURRENT_APN_CONFIG));
 
-			else if (decoded_values[i].id == 13) // Second COAP server)
-			{
-				nvs_write(&fs, NVS_FOTA_COAP_SERVER_ID+1, stringval, length);
-			}
-			else if (decoded_values[i].id == 14) // Second COAP port)
-			{
-				nvs_write(&fs, NVS_FOTA_COAP_PORT_ID+1, &intval, sizeof(intval));
-			}
-			else if (decoded_values[i].id == 15) // Second COAP update path)
-			{
-				nvs_write(&fs, NVS_FOTA_COAP_UPDATE_PATH_ID+1, stringval, length);
-			}
-
-			else if (decoded_values[i].id == 16) // Third COAP server)
-			{
-				nvs_write(&fs, NVS_FOTA_COAP_SERVER_ID+2, stringval, length);
-			}
-			else if (decoded_values[i].id == 17) // Third COAP port)
-			{
-				nvs_write(&fs, NVS_FOTA_COAP_PORT_ID+2, &intval, sizeof(intval));
-			}
-			else if (decoded_values[i].id == 18) // Third COAP update path)
-			{
-				nvs_write(&fs, NVS_FOTA_COAP_UPDATE_PATH_ID+2, stringval, length);
-			}
-    }
-		return 0;
+  LOG_INF("%d bytes written to flash.", b);
+	return b;
 }
 
 void select_active_apn()
 {
 	LOG_INF("Checking APN connectivity");
 
-	// ACTIVE_APN_INDEX is global. Careful where you t(h)read
-	for (ACTIVE_APN_INDEX=0; ACTIVE_APN_INDEX<NVS_APN_COUNT; ACTIVE_APN_INDEX++)
+	char * pAPN = NULL;
+	char * pCOAP = NULL;
+
+	for (int i =0; i<NVS_APN_COUNT; i++)
 	{
+		switch (i)
+		{
+				case 0: pAPN = CURRENT_APN_CONFIG.apn1;
+						    pCOAP = CURRENT_APN_CONFIG.coap1;
+								break;
+				case 1: pAPN = CURRENT_APN_CONFIG.apn2;
+						    pCOAP = CURRENT_APN_CONFIG.coap2;
+								break;
+				case 2: pAPN = CURRENT_APN_CONFIG.apn3;
+						    pCOAP = CURRENT_APN_CONFIG.coap3;
+								break;
+				case 3: pAPN = CURRENT_APN_CONFIG.apn4;
+						    pCOAP = CURRENT_APN_CONFIG.coap4;
+								break;
+				default: LOG_ERR("Hey! There is a house limit of 3 APNs (+ a secret one). Brace for bus error!");
+								k_sleep(1000);
+								break;
+		}
+		strcpy(CURRENT_APN_BUFFER, pAPN);
+		strcpy(CURRENT_COAP_BUFFER, pCOAP);
+
+		LOG_INF("Testing APN : %s, COAP: %s", log_strdup(CURRENT_APN_BUFFER), log_strdup(CURRENT_COAP_BUFFER));
+
 		modem_restart();
 		modem_configure();
 		int retries = 0;
 		while (!modem_is_ready() & (retries++ < APN_QUERY_RETRY_COUNT))
 		{
-			LOG_INF("Waiting for IP-address from %s. Retry : %d", log_strdup(APN_NAME[ACTIVE_APN_INDEX]), retries);
+			LOG_INF("Waiting for IP-address from %s. Retry : %d", log_strdup(CURRENT_APN_BUFFER), retries);
 			k_sleep(APN_RETRY_DELAY_MS);
 		}
 		if (modem_is_ready())
 		{
-			LOG_INF("SELECTING APN : %s", log_strdup(APN_NAME[ACTIVE_APN_INDEX]));
+			LOG_INF("SELECTING APN : %s", log_strdup(CURRENT_APN_BUFFER));
 			return; 
 		}
 	}
@@ -137,132 +94,91 @@ void select_active_apn()
 	sys_reboot(0);
 }
 
-void write_default_values_to_flash()
+void init_default_config()
 {
-	LOG_INF("Populating default APN list in flash");
-	for (int i=0; i<NVS_APN_COUNT; i++)
-	{
-		LOG_INF("Writing default APN %s (id:%d)", log_strdup(DEFAULT_APN[i]), NVS_APN_NAME_ID+i);
-		nvs_write(&fs, NVS_APN_NAME_ID+i, 	&DEFAULT_APN[i], strlen(DEFAULT_APN[i])+1);
-	}
+		LOG_INF("Initializing default APN config");
+	  strcpy(CURRENT_APN_CONFIG.apn4, "mda.lab5e");
+    strcpy(CURRENT_APN_CONFIG.apn2, "mda.ee");
+    strcpy(CURRENT_APN_CONFIG.apn3, "telenor.iotgw");
+    strcpy(CURRENT_APN_CONFIG.apn1, "telenor.iot");
 
-	for (int i=0; i<NVS_APN_COUNT; i++)
-	{
-		strcpy(FOTA_COAP_SERVER[i], DEFAULT_FOTA_COAP_SERVER);
-		strcpy(FOTA_COAP_REPORT_PATH[i], DEFAULT_FOTA_COAP_REPORT_PATH);
-		strcpy(FOTA_COAP_UPDATE_PATH[i], DEFAULT_FOTA_COAP_UPDATE_PATH);
-		FOTA_COAP_PORT[i] = DEFAULT_FOTA_COAP_PORT;
+    strcpy(CURRENT_APN_CONFIG.coap4, "172.16.15.14");
+    strcpy(CURRENT_APN_CONFIG.coap2, "172.16.15.14");
+    strcpy(CURRENT_APN_CONFIG.coap3, "172.16.32.1");
+    strcpy(CURRENT_APN_CONFIG.coap1, "88.99.192.151");
+	/*
+	  strcpy(CURRENT_APN_CONFIG.apn1, "mda.lab5e");
+    strcpy(CURRENT_APN_CONFIG.apn2, "mda.ee");
+    strcpy(CURRENT_APN_CONFIG.apn3, "telenor.iotgw");
+    strcpy(CURRENT_APN_CONFIG.apn4, "telenor.iot");
 
-		LOG_INF("Writing default COAP Server %s (id:%d)", log_strdup(FOTA_COAP_SERVER[i]), i+1);
-		LOG_INF("Writing default COAP Report path %s (id:%d)", log_strdup(FOTA_COAP_REPORT_PATH[i]), i+1);
-		LOG_INF("Writing default COAP Update path %s (id:%d)", log_strdup(FOTA_COAP_UPDATE_PATH[i]), i+1);
-		LOG_INF("Writing default COAP Port %d (id:%d)", FOTA_COAP_PORT[i], i+1);
-
-		nvs_write(&fs, NVS_FOTA_COAP_SERVER_ID+i, 			FOTA_COAP_SERVER[i], strlen(FOTA_COAP_SERVER[i])+1);
-		nvs_write(&fs, NVS_FOTA_COAP_REPORT_PATH_ID+i, 	FOTA_COAP_REPORT_PATH[i], strlen(FOTA_COAP_REPORT_PATH[i])+1);
-		nvs_write(&fs, NVS_FOTA_COAP_UPDATE_PATH_ID+i, 	FOTA_COAP_UPDATE_PATH[i], strlen(FOTA_COAP_UPDATE_PATH[i])+1);
-		nvs_write(&fs, NVS_FOTA_COAP_PORT_ID+i, 				&FOTA_COAP_PORT[i], sizeof(int));
-	}
+    strcpy(CURRENT_APN_CONFIG.coap1, "172.16.15.14");
+    strcpy(CURRENT_APN_CONFIG.coap2, "172.16.15.14");
+    strcpy(CURRENT_APN_CONFIG.coap3, "172.16.32.1");
+    strcpy(CURRENT_APN_CONFIG.coap4, "88.99.192.151");
+*/		
 }
 
-bool missing_flash_parameter()
+bool has_flash_config()
 {
-	// Check APNs
-	for (int i=0; i<NVS_APN_COUNT; i++)
+	apn_config tmp_config;
+	int rc = nvs_read(&fs, NVS_APN_NAME_ID, &tmp_config, sizeof(tmp_config));
+	if (rc > 0) 
+	{  
+		LOG_INF("APN Configuration read from FLASH");
+	} else   
 	{
-		int rc = nvs_read(&fs, NVS_APN_NAME_ID + i, &APN_NAME[i], CONFIG_NAME_SIZE);
-		if (rc > 0) 
-		{  
-			LOG_INF("APN Name %d read ok from FLASH : %s", i+1, log_strdup(APN_NAME[i]));
-		} else   
-		{
-			LOG_INF("Missing APN name at offset :%d", i);
-			return true;
-		}
+		LOG_INF("Missing APN configuration in FLASH");
+		return false;
 	}
 
-	// Check COAP servers
-	for (int i=0; i<NVS_APN_COUNT; i++)
-	{
-		int rc = nvs_read(&fs, NVS_FOTA_COAP_SERVER_ID + i, &FOTA_COAP_SERVER[i], CONFIG_NAME_SIZE);
-		if (rc > 0) 
-		{  
-			LOG_INF("COAP Server %d read ok from FLASH : %s", i+1, log_strdup(FOTA_COAP_SERVER[i]));
-		} else   
-		{
-			LOG_INF("Missing COAP Server name at offset :%d", i);
-			return true;
-		}
-	}
+	if (0 != strcmp(tmp_config.apn4, CURRENT_APN_CONFIG.apn4))
+		return false;
+	if (0 != strcmp(tmp_config.coap4, CURRENT_APN_CONFIG.coap4))
+		return false;
 
-	// Check COAP Report paths
-	for (int i=0; i<NVS_APN_COUNT; i++)
-	{
-		int rc = nvs_read(&fs, NVS_FOTA_COAP_REPORT_PATH_ID + i, &FOTA_COAP_REPORT_PATH[i], CONFIG_NAME_SIZE);
-		if (rc > 0) 
-		{  
-			LOG_INF("COAP Report path %d read ok from FLASH : %s", i+1, log_strdup(FOTA_COAP_REPORT_PATH[i]));
-		} else   
-		{
-			LOG_INF("Missing COAP Report path at offset :%d", i);
-			return true;
-		}
-	}
+	LOG_INF("Read APN configuration from flash.");
+  LOG_INF("Read APN1: %s", log_strdup(tmp_config.apn1));
+  LOG_INF("Read APN2: %s", log_strdup(tmp_config.apn2));
+  LOG_INF("Read APN3: %s", log_strdup(tmp_config.apn3));
+  LOG_INF("Read APN4: %s", log_strdup(tmp_config.apn4));
+  LOG_INF("Read COAP1: %s", log_strdup(tmp_config.coap1));
+  LOG_INF("Read COAP2: %s", log_strdup(tmp_config.coap2));
+  LOG_INF("Read COAP3: %s", log_strdup(tmp_config.coap3));
+  LOG_INF("Read COAP4: %s", log_strdup(tmp_config.coap4));
 
-	// Check COAP Update paths
-	for (int i=0; i<NVS_APN_COUNT; i++)
-	{
-		int rc = nvs_read(&fs, NVS_FOTA_COAP_UPDATE_PATH_ID + i, &FOTA_COAP_UPDATE_PATH[i], CONFIG_NAME_SIZE);
-		if (rc > 0) 
-		{  
-			LOG_INF("COAP Update path %d read ok from FLASH : %s", i+1, log_strdup(FOTA_COAP_UPDATE_PATH[i]));
-		} else   
-		{
-			LOG_INF("Missing COAP Update path at offset :%d", i);
-			return true;
-		}
-	}
-	
-	// Check COAP ports
-	for (int i=0; i<NVS_APN_COUNT; i++)
-	{
-		int rc = nvs_read(&fs, NVS_FOTA_COAP_PORT_ID + i, &FOTA_COAP_PORT[i], sizeof(int));
-		if (rc > 0) 
-		{  
-			LOG_INF("COAP Update port %d read ok from FLASH : %d", i+1, FOTA_COAP_PORT[i]);
-		} else   
-		{
-			LOG_INF("Missing COAP PORT at offset :%d", i);
-			return true;
-		}
-	}
+	if (0 != strlen(tmp_config.apn1))
+		strcpy(CURRENT_APN_CONFIG.apn1,tmp_config.apn1);
+	if (0 != strlen(tmp_config.apn2))
+		strcpy(CURRENT_APN_CONFIG.apn2,tmp_config.apn2);
+	if (0 != strlen(tmp_config.apn3))
+		strcpy(CURRENT_APN_CONFIG.apn3,tmp_config.apn3);
+	if (0 != strlen(tmp_config.coap1))
+		strcpy(CURRENT_APN_CONFIG.coap1,tmp_config.coap1);
+	if (0 != strlen(tmp_config.coap2))
+		strcpy(CURRENT_APN_CONFIG.coap2,tmp_config.coap2);
+	if (0 != strlen(tmp_config.coap3))
+		strcpy(CURRENT_APN_CONFIG.coap3,tmp_config.coap3);
 
-	return false;
+	LOG_INF("Current APN configuration is now");
+  LOG_INF("Current APN1: %s", log_strdup(CURRENT_APN_CONFIG.apn1));
+  LOG_INF("Current APN2: %s", log_strdup(CURRENT_APN_CONFIG.apn2));
+  LOG_INF("Current APN3: %s", log_strdup(CURRENT_APN_CONFIG.apn3));
+  LOG_INF("Current APN4: %s", log_strdup(CURRENT_APN_CONFIG.apn4));
+  LOG_INF("Current COAP1: %s", log_strdup(CURRENT_APN_CONFIG.coap1));
+  LOG_INF("Current COAP2: %s", log_strdup(CURRENT_APN_CONFIG.coap2));
+  LOG_INF("Current COAP3: %s", log_strdup(CURRENT_APN_CONFIG.coap3));
+  LOG_INF("Current COAP4: %s", log_strdup(CURRENT_APN_CONFIG.coap4));		
+
+	return true;
 }
-
-/**
- * Checks for the existense of a predefined APN list in FLASH memory
- * If the list is missing or incomplete, a default list consisting of
- * the names defined by DEFAULT_APN_1, DEFAULT_APN_2, DEFAULT_APN_3 
- * is saved to FLASH memory
- * 
- * Must be called after init_config_nvs();
- */
-void init_default_apn_list()
-{
-	LOG_INF("Scanning stored APN NAMES in flash");
-
-	if (missing_flash_parameter())
-	{
-		write_default_values_to_flash();
-	}
-}
-
 
 void init_config_nvs()
 {
 	struct flash_pages_info info;
 	int rc = 0;
+
+	init_default_config();
 
 	// Define the nvs file system by settings with:
 	// 	- sector_size equal to the pagesize,
@@ -285,20 +201,13 @@ void init_config_nvs()
 		LOG_ERR("Flash Init failed\n");
 	}
 
- // nvs_clear(&fs); // Nuke the file system
+  // nvs_clear(&fs); // Nuke the file system
 
 	size_t freespace = nvs_calc_free_space(&fs);
  	LOG_INF("Calculated free space: %d", freespace);
 
-	init_default_apn_list();
-
-	if (!missing_flash_parameter())
-	{
-		LOG_INF("Flash parameter list is ok.");
-	}
-	
-	// We will have to select_active_apn() after the rest of the hardware has been initialized.
-	// At dawn, look to main()
+	if (!has_flash_config())
+	 	save_apn_config();
 }
 
 

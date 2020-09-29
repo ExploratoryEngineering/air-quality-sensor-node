@@ -3,163 +3,91 @@
 #include <logging/log.h>
 #include <misc/reboot.h>
 #include "config_message.h"
-#include "config.pb.h"
+#include "aqconfig.pb.h"
 #include <pb_encode.h>
 #include <pb_decode.h>
 #include "config.h"
+#include <stdlib.h>
 
 LOG_MODULE_DECLARE(NVS);
 
-int apn_argument_num = 0;
+char ping_buffer[64];
 
-decoded_config_value decoded_values[APN_COMMAND_ARGUMENTS];
+extern char imei[24];
+extern apn_config CURRENT_APN_CONFIG;
 
+int ping_id = 1;
 
-/*
-*   string_callback is called for each occurence of string values in the incoming stream.
-*/
-bool apn_string_callback(pb_istream_t *stream, const pb_field_t *field, void **arg)
+int decode_config_message(uint8_t * buf, int size)
 {
-    uint8_t string_buffer[CONFIG_NAME_SIZE] = {0};
-
-    if (stream->bytes_left > CONFIG_NAME_SIZE - 1)
-        return false;
-    if (!pb_read(stream, string_buffer, stream->bytes_left))
-        return false;
-    
-    decoded_config_value * decoded_value = (decoded_config_value *)(*arg);
-    strcpy(decoded_value->string_val, string_buffer);
-
-    return true;
-}
-
-/*   
-*   Callback for decoding config_Value
-*/
-bool apn_value_callback(pb_istream_t *stream, const pb_field_t *field, void **arg)
-{
-	config_Value value = config_Value_init_zero;
-	value.stringVal.funcs.decode = &apn_string_callback;
-
-    decoded_config_value * decoded_value = (decoded_config_value *)(*arg);
-    value.stringVal.arg = decoded_value;
- 	if (!pb_decode(stream, config_Value_fields, &value))
-            return false;
-
-    decoded_value->id = value.id;
-    decoded_value->int_val = value.int32Val;
-   
-    if (apn_argument_num < APN_COMMAND_ARGUMENTS)
-    {
-        decoded_values[apn_argument_num++] = *decoded_value;
-        return true;
-    }
-  
-    return false;
-}
-
-size_t encode_response(config_response r, uint8_t * buffer, size_t buf_size)
-{
-    #pragma message("TODO: Fix broken encode_response function.")
-    return 0;
-
-    
-    size_t message_length = 0;
-
-    config_Response response;
-    response.id = r.id;
-    response.command = r.command;
-    response.responseCode = r.responseCode;
-
-    memset(buffer, 0, buf_size);
-
-    pb_ostream_t stream = pb_ostream_from_buffer(buffer, buf_size);
-
-    bool status = pb_encode(&stream, config_Response_fields, &response);
-    message_length = stream.bytes_written;
-        
-    if (!status)
-    {
-        LOG_ERR("Encoding of config request response failed:\n");
-        return 0;
-    }
-
-    return message_length;
-}
-
-
-/*   
-*   Decode SET APN LIST config command
-*/
-config_response decode_set_apn_list_command(uint8_t * buf, int size)
-{
-	LOG_INF("Decoding SET APN COMMAND");
-
-    config_response response;
-
-    decoded_config_value decoded_value;
-    apn_argument_num = 0;
-
-	pb_istream_t stream = pb_istream_from_buffer(buf, size);
-	config_Request request = config_Request_init_zero;
-	request.values.funcs.decode = &apn_value_callback;
-	request.values.arg = &decoded_value;
-
-    response.command = COMMAND_SET_APN_LIST;
-	if (!pb_decode(&stream, config_Request_fields, &request))
-	{
-		LOG_ERR("protobuf decoding failed (request");
-        response.responseCode = CONFIG_COMMAND_INVALID_PROOBUF;
-		return response;
-	}
-
-    response.id = request.id;
-    response.responseCode = save_new_apn_config(apn_argument_num);
-    return response;
-}
-
-
-/*
-*   get_message_type is a helper function for identifying message type.
-*/
-int get_message_type(uint8_t * buf, int size)
-{
-	LOG_INF("Checking incoming message type");
+   	LOG_INF("Decoding incoming message");
 
     pb_istream_t stream = pb_istream_from_buffer(buf, size);
-	config_Request request = config_Request_init_zero;
+	aqconfig_setapn tmp_config = aqconfig_setapn_init_zero;
 
-	if (!pb_decode(&stream, config_Request_fields, &request))
+	if (!pb_decode(&stream, aqconfig_setapn_fields, &tmp_config))
 	{
 		LOG_ERR("protobuf decoding failed (request");
 		return -1;
 	}
-    return request.command;
+
+   	LOG_INF("DECODED message");
+    LOG_INF("   ID: %d", tmp_config.id);
+    LOG_INF("   Timestamp: %d", tmp_config.timestamp);
+    LOG_INF("   APN1: %s", log_strdup(tmp_config.apn1));
+    LOG_INF("   APN2: %s", log_strdup(tmp_config.apn2));
+    LOG_INF("   APN3: %s", log_strdup(tmp_config.apn3));
+    LOG_INF("   COAP1: %s", log_strdup(tmp_config.coap1));
+    LOG_INF("   COAP2: %s", log_strdup(tmp_config.coap2));
+    LOG_INF("   COAP3: %s", log_strdup(tmp_config.coap3));
+
+   
+   if (0 != strlen(tmp_config.apn1))
+		strcpy(CURRENT_APN_CONFIG.apn1,tmp_config.apn1);
+	if (0 != strlen(tmp_config.apn2))
+		strcpy(CURRENT_APN_CONFIG.apn2,tmp_config.apn2);
+	if (0 != strlen(tmp_config.apn3))
+		strcpy(CURRENT_APN_CONFIG.apn3,tmp_config.apn3);
+	if (0 != strlen(tmp_config.coap1))
+		strcpy(CURRENT_APN_CONFIG.coap1,tmp_config.coap1);
+	if (0 != strlen(tmp_config.coap2))
+		strcpy(CURRENT_APN_CONFIG.coap2,tmp_config.coap2);
+	if (0 != strlen(tmp_config.coap3))
+		strcpy(CURRENT_APN_CONFIG.coap3,tmp_config.coap3);
+
+	LOG_INF("Current APN configuration is now");
+    LOG_INF("Current APN1: %s", log_strdup(CURRENT_APN_CONFIG.apn1));
+    LOG_INF("Current APN2: %s", log_strdup(CURRENT_APN_CONFIG.apn2));
+    LOG_INF("Current APN3: %s", log_strdup(CURRENT_APN_CONFIG.apn3));
+    LOG_INF("Current APN4: %s", log_strdup(CURRENT_APN_CONFIG.apn4));
+    LOG_INF("Current COAP1: %s", log_strdup(CURRENT_APN_CONFIG.coap1));
+    LOG_INF("Current COAP2: %s", log_strdup(CURRENT_APN_CONFIG.coap2));
+    LOG_INF("Current COAP3: %s", log_strdup(CURRENT_APN_CONFIG.coap3));
+    LOG_INF("Current COAP4: %s", log_strdup(CURRENT_APN_CONFIG.coap4));		
+
+    save_apn_config();
+
+    LOG_INF("Scheduling reboot");
+    k_sleep(3000);
+    return 0;
 }
 
-
-config_response decode_config_message(uint8_t * buf, int size)
+int encode_ping(char * buffer, int buffer_size)
 {
-    config_response response;
-   	LOG_INF("Decoding incoming message");
+    aqconfig_ping ping = aqconfig_ping_init_zero;
+    pb_ostream_t stream = pb_ostream_from_buffer(buffer, buffer_size);
+    
+    ping.id = ping_id++;
+    ping.deviceid = atoll(imei);
+    ping.timestamp = k_uptime_get() / 1000; // Uptime in seconds == kinda time'ish
 
-    int message_type = get_message_type(buf, size);
-
-    switch(message_type)
+    bool status = pb_encode(&stream, aqconfig_ping_fields, &ping);
+        
+    if (!status)
     {
-        case COMMAND_SET_APN_LIST : return decode_set_apn_list_command(buf, size);
-                                    break;
-        case COMMAND_REBOOT : LOG_INF("Rebooting...");
-                                k_sleep(1000);
-                                sys_reboot(0);
-                                break;
-        case COMMAND_STATUS :
-        case COMMAND_GET_APN_LIST :
-        case COMMAND_ECHO         :
-        default:
-		       LOG_INF("Unrecognized message type %d. Ignoring request", message_type);
-		        break;
+        LOG_ERR("PING Encoding failed: %s\n", log_strdup(PB_GET_ERROR(&stream)));
+        return -1;
     }
 
-    return response;
+    return 0;
 }

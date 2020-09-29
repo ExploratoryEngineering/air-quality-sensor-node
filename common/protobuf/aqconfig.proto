@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package aqconfig;
+
+option go_package = ".;aqconfig";
+
+message ping {
+    uint32 id = 1;
+    uint64 deviceid = 2;
+    uint32 timestamp = 3;
+}
+
+message setapn {
+    uint32 id = 1;
+    uint32 timestamp = 2;
+    string apn1  = 3;
+    string apn2  = 4;
+    string apn3  = 5;
+    string coap1  = 6;
+    string coap2  = 7;
+    string coap3  = 8;
+}
