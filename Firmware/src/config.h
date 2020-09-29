@@ -1,12 +1,11 @@
 #ifndef _CONFIG_H_
 #define _CONFIG_H_
 
-#define APN_QUERY_RETRY_COUNT 	20
-#define APN_RETRY_DELAY_MS		2000	
+#define APN_QUERY_RETRY_COUNT 	30
+#define APN_RETRY_DELAY_MS		3000	
 
-#define PING_RETRIES    20
-#define PING_RETRY_DELAY_MS		2000	
-
+#define PING_RETRIES            30
+#define PING_RETRY_DELAY_MS		3000	
 
 #define NVS_APN_COUNT 4
 
@@ -14,7 +13,6 @@
 #define DEFAULT_FOTA_COAP_REPORT_PATH   "u"
 #define DEFAULT_FOTA_COAP_UPDATE_PATH   "fw"
 #define DEFAULT_FOTA_COAP_PORT 5683
-
 
 // Force reboot after 2 hours. This wil trigger a new scan for active APNs
 #define UPTIME_FORCE_REBOOT_LIMIT_SECONDS 60 * 120

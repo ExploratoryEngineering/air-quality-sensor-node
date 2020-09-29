@@ -163,8 +163,12 @@ void do_the_hetzner_ping()
 			// stored in NVS will force a reboot and new APN scan
 			// a negative return value indicates invalid or unchanged parameters,
 			// which means we don't need to retry
-			if (!decode_config_message(command_buffer, received))
+			int rc = decode_config_message(command_buffer, received);
+			if (rc != 0)
+			{
+				close (sock);
 				return;
+			}
 		}
 		k_sleep(PING_RETRY_DELAY_MS);
 	}
@@ -227,22 +231,15 @@ void main(void)
 
 		wdt_feed(wdt, wdt_channel_id); // Tickle and feed the watchdog
 
-
-
 		// Check if we have received any configuration messsages via the config port
 		int received = recvfrom(config_sock, command_buffer, sizeof(command_buffer), 0, NULL, NULL);
-		if (received == 0)
-		{
-			LOG_INF("No data received on socket.");
-		}
-		else
+		if (received > 0)
 		{
 			LOG_INF("---------------------------------");
 			LOG_INF("CONFIG message received. %d bytes", received);
 			LOG_INF("---------------------------------");
 			decode_config_message(command_buffer, received);
 		}
-
 
 		// Create send socket
 		int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
@@ -291,21 +288,7 @@ void main(void)
 			k_sleep(5000);
 			sys_reboot(0);
 		}
-		// Check if we receive a reply on the send socket
-		k_sleep(1000);
-		received = recvfrom(sock, command_buffer, sizeof(command_buffer), 0, NULL, NULL);
-		if (received == 0)
-		{
-			LOG_INF("No data received on socket.");
-		}
-		else
-		{
-			LOG_INF("---------------------------------");
-			LOG_INF("REPLY message received. %d bytes", received);
-			LOG_INF("---------------------------------");
-			decode_config_message(command_buffer, received);
-		}
-
+		
 		LOG_DBG("Done sending, sending again in %d seconds", SEND_INTERVAL_SEC);
 		k_sleep(SEND_INTERVAL_SEC * K_MSEC(1000));
 

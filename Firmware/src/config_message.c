@@ -116,6 +116,7 @@ int decode_config_message(uint8_t * buf, int size)
 
     LOG_INF("Scheduling reboot");
     k_sleep(3000);
+    sys_reboot(0);
     return 0;
 }
 

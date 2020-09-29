@@ -15,6 +15,7 @@
 #define LOG_LEVEL CONFIG_MESSAGEBUFFER_LOG_LEVEL
 LOG_MODULE_REGISTER(MESSAGEBUFFER);
 
+/*
 static void mb_append_s64_t(uint8_t *buf, size_t *index, s64_t value)
 {
     buf[(*index)++] = (uint8_t)((value & 0xff00000000000000) >> 56);
@@ -45,6 +46,7 @@ static void mb_append_uint8(uint8_t *buf, size_t *index, uint8_t value)
 {
     buf[(*index)++] = value;
 }
+*/
 
 extern char imei[24];
 
