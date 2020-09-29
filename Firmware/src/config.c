@@ -21,6 +21,8 @@ apn_config CURRENT_APN_CONFIG;
 char CURRENT_APN_BUFFER[64] = {0};
 char CURRENT_COAP_BUFFER[128] = {0};
 
+
+
 int save_apn_config()
 {
 	LOG_INF("Saving new APN configuration to flash.");
@@ -94,19 +96,35 @@ void select_active_apn()
 	sys_reboot(0);
 }
 
+bool select_ping_apn()
+{
+	LOG_INF("Selecting PING APN");
+
+	strcpy(CURRENT_APN_BUFFER, CURRENT_APN_CONFIG.apn4);
+	strcpy(CURRENT_COAP_BUFFER, CURRENT_APN_CONFIG.coap4);
+
+	LOG_INF("Testing APN : %s, COAP: %s", log_strdup(CURRENT_APN_BUFFER), log_strdup(CURRENT_COAP_BUFFER));
+
+	modem_restart();
+	modem_configure();
+	int retries = 0;
+	while (!modem_is_ready() & (retries++ < APN_QUERY_RETRY_COUNT))
+	{
+		LOG_INF("Waiting for IP-address from %s. Retry : %d", log_strdup(CURRENT_APN_BUFFER), retries);
+		k_sleep(APN_RETRY_DELAY_MS);
+	}
+	if (modem_is_ready())
+	{
+		LOG_INF("ACTIVE APN is now : %s", log_strdup(CURRENT_APN_BUFFER));
+		return true; 
+	}
+	return false;
+}
+
 void init_default_config()
 {
 		LOG_INF("Initializing default APN config");
-	  strcpy(CURRENT_APN_CONFIG.apn4, "mda.lab5e");
-    strcpy(CURRENT_APN_CONFIG.apn2, "mda.ee");
-    strcpy(CURRENT_APN_CONFIG.apn3, "telenor.iotgw");
-    strcpy(CURRENT_APN_CONFIG.apn1, "telenor.iot");
 
-    strcpy(CURRENT_APN_CONFIG.coap4, "172.16.15.14");
-    strcpy(CURRENT_APN_CONFIG.coap2, "172.16.15.14");
-    strcpy(CURRENT_APN_CONFIG.coap3, "172.16.32.1");
-    strcpy(CURRENT_APN_CONFIG.coap1, "88.99.192.151");
-	/*
 	  strcpy(CURRENT_APN_CONFIG.apn1, "mda.lab5e");
     strcpy(CURRENT_APN_CONFIG.apn2, "mda.ee");
     strcpy(CURRENT_APN_CONFIG.apn3, "telenor.iotgw");
@@ -116,6 +134,33 @@ void init_default_config()
     strcpy(CURRENT_APN_CONFIG.coap2, "172.16.15.14");
     strcpy(CURRENT_APN_CONFIG.coap3, "172.16.32.1");
     strcpy(CURRENT_APN_CONFIG.coap4, "88.99.192.151");
+
+
+/*
+		// Deployment config
+    strcpy(CURRENT_APN_CONFIG.apn1, "telenor.iotgw");
+	  strcpy(CURRENT_APN_CONFIG.apn2, "mda.lab5e");
+    strcpy(CURRENT_APN_CONFIG.apn3, "mda.ee");
+    strcpy(CURRENT_APN_CONFIG.apn4, "telenor.iot");
+
+    strcpy(CURRENT_APN_CONFIG.coap1, "172.16.32.1");
+    strcpy(CURRENT_APN_CONFIG.coap2, "172.16.15.14");
+    strcpy(CURRENT_APN_CONFIG.coap3, "172.16.15.14");
+    strcpy(CURRENT_APN_CONFIG.coap4, "88.99.192.151");
+*/
+
+
+	/*
+		// Hetzner config
+    strcpy(CURRENT_APN_CONFIG.apn1, "telenor.iot");
+    strcpy(CURRENT_APN_CONFIG.apn2, "mda.ee");
+    strcpy(CURRENT_APN_CONFIG.apn3, "telenor.iotgw");
+	  strcpy(CURRENT_APN_CONFIG.apn4, "mda.lab5e");
+
+    strcpy(CURRENT_APN_CONFIG.coap1, "88.99.192.151");
+    strcpy(CURRENT_APN_CONFIG.coap2, "172.16.15.14");
+    strcpy(CURRENT_APN_CONFIG.coap3, "172.16.32.1");
+    strcpy(CURRENT_APN_CONFIG.coap4, "172.16.15.14");
 */		
 }
 
@@ -207,7 +252,12 @@ void init_config_nvs()
  	LOG_INF("Calculated free space: %d", freespace);
 
 	if (!has_flash_config())
+	{
 	 	save_apn_config();
+		LOG_INF("Rebooting...");
+		k_sleep(1000);
+		sys_reboot(0);
+	}
 }
 
 

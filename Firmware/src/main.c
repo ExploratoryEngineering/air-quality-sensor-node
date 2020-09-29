@@ -46,12 +46,16 @@ static uint8_t buffer[MAX_SEND_BUFFER];
 #define MAX_COMMAND_BUFFER 256
 static uint8_t command_buffer[MAX_COMMAND_BUFFER];
 
+extern char CURRENT_COAP_BUFFER[128];
+extern apn_config CURRENT_APN_CONFIG;
+
+
+
 // Watchdog
 #define WDT_DEV_NAME DT_WDT_0_NAME
 struct device *wdt;
 int wdt_channel_id;
 
-extern char CURRENT_COAP_BUFFER[128];
 
 static void wdt_callback(struct device *wdt_dev, int channel_id)
 {
@@ -59,6 +63,7 @@ static void wdt_callback(struct device *wdt_dev, int channel_id)
 	k_sleep(1000);
 	sys_reboot(0);
 }
+
 
 void watchdog_init()
 {
@@ -105,6 +110,72 @@ void watchdog_init()
 	LOG_INF("Watchdog channel id: %d", wdt_channel_id);
 }
 
+
+void do_the_hetzner_ping()
+{
+	LOG_INF("----------------------");
+	LOG_INF("Doing the Hetzner ping");
+	LOG_INF("----------------------");
+
+	// Select temporary APN. Bail out if we can't make contact
+	if (!select_ping_apn())
+		return;
+
+	// Create socket
+	int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	if (sock < 0)
+	{
+		LOG_ERR("Error opening socket: %d", sock);
+		k_sleep(1000);
+		sys_reboot(0);
+	}
+	
+	static struct sockaddr_in remote_addr_ping = {
+		sin_family : AF_INET,
+	};
+	remote_addr_ping.sin_port = htons(1234);
+	net_addr_pton(AF_INET, CURRENT_COAP_BUFFER, &remote_addr_ping.sin_addr);
+
+	char PING_BUFFER[128];
+
+	if (!encode_ping(PING_BUFFER, sizeof(PING_BUFFER)))
+	{
+		LOG_ERR("Failed encoding PING message. Bailing out");
+		return;
+	}
+
+	for (int i=0; i<PING_RETRIES; i++) 
+	{
+		LOG_INF("PING attempts: %d", i);
+		int err = sendto(sock, buffer, strlen(buffer), 0, (struct sockaddr *)&remote_addr_ping, sizeof(remote_addr_ping));
+		if (err < 0)
+		{
+			LOG_ERR("Unable to send data to PING server: %d", err);
+		}
+		k_sleep(1000);
+		int received = recvfrom(sock, command_buffer, sizeof(command_buffer), 0, NULL, NULL);
+		if (received > 0)
+		{
+			LOG_INF("----------------------------------------------");
+			LOG_INF("RECEIVED CONFIGURAION request from PING server");
+			LOG_INF("----------------------------------------------");
+			// A correctly decoded message that contains parameters that differ from those
+			// stored in NVS will force a reboot and new APN scan
+			// a negative return value indicates invalid or unchanged parameters,
+			// which means we don't need to retry
+			if (!decode_config_message(command_buffer, received))
+				return;
+		}
+		k_sleep(PING_RETRY_DELAY_MS);
+	}
+
+	LOG_INF("PING timeout. No reply from PING server");
+
+	close (sock);
+}
+
+
+
 void main(void)
 {
  	init_board();
@@ -122,14 +193,14 @@ void main(void)
 	wait_for_sockets();
 	LOG_DBG("Ready to run");
 
+	do_the_hetzner_ping();
+
 	select_active_apn();
 	fota_init();
 	if (fota_run())
 	{
 		k_sleep(1000);
 	}
-
-
 
 	// Create config socket
 	int config_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
@@ -144,7 +215,6 @@ void main(void)
 		sin_family : AF_INET,
 	};
 	remote_addr_config.sin_port = htons(1234);
-	//net_addr_pton(AF_INET, "172.16.15.14", &remote_addr.sin_addr);
 	net_addr_pton(AF_INET, CURRENT_COAP_BUFFER, &remote_addr_config.sin_addr);
 
 
@@ -159,7 +229,7 @@ void main(void)
 
 
 
-		// Check if we have received any configuration messsages
+		// Check if we have received any configuration messsages via the config port
 		int received = recvfrom(config_sock, command_buffer, sizeof(command_buffer), 0, NULL, NULL);
 		if (received == 0)
 		{
@@ -171,16 +241,6 @@ void main(void)
 			LOG_INF("CONFIG message received. %d bytes", received);
 			LOG_INF("---------------------------------");
 			decode_config_message(command_buffer, received);
-			/*
-			k_sleep(1000);
-			config_response r = decode_config_message(command_buffer, received);
-			uint8_t response_buffer[64];
-			size_t length = encode_response(r, response_buffer, sizeof(response_buffer));
-			if (0!=length)
-			{
-				sendto(config_sock, response_buffer, length, 0, (struct sockaddr *)&remote_addr_config, sizeof(remote_addr_config));
-			}
-			*/
 		}
 
 
@@ -197,7 +257,6 @@ void main(void)
 			sin_family : AF_INET,
 		};
 		remote_addr.sin_port = htons(1234);
-		//net_addr_pton(AF_INET, "172.16.15.14", &remote_addr.sin_addr);
 		net_addr_pton(AF_INET, CURRENT_COAP_BUFFER, &remote_addr.sin_addr);
 
 
@@ -232,8 +291,8 @@ void main(void)
 			k_sleep(5000);
 			sys_reboot(0);
 		}
-
-		k_sleep(3000);
+		// Check if we receive a reply on the send socket
+		k_sleep(1000);
 		received = recvfrom(sock, command_buffer, sizeof(command_buffer), 0, NULL, NULL);
 		if (received == 0)
 		{
@@ -245,14 +304,6 @@ void main(void)
 			LOG_INF("REPLY message received. %d bytes", received);
 			LOG_INF("---------------------------------");
 			decode_config_message(command_buffer, received);
-/*			
-			uint8_t response_buffer[64];
-			size_t length = encode_response(r, response_buffer, sizeof(response_buffer));
-			if (0!=length)
-			{
-				sendto(sock, response_buffer, length, 0, (struct sockaddr *)&remote_addr, sizeof(remote_addr));
-			}
-*/			
 		}
 
 		LOG_DBG("Done sending, sending again in %d seconds", SEND_INTERVAL_SEC);

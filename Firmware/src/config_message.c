@@ -11,12 +11,29 @@
 
 LOG_MODULE_DECLARE(NVS);
 
+
+
+
 char ping_buffer[64];
 
 extern char imei[24];
 extern apn_config CURRENT_APN_CONFIG;
 
 int ping_id = 1;
+
+char URL_BUF[256];
+
+void rewrite_URL_to_IP_only(char * url)
+{
+    char ip[124];
+    int port = 80;
+    char path[128];
+    strcpy(URL_BUF, url);
+
+    sscanf(url, "coap://%99[^:]:%99d/%99[^\n]", ip, &port, path);
+
+    strcpy(url, ip);
+}
 
 int decode_config_message(uint8_t * buf, int size)
 {
@@ -31,6 +48,10 @@ int decode_config_message(uint8_t * buf, int size)
 		return -1;
 	}
 
+    rewrite_URL_to_IP_only(tmp_config.coap1);
+    rewrite_URL_to_IP_only(tmp_config.coap2);
+    rewrite_URL_to_IP_only(tmp_config.coap3);
+
    	LOG_INF("DECODED message");
     LOG_INF("   ID: %d", tmp_config.id);
     LOG_INF("   Timestamp: %d", tmp_config.timestamp);
@@ -41,21 +62,47 @@ int decode_config_message(uint8_t * buf, int size)
     LOG_INF("   COAP2: %s", log_strdup(tmp_config.coap2));
     LOG_INF("   COAP3: %s", log_strdup(tmp_config.coap3));
 
-   
-   if (0 != strlen(tmp_config.apn1))
-		strcpy(CURRENT_APN_CONFIG.apn1,tmp_config.apn1);
-	if (0 != strlen(tmp_config.apn2))
-		strcpy(CURRENT_APN_CONFIG.apn2,tmp_config.apn2);
-	if (0 != strlen(tmp_config.apn3))
-		strcpy(CURRENT_APN_CONFIG.apn3,tmp_config.apn3);
-	if (0 != strlen(tmp_config.coap1))
-		strcpy(CURRENT_APN_CONFIG.coap1,tmp_config.coap1);
-	if (0 != strlen(tmp_config.coap2))
-		strcpy(CURRENT_APN_CONFIG.coap2,tmp_config.coap2);
-	if (0 != strlen(tmp_config.coap3))
-		strcpy(CURRENT_APN_CONFIG.coap3,tmp_config.coap3);
+    // Check if we have a complete list
+    if ((0 == strlen(tmp_config.apn1)) || 
+	    (0 == strlen(tmp_config.apn2)) || 
+	    (0 == strlen(tmp_config.apn3)) || 
+	    (0 == strlen(tmp_config.coap1)) || 
+	    (0 == strlen(tmp_config.coap2)) || 
+	    (0 == strlen(tmp_config.coap3)))
+        {
+            LOG_ERR("Invalid configuration request received. Empty APN or COAP argument.");
+            return -2;
+        }
 
-	LOG_INF("Current APN configuration is now");
+    // Only write to flash and reboot if we receive a configuration that
+    // differs from the current configuration
+    bool modified = false;
+
+    if ((0 != strcmp(CURRENT_APN_CONFIG.apn1,tmp_config.apn1)) || 
+		(0 != strcmp(CURRENT_APN_CONFIG.apn2,tmp_config.apn2)) || 
+		(0 != strcmp(CURRENT_APN_CONFIG.apn3,tmp_config.apn3)) || 
+		(0 != strcmp(CURRENT_APN_CONFIG.coap1,tmp_config.coap1)) || 
+		(0 != strcmp(CURRENT_APN_CONFIG.coap2,tmp_config.coap2)) || 
+		(0 != strcmp(CURRENT_APN_CONFIG.coap3,tmp_config.coap3)))
+        {
+            modified = true;
+        }
+
+    if (!modified) 
+    {
+        LOG_INF("New configuration does not differ from existing configuration.");
+        LOG_INF("FLASH area will not be updated and no reboot is preformed.");
+        return -3;
+    }
+
+    strcpy(CURRENT_APN_CONFIG.apn1,tmp_config.apn1);
+    strcpy(CURRENT_APN_CONFIG.apn2,tmp_config.apn2);
+    strcpy(CURRENT_APN_CONFIG.apn3,tmp_config.apn3);
+    strcpy(CURRENT_APN_CONFIG.coap1,tmp_config.coap1);
+    strcpy(CURRENT_APN_CONFIG.coap2,tmp_config.coap2);
+    strcpy(CURRENT_APN_CONFIG.coap3,tmp_config.coap3);
+
+	LOG_INF("Current APN configuration has changed:");
     LOG_INF("Current APN1: %s", log_strdup(CURRENT_APN_CONFIG.apn1));
     LOG_INF("Current APN2: %s", log_strdup(CURRENT_APN_CONFIG.apn2));
     LOG_INF("Current APN3: %s", log_strdup(CURRENT_APN_CONFIG.apn3));
@@ -86,8 +133,8 @@ int encode_ping(char * buffer, int buffer_size)
     if (!status)
     {
         LOG_ERR("PING Encoding failed: %s\n", log_strdup(PB_GET_ERROR(&stream)));
-        return -1;
+        return false;
     }
 
-    return 0;
+    return true;
 }
