@@ -7,3 +7,5 @@ cmd/aq/aq
 aq.db
 aq.db*
 logs
+*.bz2
+scripts
