@@ -21,8 +21,6 @@ apn_config CURRENT_APN_CONFIG;
 char CURRENT_APN_BUFFER[64] = {0};
 char CURRENT_COAP_BUFFER[128] = {0};
 
-
-
 int save_apn_config()
 {
 	LOG_INF("Saving new APN configuration to flash.");
@@ -127,14 +125,14 @@ void init_default_config()
 		LOG_INF("Initializing default APN config");
 
 		// Deployment config
-    strcpy(CURRENT_APN_CONFIG.apn1, "telenor.iotgw");
-	  strcpy(CURRENT_APN_CONFIG.apn2, "mda.lab5e");
-    strcpy(CURRENT_APN_CONFIG.apn3, "mda.ee");
+	  strcpy(CURRENT_APN_CONFIG.apn1, "mda.lab5e");
+    strcpy(CURRENT_APN_CONFIG.apn2, "mda.ee");
+    strcpy(CURRENT_APN_CONFIG.apn3, "telenor.iotgw");
     strcpy(CURRENT_APN_CONFIG.apn4, "telenor.iot");
 
-    strcpy(CURRENT_APN_CONFIG.coap1, "172.16.32.1");
+    strcpy(CURRENT_APN_CONFIG.coap1, "172.16.15.14");
     strcpy(CURRENT_APN_CONFIG.coap2, "172.16.15.14");
-    strcpy(CURRENT_APN_CONFIG.coap3, "172.16.15.14");
+    strcpy(CURRENT_APN_CONFIG.coap3, "172.16.32.1");
     strcpy(CURRENT_APN_CONFIG.coap4, "88.99.192.151");
 }
 
@@ -230,9 +228,6 @@ void init_config_nvs()
 	if (!has_flash_config())
 	{
 	 	save_apn_config();
-		LOG_INF("Rebooting...");
-		k_sleep(1000);
-		sys_reboot(0);
 	}
 }
 

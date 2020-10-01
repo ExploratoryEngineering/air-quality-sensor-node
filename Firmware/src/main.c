@@ -43,7 +43,6 @@ LOG_MODULE_REGISTER(MAIN);
 
 #define MAX_SEND_BUFFER 450
 static uint8_t buffer[MAX_SEND_BUFFER];
-static uint8_t coap_buffer[MAX_SEND_BUFFER+50]; 
 
 #define MAX_COMMAND_BUFFER 256
 static uint8_t command_buffer[MAX_COMMAND_BUFFER];
@@ -212,6 +211,7 @@ void main(void)
 	do_the_hetzner_ping();
 
 	select_active_apn();
+
 	fota_init();
 	if (fota_run())
 	{
@@ -294,9 +294,7 @@ void main(void)
 		mb_hex_dump_message(buffer, len);
 	#endif
 
-		// Ugly last minute hack
-		//	strcpy(coap_buffer, "40022890bb726571756573742f757269ff"); // Don't ask...
-		
+/*		// Ugly last minute hack -
 		coap_buffer[0] = 0x40;
 		coap_buffer[1] = 0x02;
 		coap_buffer[2] = 0x28;
@@ -319,11 +317,9 @@ void main(void)
 		memcpy(&coap_buffer[17], buffer, len);
 		remote_addr.sin_port = htons(DEFAULT_FOTA_COAP_PORT);
 		net_addr_pton(AF_INET, CURRENT_COAP_BUFFER, &remote_addr.sin_addr);
-
-		int err = sendto(sock, coap_buffer, len+header_len, 0, (struct sockaddr *)&remote_addr, sizeof(remote_addr));
-
-		//int err = sendto(sock, buffer, len, 0, (struct sockaddr *)&remote_addr, sizeof(remote_addr));
-		err = sendto(sock, coap_buffer, len+header_len, 0, (struct sockaddr *)&remote_addr, sizeof(remote_addr));
+		*/
+		int err = sendto(sock, buffer, len, 0, (struct sockaddr *)&remote_addr, sizeof(remote_addr));
+//		err = sendto(sock, coap_buffer, len+header_len, 0, (struct sockaddr *)&remote_addr, sizeof(remote_addr));
 		if (err < 0)
 		{
 			LOG_ERR("Unable to send data: %d", err);
@@ -352,6 +348,8 @@ void main(void)
 		LOG_INF("Uptime: %d seconds", uptime_seconds);
 		if (uptime_seconds > UPTIME_FORCE_REBOOT_LIMIT_SECONDS)
 		{
+			LOG_INF("REBOOTING");
+			k_sleep(2000);
 			sys_reboot(0);
 		}
 		
