@@ -84,4 +84,8 @@ message Sample {
     uint32 opc_bin_21 = 61; // OPC PM bin 21
     uint32 opc_bin_22 = 62; // OPC PM bin 22
     uint32 opc_bin_23 = 63; // OPC PM bin 23
+
+    float pm1  = 64; // OPC PM A (default PM1)
+    float pm25 = 65; // OPC PM B (default PM2.5)
+    float pm10 = 66; // OPC PM C (default PM10)
 }
