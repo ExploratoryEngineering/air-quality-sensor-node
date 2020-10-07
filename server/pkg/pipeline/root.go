@@ -19,7 +19,7 @@ type Root struct {
 	db   store.Store
 }
 
-// NewRoot creates a new Root instance
+// New creates a new Root instance
 func New(opts *opts.Opts, db store.Store) *Root {
 	return &Root{
 		opts: opts,
