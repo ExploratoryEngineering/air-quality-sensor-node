@@ -19,7 +19,7 @@ typedef struct _apn_config {
 } apn_config;
 
 int decode_config_message(uint8_t * buf, int size);
-int encode_ping(char * buffer, int buffer_size);
+int encode_ping(char * buffer, int buffer_size, int  * encoded_length);
 
 
 #endif // _CONFIG_MESSAGE_

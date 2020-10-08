@@ -149,16 +149,18 @@ void do_the_hetzner_ping()
 
 	char PING_BUFFER[128];
 
-	if (!encode_ping(PING_BUFFER, sizeof(PING_BUFFER)))
+	int ping_bytes = 0;
+	if (!encode_ping(PING_BUFFER, sizeof(PING_BUFFER), &ping_bytes))
 	{
 		LOG_ERR("Failed encoding PING message. Bailing out");
 		return;
 	}
+	LOG_INF("Encoded protobuf PING: %d bytes", ping_bytes);
 
 	for (int i=0; i<PING_RETRIES; i++) 
 	{
 		LOG_INF("PING attempts: %d", i);
-		int err = sendto(sock, buffer, strlen(buffer), 0, (struct sockaddr *)&remote_addr_ping, sizeof(remote_addr_ping));
+		int err = sendto(sock, PING_BUFFER, ping_bytes, 0, (struct sockaddr *)&remote_addr_ping, sizeof(remote_addr_ping));
 		if (err < 0)
 		{
 			LOG_ERR("Unable to send data to PING server: %d", err);

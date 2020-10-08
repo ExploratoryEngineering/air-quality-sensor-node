@@ -117,7 +117,7 @@ int decode_config_message(uint8_t * buf, int size)
     return 0;
 }
 
-int encode_ping(char * buffer, int buffer_size)
+int encode_ping(char * buffer, int buffer_size, int  * encoded_length)
 {
     aqconfig_ping ping = aqconfig_ping_init_zero;
     pb_ostream_t stream = pb_ostream_from_buffer(buffer, buffer_size);
@@ -125,6 +125,11 @@ int encode_ping(char * buffer, int buffer_size)
     ping.id = ping_id++;
     ping.deviceid = atoll(imei);
     ping.timestamp = k_uptime_get() / 1000; // Uptime in seconds == kinda time'ish
+
+    // Zephry logging rocks...
+    LOG_INF("PING device id %x%x", (uint32_t)(ping.deviceid >> 32), (uint32_t)(ping.deviceid));
+    LOG_INF("PING device id (str): %s", log_strdup(imei));
+    LOG_INF("PING timestamp: %d", ping.timestamp);
 
     bool status = pb_encode(&stream, aqconfig_ping_fields, &ping);
         
@@ -134,5 +139,6 @@ int encode_ping(char * buffer, int buffer_size)
         return false;
     }
 
+    *encoded_length = stream.bytes_written;
     return true;
 }

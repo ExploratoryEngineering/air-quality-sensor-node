@@ -147,6 +147,10 @@ size_t mb_encode(SENSOR_NODE_MESSAGE *msg, char *buffer, size_t max)
     message.opc_bin_22 = msg->opc_sample.bin[22];
     message.opc_bin_23 = msg->opc_sample.bin[23];
 
+    message.pm1 = msg->opc_sample.pm_a;
+    message.pm25 = msg->opc_sample.pm_b;
+    message.pm10 = msg->opc_sample.pm_c;
+
     status = pb_encode(&stream, aqpb_Sample_fields, &message);
     message_length = stream.bytes_written;
         
