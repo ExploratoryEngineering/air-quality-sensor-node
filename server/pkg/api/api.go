@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"html/template"
 	"log"
 	"net/http"
 	"os"
@@ -22,9 +21,6 @@ type Server struct {
 	broker         *stream.Broker
 	circularBuffer *circular.Buffer
 	listenAddr     string
-	staticDir      string
-	templateDir    string
-	templates      *template.Template
 	readTimeout    time.Duration
 	writeTimeout   time.Duration
 	httpServer     http.Server
@@ -37,8 +33,6 @@ type ServerConfig struct {
 	Broker         *stream.Broker
 	CircularBuffer *circular.Buffer
 	ListenAddr     string
-	StaticDir      string
-	TemplateDir    string
 	AccessLogDir   string
 }
 
@@ -51,21 +45,13 @@ const (
 
 // New creates a new webserver instance
 func New(config *ServerConfig) *Server {
-	// Yes we could have used template.Must but the output is butt ugly.
-	t, err := template.ParseGlob(config.TemplateDir + "/*.html")
-	if err != nil {
-		log.Fatalf("Error reading templates: %v", err)
-	}
 	return &Server{
 		db:             config.DB,
 		broker:         config.Broker,
 		circularBuffer: config.CircularBuffer,
 		listenAddr:     config.ListenAddr,
-		staticDir:      config.StaticDir,
-		templateDir:    config.TemplateDir,
 		readTimeout:    defaultReadTimeout,
 		writeTimeout:   defaultWriteTimeout,
-		templates:      t,
 		accessLogDir:   config.AccessLogDir,
 	}
 }
@@ -74,12 +60,7 @@ func New(config *ServerConfig) *Server {
 func (s *Server) Start() {
 	// Create router
 	m := mux.NewRouter().StrictSlash(true)
-	m.HandleFunc("/", s.mainHandler).Methods("GET")
 	m.HandleFunc("/stream", s.streamHandler).Methods("GET")
-	m.HandleFunc("/last", s.lastDataHandler).Methods("GET")
-
-	// Enable serving the static dir
-	m.PathPrefix("/").Handler(http.FileServer(http.Dir(s.staticDir)))
 
 	// Set up access logging
 	if _, err := os.Stat(s.accessLogDir); os.IsNotExist(err) {

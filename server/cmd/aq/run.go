@@ -25,8 +25,6 @@ const (
 type RunCommand struct {
 	// Webserver options
 	WebListenAddr   string `short:"w" long:"web-listen-address" description:"Listen address for webserver" default:":8888" value-name:"<[host]:port>"`
-	WebStaticDir    string `short:"s" long:"web-static-dir" description:"Static directory for webserver" default:"./web" value-name:"<dir>"`
-	WebTemplateDir  string `short:"t" long:"web-template-dir" description:"Template directory for webserver" default:"./templates" value-name:"<dir>"`
 	WebAccessLogDir string `short:"l" long:"web-access-log-dir" description:"Directory for access logs" default:"./logs" value-name:"<dir>"`
 
 	// MQTT
@@ -130,8 +128,6 @@ func (a *RunCommand) Execute(args []string) error {
 		DB:             db,
 		CircularBuffer: pipelineCirc,
 		ListenAddr:     a.WebListenAddr,
-		StaticDir:      a.WebStaticDir,
-		TemplateDir:    a.WebTemplateDir,
 		AccessLogDir:   a.WebAccessLogDir,
 	})
 	api.Start()
