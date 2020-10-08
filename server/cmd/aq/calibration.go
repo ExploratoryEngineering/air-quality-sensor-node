@@ -71,7 +71,7 @@ func loadCalibrationData(db store.Store, dir string) error {
 	}
 
 	if !dirInfo.IsDir() {
-		return fmt.Errorf("Calibration data directory '%s' does not exist", dir)
+		return fmt.Errorf("'%s' is not a directory", dir)
 	}
 
 	err = filepath.Walk(dir, f)

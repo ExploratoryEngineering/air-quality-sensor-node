@@ -84,8 +84,14 @@ func (a *RunCommand) Execute(args []string) error {
 	}
 	defer db.Close()
 
-	// Load the calibration data to pick up any new calibration sets
-	loadCalibrationData(db, options.CalibrationDataDir)
+	// Load the calibration data to pick up any new calibration sets.
+	err = loadCalibrationData(db, options.CalibrationDataDir)
+	if err != nil {
+		// At this point we don't actually care if this returns an
+		// error because it just means that we won't get any new
+		// calibration data that might have been placed there.
+		log.Printf("Did not load any (new) calibration data: %v", err)
+	}
 
 	// Create pipeline elements
 	// TODO(borud): make streaming broker configurable
