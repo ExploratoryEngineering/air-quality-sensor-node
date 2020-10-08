@@ -19,8 +19,6 @@ func TestAPISimple(t *testing.T) {
 
 	s := New(&ServerConfig{
 		ListenAddr:   ":0",
-		StaticDir:    "../../static",
-		TemplateDir:  "../../templates",
 		AccessLogDir: tempLogDir,
 	})
 	assert.NotNil(t, s)

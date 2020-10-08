@@ -29,6 +29,9 @@ var testPB = &aqpb.Sample{
 	OpcPmA:            18,
 	OpcPmB:            19,
 	OpcPmC:            20,
+	Pm1:               18.1,
+	Pm10:              19.1,
+	Pm25:              20.1,
 	OpcSamplePeriod:   21,
 	OpcSampleFlowRate: 22,
 	OpcTemp:           23,
@@ -60,7 +63,7 @@ var testPB = &aqpb.Sample{
 	OpcBin_22:         49,
 	OpcBin_23:         50,
 }
-var testPBLen = 158
+var testPBLen = 176
 
 func TestSimple(t *testing.T) {
 	// Create a byte array from protobuffer instance

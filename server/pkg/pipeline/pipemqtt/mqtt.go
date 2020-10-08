@@ -1,4 +1,4 @@
-// pipemqtt is a very simplistic example of how to forward messages to
+// Package pipemqtt is a very simplistic example of how to forward messages to
 // an MQTT server.  If you want to use this for production you should
 // rewrite it for more robustness.
 //

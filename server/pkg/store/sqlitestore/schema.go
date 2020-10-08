@@ -46,6 +46,10 @@ CREATE TABLE IF NOT EXISTS messages (
   opcpmb        INTEGER NOT NULL,
   opcpmc        INTEGER NOT NULL,
 
+  pm1               REAL NOT NULL,
+  pm10              REAL NOT NULL,
+  pm25              REAL NOT NULL,
+
   opcsampleperiod   INTEGER NOT NULL,
   opcsampleflowrate INTEGER NOT NULL,
   opctemp           INTEGER NOT NULL,

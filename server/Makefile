@@ -1,75 +1,55 @@
-GOOS ?= darwin
-GOARCH ?= amd64
-CGO_ENABLED ?= 1
-CGO_CFLAGS ?= 
-CGO_LDFLAGS ?=
-BUILD_TAGS ?=
-APP_NAME ?= aq
-VERSION ?= 0.1.1
-BIN_EXT ?=
-
-GO := GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED=$(CGO_ENABLED) CGO_CFLAGS=$(CGO_CFLAGS) CGO_LDFLAGS=$(CGO_LDFLAGS) GO111MODULE=auto go
-PACKAGES = $(shell $(GO) list ./... | grep -v '/vendor/')
-TARGET_PACKAGES = $(shell find . -name 'main.go' -print0 | xargs -0 -n1 dirname | sort | uniq | grep -v /vendor/)
-
-ifeq ($(GOOS),windows)
-  BIN_EXT = .exe
+ifeq ($(GOPATH),)
+GOPATH := $(HOME)/go
 endif
 
-ifeq ($(VERSION),)
-  VERSION = latest
-endif
+all: test lint vet build
 
-.DEFAULT_GOAL := build
+clean:
+	@find . -name "*-wal" -delete
+	@find . -name "*-shm" -delete
+	@rm -f bin/*.linux
 
-.PHONY: help
-help:
-	@echo "   GOOS        = $(GOOS)"
-	@echo "   GOARCH      = $(GOARCH)"
-	@echo "   CGO_ENABLED = $(CGO_ENABLED)"
-	@echo "   CGO_CFLAGS  = $(CGO_CFLAGS)"
-	@echo "   CGO_LDFLAGS = $(CGO_LDFLAGS)"
-	@echo "   BUILD_TAGS  = $(BUILD_TAGS)"
-	@echo "   VERSION     = $(VERSION)"
+build: aq
 
+aq:
+	@cd cmd/aq && go build -o ../../bin/aq
 
-.PHONY: gen
+check: lint vet staticcheck revive
+
+lint:
+	@golint ./...
+
+vet:
+	@go vet ./...
+
+staticcheck:
+	@staticcheck ./...
+
+revive:
+	@revive ./...
+
+test:
+	@go test ./...
+
+test_verbose:
+	@go test ./... -v
+
+test_race:
+	@go test ./... -race
+
+test_all: test_cover test_race
+
+benchmark:
+	cd output && go test -bench .
+
 gen:
 	@go generate ./...
 
-.PHONY: format
-format:
-	@$(GO) fmt $(PACKAGES)
 
-.PHONY: test
-test:
-	@$(GO) test -tags="$(BUILD_TAGS)" $(PACKAGES)
-
-.PHONY: build
-build: gen
-	@for target_pkg in $(TARGET_PACKAGES); do $(GO) build -tags="$(BUILD_TAGS)" $(LDFLAGS) -o ./bin/`basename $$target_pkg`$(BIN_EXT) $$target_pkg || exit 1; done
-
-.PHONY: install
-install:
-	@for target_pkg in $(TARGET_PACKAGES); do $(GO) install -tags="$(BUILD_TAGS)" $(LDFLAGS) $$target_pkg || exit 1; done
-
-.PHONY: dist
-dist: build
-	@mkdir -p ./dist/$(GOOS)-$(GOARCH)/bin
-	@(cd ./dist/$(GOOS)-$(GOARCH); tar cfz ../$(APP_NAME)-${VERSION}.$(GOOS)-$(GOARCH).tar.gz .)
-
-.PHONY: git-tag
-git-tag:
-ifeq ($(VERSION),$(filter $(VERSION),latest master ""))
-	@echo "please specify VERSION"
-else
-	@git tag -a $(VERSION) -m "Release $(VERSION)"
-	@git push origin $(VERSION)
-endif
-
-.PHONY: clean
-clean:
-	@rm -rf ./bin
-	@rm -rf ./data
-	@rm -rf ./dist
-	@rm -rf ./aq.db*
+# Here be dragons
+dep_install:
+	(cd $(GOPATH); go get -u github.com/golang/protobuf/protoc-gen-go)
+	(cd $(GOPATH); go get -u github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway)
+	(cd $(GOPATH); go get -u github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger)
+	(cd $(GOPATH); go get -u github.com/golang/protobuf/protoc-gen-go)
+	(cd $(GOPATH); go get -u github.com/favadi/protoc-go-inject-tag)

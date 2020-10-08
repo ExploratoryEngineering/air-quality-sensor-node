@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -64,7 +65,16 @@ func loadCalibrationData(db store.Store, dir string) error {
 		return nil
 	}
 
-	err := filepath.Walk(dir, f)
+	dirInfo, err := os.Stat(dir)
+	if err != nil {
+		return err
+	}
+
+	if !dirInfo.IsDir() {
+		return fmt.Errorf("Calibration data directory '%s' does not exist", dir)
+	}
+
+	err = filepath.Walk(dir, f)
 	if err != nil {
 		return err
 	}
