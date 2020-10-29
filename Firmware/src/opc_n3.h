@@ -82,7 +82,7 @@ typedef struct
 
 // According to Alphasense User Manual OPC-N3 Optical
 // Particle Counter Issue 2. Chapter 8 ("repeat interval ms")
-#define OPC_SAMPLING_TIME_MS 5000
+#define OPC_SAMPLING_TIME_MS 30000
 
 #define OPC_N3_CMD_COMMAND_ACK_WAIT 10
 #define OPC_N3_SPI_BUFFER_RESET_WAIT 2000
